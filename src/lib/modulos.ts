@@ -16,6 +16,9 @@ export const MODULOS: Modulo[] = [
   { key: "finanzas", label: "Reporte", href: "/finanzas", icon: "finanzas", listo: true },
   { key: "equipos", label: "Mi equipo", href: "/equipos", icon: "equipo", listo: true },
   { key: "turnos", label: "Turnos", href: "/turnos", icon: "turnos", listo: true },
+  // Solo tiene sentido en Puerto Natales (no tiene encuentro todos los
+  // domingos) — la propia pantalla/API ya filtra por campus/rol.
+  { key: "fechas-encuentro", label: "Fechas de encuentro", href: "/fechas-encuentro", icon: "turnos", listo: true },
   { key: "visitas", label: "Conexión", href: "/visitas", icon: "visitas", listo: true },
   { key: "perfiles", label: "Perfiles", href: "/perfiles", icon: "perfiles", listo: true },
   { key: "reuniones", label: "Reuniones", href: "/reuniones", icon: "reuniones", listo: true },
