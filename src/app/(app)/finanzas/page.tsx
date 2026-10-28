@@ -12,9 +12,25 @@ type Informe = {
   porItem: Record<string, number>;
   saldo: number;
   gastos: { id: number; fecha: string; item: string; monto: number; comercio: string | null; descripcion: string; anulado: boolean }[];
+  cierre: { cerrado: boolean; por: string; cuando: string; auto: boolean };
 };
 
 const fmt = (n: number) => `$${n.toLocaleString("es-CL")}`;
+
+const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+function nombreMes(mes: string) {
+  const [y, m] = mes.split("-").map(Number);
+  return `${MESES[m - 1][0].toUpperCase()}${MESES[m - 1].slice(1)} ${y}`;
+}
+function diasQuedan(mes: string) {
+  const hoy = new Date();
+  const act = hoy.toISOString().slice(0, 7);
+  if (mes !== act) return "Este mes ya terminó.";
+  const ultimo = new Date(Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth() + 1, 0)).getUTCDate();
+  const dia = hoy.getUTCDate();
+  const q = ultimo - dia;
+  return q > 0 ? `Quedan ${q} día${q === 1 ? "" : "s"} para que termine el mes.` : "Último día del mes.";
+}
 
 /** Módulo Finanzas (informe de campus) — equivalente a Soporte → Finanzas/
  * Informe de la app vieja: ingresos (encuentros + extraordinarios), gastos
@@ -26,6 +42,7 @@ export default function FinanzasPage() {
   const [error, setError] = useState<string | null>(null);
   const [mostrarForm, setMostrarForm] = useState(false);
   const [guardando, setGuardando] = useState(false);
+  const [cerrando, setCerrando] = useState(false);
 
   const cargar = useCallback(async () => {
     const res = await fetch(`/api/gastos-campus/informe?campus=${encodeURIComponent(campusActivo)}`);
@@ -62,6 +79,20 @@ export default function FinanzasPage() {
     await cargar();
   }
 
+  async function cerrarMes() {
+    if (!informe) return;
+    setCerrando(true);
+    const res = await fetch("/api/fondos/cerrar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ campus: informe.campus, area: "Campus", mes: informe.mes }),
+    });
+    const json = await res.json();
+    setCerrando(false);
+    if (!json.ok) { setError(json.error); return; }
+    await cargar();
+  }
+
   if (!informe && !error) return <div className="contenedor">Cargando…</div>;
 
   return (
@@ -78,6 +109,22 @@ export default function FinanzasPage() {
               Ingresos {fmt(informe.ingresos.total)} (encuentros {fmt(informe.ingresos.encuentros)} + extraordinarios {fmt(informe.ingresos.extraordinarios)}) · Gastos {fmt(informe.egresos)}
             </p>
           </div>
+
+          {informe.cierre.cerrado ? (
+            <p className="muted" style={{ fontSize: "0.82rem", marginTop: -4 }}>
+              Mes cerrado{informe.cierre.auto ? " automáticamente" : ` por ${informe.cierre.por}`}.
+            </p>
+          ) : (
+            <div className="tarjeta" style={{ marginBottom: 12 }}>
+              <p style={{ margin: "0 0 2px", fontWeight: 600 }}>Cierre de {nombreMes(informe.mes)}</p>
+              <p className="muted" style={{ margin: "0 0 10px", fontSize: "0.82rem" }}>
+                {diasQuedan(informe.mes)} Si no cierras, se cierra solo el día 5.
+              </p>
+              <button className="boton-secundario" disabled={cerrando} onClick={cerrarMes}>
+                {cerrando ? "Cerrando…" : "Cerrar mes"}
+              </button>
+            </div>
+          )}
 
           {Object.keys(informe.porItem).length > 0 && (
             <div className="tarjeta">

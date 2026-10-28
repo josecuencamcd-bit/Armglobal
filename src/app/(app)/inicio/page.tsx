@@ -18,11 +18,23 @@ const GRUPOS: { titulo: string; claves: string[] }[] = [
   { titulo: "Personas", claves: ["cumpleanos", "reuniones", "perfil"] },
 ];
 
+/** Lunes ISO de la semana que contiene `fecha` (mismo criterio que
+ * lunesDe_ en Code.gs / turnos/page.tsx). */
+function lunesDe(fecha: Date): string {
+  const d = new Date(fecha);
+  const dia = (d.getDay() + 6) % 7; // 0 = lunes
+  d.setDate(d.getDate() - dia);
+  return d.toISOString().slice(0, 10);
+}
+
+type MiTurno = { semana: string; campus: string };
+
 export default function InicioPage() {
   const router = useRouter();
   const supabase = createClient();
   const [nombre, setNombre] = useState("");
   const { campusActivo } = useCampus();
+  const [miTurno, setMiTurno] = useState<MiTurno | null | undefined>(undefined);
 
   useEffect(() => {
     let cancelado = false;
@@ -39,6 +51,22 @@ export default function InicioPage() {
     };
   }, [supabase]);
 
+  useEffect(() => {
+    let cancelado = false;
+    (async () => {
+      const res = await fetch("/api/turnos/mios");
+      const json = await res.json();
+      if (cancelado) return;
+      if (!json.ok) { setMiTurno(null); return; }
+      const semanaActual = lunesDe(new Date());
+      const match = (json.data as MiTurno[]).find((t) => t.semana === semanaActual && t.campus === campusActivo);
+      setMiTurno(match ?? null);
+    })();
+    return () => {
+      cancelado = true;
+    };
+  }, [campusActivo]);
+
   const porClave = new Map(MODULOS.map((m) => [m.key, m]));
 
   return (
@@ -49,6 +77,17 @@ export default function InicioPage() {
         </h1>
         <span className="muted" style={{ fontSize: "0.8rem" }}>{campusActivo}</span>
       </div>
+
+      {miTurno && (
+        <div
+          className="tarjeta"
+          style={{ marginBottom: 20, cursor: "pointer" }}
+          onClick={() => router.push("/turnos")}
+        >
+          <p className="muted" style={{ margin: "0 0 2px", fontSize: "0.75rem" }}>ESTA SEMANA</p>
+          <p style={{ margin: 0, fontWeight: 600 }}>Te toca turno en {miTurno.campus}</p>
+        </div>
+      )}
 
       {GRUPOS.map((g) => {
         const tiles = g.claves.map((k) => porClave.get(k)).filter((m): m is Modulo => !!m);

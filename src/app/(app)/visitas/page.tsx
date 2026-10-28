@@ -25,6 +25,8 @@ export default function VisitasPage() {
   const [error, setError] = useState<string | null>(null);
   const [mostrarForm, setMostrarForm] = useState(false);
   const [guardando, setGuardando] = useState(false);
+  const [busqueda, setBusqueda] = useState("");
+  const [filtroEstado, setFiltroEstado] = useState<string>("");
 
   const cargar = useCallback(async (c: string) => {
     const res = await fetch(`/api/visitas?campus=${encodeURIComponent(c)}`);
@@ -70,6 +72,17 @@ export default function VisitasPage() {
 
   if (!lista && !error) return <div className="contenedor">Cargando…</div>;
 
+  const kpis = [
+    { label: "Total", n: lista?.length ?? 0 },
+    ...ESTADOS.map((e) => ({ label: e, n: lista?.filter((v) => v.estado === e).length ?? 0 })),
+  ];
+
+  const filtradas = (lista ?? []).filter((v) => {
+    if (filtroEstado && v.estado !== filtroEstado) return false;
+    if (busqueda && !v.nombre.toLowerCase().includes(busqueda.toLowerCase())) return false;
+    return true;
+  });
+
   return (
     <div className="contenedor" style={{ paddingTop: 24 }}>
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
@@ -84,6 +97,15 @@ export default function VisitasPage() {
         </span>
       </div>
       {error && <p className="aviso">{error}</p>}
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, margin: "14px 0" }}>
+        {kpis.map((k) => (
+          <div key={k.label} className="tarjeta" style={{ margin: 0, padding: "10px 12px", textAlign: "center" }}>
+            <p className="num" style={{ fontSize: "1.3rem", fontWeight: 700, margin: 0 }}>{k.n}</p>
+            <p className="muted" style={{ margin: 0, fontSize: "0.68rem" }}>{k.label.toUpperCase()}</p>
+          </div>
+        ))}
+      </div>
 
       <button className="boton" style={{ marginBottom: 16 }} onClick={() => setMostrarForm((v) => !v)}>
         {mostrarForm ? "Cerrar" : "Registrar visita"}
@@ -109,8 +131,26 @@ export default function VisitasPage() {
         </form>
       )}
 
+      <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+        <input
+          placeholder="Buscar por nombre…"
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+          style={{ flex: 1, background: "var(--surface-2)", border: "1px solid var(--line)", borderRadius: 8, color: "var(--ink)", padding: "10px 12px" }}
+        />
+        <select
+          value={filtroEstado}
+          onChange={(e) => setFiltroEstado(e.target.value)}
+          style={{ background: "var(--surface-2)", border: "1px solid var(--line)", borderRadius: 8, color: "var(--ink)", padding: "10px 12px" }}
+        >
+          <option value="">Todos los estados</option>
+          {ESTADOS.map((e) => <option key={e} value={e}>{e}</option>)}
+        </select>
+      </div>
+
       {lista?.length === 0 && <p className="muted">Sin visitas registradas en {campus}.</p>}
-      {lista?.map((v) => (
+      {lista && lista.length > 0 && filtradas.length === 0 && <p className="muted">Nada coincide con la búsqueda.</p>}
+      {filtradas.map((v) => (
         <div className="tarjeta" key={v.id}>
           <p style={{ fontWeight: 600, margin: 0 }}>{v.nombre}</p>
           <p className="muted" style={{ margin: "2px 0 10px", fontSize: "0.8rem" }}>

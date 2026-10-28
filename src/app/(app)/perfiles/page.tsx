@@ -15,6 +15,7 @@ type Perfil = {
   correo: string;
   roles: string[];
   areas: string[];
+  sirve: string[];
   campus: string | null;
   bloqueado: boolean;
   modulos_on: string[];
@@ -81,7 +82,7 @@ export default function PerfilesPage() {
     await cargar();
   }
 
-  async function guardarPerfil(id: string, cambios: Partial<Pick<Perfil, "roles" | "areas" | "campus" | "bloqueado" | "roles_nuevos" | "areas_nuevas" | "rol_cambia_desde">>) {
+  async function guardarPerfil(id: string, cambios: Partial<Pick<Perfil, "roles" | "areas" | "sirve" | "campus" | "bloqueado" | "roles_nuevos" | "areas_nuevas" | "rol_cambia_desde">>) {
     setGuardando(true);
     const res = await fetch(`/api/perfiles/${id}`, {
       method: "PATCH",
@@ -233,7 +234,7 @@ export default function PerfilesPage() {
 
               <ProgramarRol perfil={p} guardando={guardando} onGuardar={guardarPerfil} />
 
-              <p className="muted" style={{ marginBottom: 6, fontSize: "0.8rem" }}>Área</p>
+              <p className="muted" style={{ marginBottom: 6, fontSize: "0.8rem" }}>Área que lidera</p>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 14 }}>
                 {AREAS.map((a) => {
                   const activo = p.areas.includes(a);
@@ -261,6 +262,34 @@ export default function PerfilesPage() {
                 })}
               </div>
 
+              <p className="muted" style={{ marginBottom: 6, fontSize: "0.8rem" }}>Otras áreas donde sirve como voluntario</p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 14 }}>
+                {AREAS.map((a) => {
+                  const activo = p.sirve.includes(a);
+                  return (
+                    <button
+                      key={a}
+                      disabled={guardando}
+                      onClick={() => {
+                        const sirve = activo ? p.sirve.filter((x) => x !== a) : [...p.sirve, a];
+                        guardarPerfil(p.id, { sirve });
+                      }}
+                      style={{
+                        padding: "6px 10px",
+                        borderRadius: 999,
+                        fontSize: "0.75rem",
+                        border: `1px solid ${activo ? "var(--accent)" : "var(--line)"}`,
+                        background: activo ? "var(--accent)" : "transparent",
+                        color: activo ? "var(--accent-ink)" : "var(--muted)",
+                        cursor: "pointer",
+                      }}
+                    >
+                      {a}
+                    </button>
+                  );
+                })}
+              </div>
+
               <div className="campo">
                 <label>Campus</label>
                 <select
@@ -268,7 +297,7 @@ export default function PerfilesPage() {
                   disabled={guardando}
                   onChange={(e) => guardarPerfil(p.id, { campus: e.target.value ? e.target.value : null })}
                 >
-                  <option value="">Ambos campus (elige al entrar)</option>
+                  <option value="">Todos los campus (elige al entrar)</option>
                   {CAMPUS.map((c) => (
                     <option key={c} value={c}>{c}</option>
                   ))}

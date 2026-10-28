@@ -5,9 +5,13 @@ import { z } from "zod";
 
 /** api_fonCerrar: cierra el mes de un área (deja de poder registrar/anular
  * movimientos de ese mes salvo autorización — igual patrón que Encuentros). */
+/** "Campus" no es un área de equipo (no está en AREAS/area_t) — es el
+ * fondo/informe a nivel de campus (Finanzas), que usa la misma tabla
+ * `cierres_mes` (ver FONDOS_CIERRE en vigilantes.ts). */
+const AREA_O_CAMPUS = [...AREAS, "Campus"] as const;
 const CerrarSchema = z.object({
   campus: z.enum(CAMPUS),
-  area: z.enum(AREAS),
+  area: z.enum(AREA_O_CAMPUS),
   mes: z.string().regex(/^\d{4}-\d{2}$/, "Mes no válido."),
 });
 
