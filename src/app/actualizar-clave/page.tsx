@@ -71,7 +71,7 @@ function ActualizarClaveForm() {
     }
     setOk(true);
     setTimeout(() => {
-      router.replace("/encuentros");
+      router.replace("/inicio");
       router.refresh();
     }, 1500);
   }

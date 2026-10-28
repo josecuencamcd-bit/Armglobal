@@ -53,7 +53,7 @@ function LoginForm() {
       setError(error.message === "Invalid login credentials" ? "Correo o clave incorrectos." : error.message);
       return;
     }
-    router.replace("/encuentros");
+    router.replace("/inicio");
     router.refresh();
   }
 

@@ -17,7 +17,7 @@ export default function Home() {
     if (window.location.hash.includes("type=recovery")) {
       router.replace(`/actualizar-clave${window.location.hash}`);
     } else {
-      router.replace("/encuentros");
+      router.replace("/inicio");
     }
   }, [router]);
   return null;
