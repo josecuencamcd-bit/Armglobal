@@ -5,6 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { Database } from "@/lib/supabase/types";
 import { MODULOS } from "@/lib/modulos";
+import { Icono } from "@/lib/iconos";
 
 type Rol = Database["public"]["Enums"]["rol_t"];
 
@@ -24,6 +25,14 @@ const ROLES_ORDEN: Rol[] = [
 function rolPrincipal(roles: Rol[]): Rol | null {
   for (const r of ROLES_ORDEN) if (roles.includes(r)) return r;
   return roles[0] ?? null;
+}
+
+function iniciales(nombre: string): string {
+  return nombre
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() ?? "")
+    .join("");
 }
 
 type Perfil = { nombre: string; roles: Rol[]; campus: string | null };
@@ -63,55 +72,28 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div style={{ minHeight: "100dvh", display: "flex", flexDirection: "column" }}>
-      <header
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "14px 16px",
-          borderBottom: "1px solid var(--line)",
-        }}
-      >
+      <header className="brandbar" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div>
-          <div style={{ fontWeight: 600, letterSpacing: "0.02em" }}>armglobal</div>
-          <div style={{ height: 2, width: 56, marginTop: 4, borderRadius: 2, background: "linear-gradient(90deg, #ff9f1c, #ffd24c)" }} />
+          <div style={{ fontWeight: 700, letterSpacing: "0.02em" }}>armglobal</div>
+          <p className="tagline" style={{ margin: "2px 0 0" }}>
+            La <em>Iglesia</em> es mucho más de lo que te dijeron
+          </p>
         </div>
         {perfil && (
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: "0.85rem" }}>{perfil.nombre}</div>
-              <div className="muted" style={{ fontSize: "0.75rem" }}>
-                {rol}
-                {perfil.campus ? ` · ${perfil.campus}` : ""}
-              </div>
-            </div>
-            <button
-              className="boton-peligro"
-              onClick={salir}
-              style={{ padding: "6px 10px", fontSize: "0.8rem" }}
-            >
-              Salir
-            </button>
-          </div>
+          <button
+            onClick={salir}
+            title={`Salir (${perfil.nombre} · ${rol}${perfil.campus ? " · " + perfil.campus : ""})`}
+            className="avatar"
+            style={{ cursor: "pointer" }}
+          >
+            {iniciales(perfil.nombre)}
+          </button>
         )}
       </header>
 
-      <main style={{ flex: 1, paddingBottom: 72 }}>{children}</main>
+      <main style={{ flex: 1, paddingBottom: 76 }}>{children}</main>
 
-      <nav
-        style={{
-          position: "fixed",
-          bottom: 0,
-          left: 0,
-          right: 0,
-          display: "flex",
-          overflowX: "auto",
-          gap: 2,
-          padding: "8px 10px",
-          background: "var(--surface)",
-          borderTop: "1px solid var(--line)",
-        }}
-      >
+      <nav className="bottom-nav">
         {MODULOS.map((m) => {
           const activo = pathname?.startsWith(m.href);
           return (
@@ -119,25 +101,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               key={m.key}
               onClick={() => m.listo && router.push(m.href)}
               disabled={!m.listo}
-              style={{
-                flex: "0 0 auto",
-                minWidth: 76,
-                background: "transparent",
-                border: "none",
-                color: !m.listo ? "#55555c" : activo ? "var(--accent)" : "var(--muted)",
-                fontWeight: activo ? 600 : 500,
-                fontSize: "0.75rem",
-                padding: "8px 6px",
-                cursor: m.listo ? "pointer" : "default",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: 2,
-              }}
+              aria-current={activo ? "true" : "false"}
             >
-              <span style={{ fontSize: "1.1rem", lineHeight: 1 }}>{m.icon}</span>
+              <Icono id={m.icon} size={21} />
               <span>{m.label}</span>
-              {!m.listo && <span style={{ fontSize: "0.6rem" }}>Pronto</span>}
+              {!m.listo && <span style={{ fontSize: "0.56rem", opacity: 0.8 }}>Pronto</span>}
             </button>
           );
         })}

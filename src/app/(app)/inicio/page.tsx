@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { MODULOS } from "@/lib/modulos";
+import { Icono } from "@/lib/iconos";
 
 /** Pantalla de inicio: equivalente a la vista "Hola, {nombre}" de la app
  * vieja — tagline + tarjetas de acceso directo a cada módulo. */
@@ -31,12 +32,9 @@ export default function InicioPage() {
 
   return (
     <div className="contenedor" style={{ paddingTop: 28 }}>
-      <h1 className="titulo" style={{ fontSize: "1.5rem" }}>
+      <h1 className="titulo" style={{ fontSize: "1.5rem", marginBottom: 20 }}>
         Hola{nombre ? `, ${nombre}` : ""}
       </h1>
-      <p className="muted" style={{ marginTop: -8, marginBottom: 20 }}>
-        La <em>Iglesia</em> es mucho más de lo que te dijeron
-      </p>
 
       <div
         style={{
@@ -56,13 +54,14 @@ export default function InicioPage() {
               flexDirection: "column",
               alignItems: "flex-start",
               gap: 6,
-              border: "1px solid var(--line)",
               cursor: m.listo ? "pointer" : "default",
               opacity: m.listo ? 1 : 0.5,
               textAlign: "left",
             }}
           >
-            <span style={{ fontSize: "1.4rem" }}>{m.icon}</span>
+            <span style={{ color: "var(--accent)" }}>
+              <Icono id={m.icon} size={26} />
+            </span>
             <span style={{ fontWeight: 600 }}>{m.label}</span>
             {!m.listo && <span className="muted">Pronto</span>}
           </button>
