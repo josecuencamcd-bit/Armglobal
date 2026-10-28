@@ -1,28 +1,28 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { encuentrosPendientes, notasPendientes, debeAvisar, vigilanteFondos } from "@/lib/vigilantes";
+import { cumpleVigilante } from "@/lib/cumpleanos";
 import { enviarWhatsApp, telefonoWa } from "@/lib/whatsapp";
 
 export const dynamic = "force-dynamic";
 
 /**
  * Puerto de `cumpleVigilante_()` (el trigger de 15 min de Code.gs que
- * llamaba a vigilanteFondos_/vigilanteEncuentros_/vigilanteNotas_).
+ * llamaba a vigilanteFondos_/vigilanteEncuentros_/vigilanteNotas_, y que
+ * también creaba/mandaba los saludos de cumpleaños — no confundir con el
+ * `cumpleVigilante` importado acá, que es justo esa última parte portada).
  * Pensado como Vercel Cron Job (ver vercel.json) corriendo cada 15 min.
  *
  * Cubierto: encuentros pendientes de finalizar (vigilanteEncuentros_),
  * áreas que no cerraron su asistencia (vigilanteNotas_, throttle vía
- * `avisos_vigilante`) y cierre automático de mes + recordatorio de fondos
- * sin cerrar (vigilanteFondos_, por correo vía Resend).
+ * `avisos_vigilante`), cierre automático de mes + recordatorio de fondos
+ * sin cerrar (vigilanteFondos_, por correo vía Resend), y los saludos de
+ * cumpleaños (crear/aprobar-recordar/enviar, también por Resend).
  *
- * Pendiente, NO fabricado para no fingir fidelidad que no es real:
- * - cumpleVigilante_ propiamente tal (crear/enviar saludos de cumpleaños —
- *   necesita portar cumpleCrear_/cumpleEnviar_/cumpleHtml_, que componen un
- *   mensaje largo con imágenes embebidas en base64 — plantillas de Code.gs
- *   no revisadas en este pase, queda como tarea aparte)
- * - encuentros/notas siguen avisando por WhatsApp (sin credenciales
- *   configuradas por decisión explícita del usuario — "no usaremos
- *   WhatsApp por ahora"), a diferencia de vigilanteFondos_ que siempre fue
- *   por correo en Code.gs y acá ya usa Resend.
+ * Pendiente: encuentros/notas siguen avisando por WhatsApp (sin
+ * credenciales configuradas por decisión explícita del usuario — "no
+ * usaremos WhatsApp por ahora"), a diferencia de vigilanteFondos_ y
+ * cumpleVigilante_ que siempre fueron por correo en Code.gs y acá ya usan
+ * Resend.
  */
 export async function GET(req: Request) {
   if (process.env.CRON_SECRET) {
@@ -33,7 +33,16 @@ export async function GET(req: Request) {
   }
 
   const supabase = createAdminClient();
-  const resultado = { encuentros_avisados: 0, notas_avisadas: 0, roles_aplicados: 0, fondos_cerrados: 0, fondos_avisos: 0 };
+  const resultado = {
+    encuentros_avisados: 0,
+    notas_avisadas: 0,
+    roles_aplicados: 0,
+    fondos_cerrados: 0,
+    fondos_avisos: 0,
+    cumples_creados: 0,
+    cumples_enviados: 0,
+    cumples_recordados: 0,
+  };
 
   const { data: rolesAplicados } = await supabase.rpc("aplicar_roles_programados");
   resultado.roles_aplicados = rolesAplicados ?? 0;
@@ -41,6 +50,11 @@ export async function GET(req: Request) {
   const fondos = await vigilanteFondos(supabase);
   resultado.fondos_cerrados = fondos.meses_cerrados;
   resultado.fondos_avisos = fondos.avisos;
+
+  const cumples = await cumpleVigilante(supabase);
+  resultado.cumples_creados = cumples.creadas;
+  resultado.cumples_enviados = cumples.enviadas;
+  resultado.cumples_recordados = cumples.recordadas;
 
   const pendEncuentros = await encuentrosPendientes(supabase);
   for (const e of pendEncuentros) {

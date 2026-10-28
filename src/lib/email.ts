@@ -13,7 +13,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
  * haya un dominio verificado en Resend. */
 const FROM = "armglobal <onboarding@resend.dev>";
 
-const APP_URL = "https://armglobal-jmnexia.vercel.app";
+export const APP_URL = "https://armglobal-jmnexia.vercel.app";
 const LOGO_URL = `${APP_URL}/icon-512.png`;
 
 function layout(opts: {
@@ -123,4 +123,23 @@ export async function avisarAdmins(opts: {
       botonUrl: APP_URL,
     }),
   });
+}
+
+/** Reemplaza cumpleEnviar_ (la parte de envío masivo): manda el saludo de
+ * cumpleaños a toda la congregación en tandas de 50 por BCC (mismo límite
+ * que usaba MailApp.sendEmail en Code.gs). Devuelve cuántos destinatarios
+ * recibieron el correo (las tandas que fallan no bloquean a las demás). */
+export async function enviarCumpleanos(destinatarios: string[], asunto: string, html: string, text: string): Promise<number> {
+  const TANDA = 50;
+  let enviados = 0;
+  for (let i = 0; i < destinatarios.length; i += TANDA) {
+    const tanda = destinatarios.slice(i, i + TANDA);
+    try {
+      await resend.emails.send({ from: FROM, to: FROM, bcc: tanda, subject: asunto, html, text });
+      enviados += tanda.length;
+    } catch {
+      // una tanda que falla no debe perder las demás
+    }
+  }
+  return enviados;
 }
