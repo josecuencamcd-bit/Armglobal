@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ok, fromSupabaseError, parseBody } from "@/lib/api-helpers";
 import { CAMPUS, GASTOS_ITEMS } from "@/lib/sesiones";
 import { subirFotoJpeg } from "@/lib/fotos";
+import { identidadActuante } from "@/lib/identidad";
 import { z } from "zod";
 
 /**
@@ -60,12 +61,7 @@ export async function POST(req: Request) {
   if ("error" in parsedBody) return parsedBody.error;
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const { data: perfil } = user
-    ? await supabase.from("perfiles").select("correo").eq("id", user.id).single()
-    : { data: null };
+  const identidad = await identidadActuante(supabase);
 
   const diasDesdeFecha = Math.floor(
     (Date.now() - new Date(`${parsedBody.data.fecha}T00:00:00Z`).getTime()) / 86_400_000
@@ -81,7 +77,7 @@ export async function POST(req: Request) {
 
   const { data, error } = await supabase
     .from("gastos_campus")
-    .insert({ ...resto, foto_url, estado: "Activo", por: perfil?.correo ?? null, tardio: diasDesdeFecha > 7 })
+    .insert({ ...resto, foto_url, estado: "Activo", por: identidad?.perfil.correo ?? null, tardio: diasDesdeFecha > 7 })
     .select()
     .single();
   if (error) return fromSupabaseError(error);

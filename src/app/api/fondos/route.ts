@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ok, fail, fromSupabaseError, parseBody } from "@/lib/api-helpers";
 import { CAMPUS, AREAS, METODOS_FONDO, CATEG_GASTO } from "@/lib/sesiones";
 import { subirFotoJpeg } from "@/lib/fotos";
+import { identidadActuante } from "@/lib/identidad";
 import { z } from "zod";
 
 const AREAS_FONDO = [...AREAS, "Campus"] as const;
@@ -79,15 +80,12 @@ export async function POST(req: Request) {
   if ("error" in parsedBody) return parsedBody.error;
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return fail("No autenticado.", 401);
-
-  const { data: perfil } = await supabase.from("perfiles").select("correo, roles").eq("id", user.id).single();
+  const identidad = await identidadActuante(supabase);
+  if (!identidad) return fail("No autenticado.", 401);
+  const perfil = identidad.perfil;
 
   if (parsedBody.data.area === "Campus") {
-    const roles = (perfil?.roles as string[] | null) ?? [];
+    const roles = (perfil.roles as string[] | null) ?? [];
     if (!roles.includes("Pastor principal") && !roles.includes("Pastor de campus") && !roles.includes("Pastor")) {
       return fail("Solo el Pastor registra aportes extraordinarios del campus.", 403);
     }
@@ -113,7 +111,7 @@ export async function POST(req: Request) {
       ...resto,
       foto_url,
       estado: "Activo",
-      por: perfil?.correo ?? null,
+      por: perfil.correo,
       tardio: diasDesdeFecha > 7,
     })
     .select()

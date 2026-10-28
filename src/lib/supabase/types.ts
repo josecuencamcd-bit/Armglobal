@@ -537,6 +537,48 @@ export type Database = {
         }
         Relationships: []
       }
+      impersonaciones_activas: {
+        Row: {
+          admin_correo: string
+          admin_id: string
+          iniciada_en: string
+          target_correo: string
+          target_id: string
+          target_nombre: string
+        }
+        Insert: {
+          admin_correo: string
+          admin_id: string
+          iniciada_en?: string
+          target_correo: string
+          target_id: string
+          target_nombre: string
+        }
+        Update: {
+          admin_correo?: string
+          admin_id?: string
+          iniciada_en?: string
+          target_correo?: string
+          target_id?: string
+          target_nombre?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "impersonaciones_activas_admin_id_fkey"
+            columns: ["admin_id"]
+            isOneToOne: true
+            referencedRelation: "perfiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "impersonaciones_activas_target_id_fkey"
+            columns: ["target_id"]
+            isOneToOne: false
+            referencedRelation: "perfiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       integrante_seguimiento: {
         Row: {
           area: Database["public"]["Enums"]["area_t"]

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { CAMPUS, AREAS } from "@/lib/sesiones";
 import { MODULOS_APP, DEFAULTS_NOMBRE_MOD, TITULOS_MOD } from "@/lib/modulosApp";
 
@@ -40,11 +41,13 @@ type Solicitud = {
  * /api/perfiles/[id] y /api/solicitudes-acceso(/[correo]), ya existentes.
  */
 export default function PerfilesPage() {
+  const router = useRouter();
   const [perfiles, setPerfiles] = useState<Perfil[] | null>(null);
   const [solicitudes, setSolicitudes] = useState<Solicitud[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [abierto, setAbierto] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
+  const [entrando, setEntrando] = useState<string | null>(null);
   const [nombresMod, setNombresMod] = useState<Record<string, string>>({});
   const [mostrarNombres, setMostrarNombres] = useState(false);
 
@@ -93,6 +96,21 @@ export default function PerfilesPage() {
     setGuardando(false);
     if (!json.ok) { setError(json.error); return; }
     setPerfiles((prev) => prev?.map((p) => (p.id === id ? { ...p, ...json.data } : p)) ?? null);
+  }
+
+  async function verComo(id: string, nombre: string) {
+    if (!confirm(`¿Entrar a la app como ${nombre}? Lo que registres desde ahí va a quedar guardado a su nombre.`)) return;
+    setEntrando(id);
+    const res = await fetch("/api/admin/impersonar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ perfilId: id }),
+    });
+    const json = await res.json();
+    setEntrando(null);
+    if (!json.ok) { setError(json.error); return; }
+    router.push("/inicio");
+    router.refresh();
   }
 
   async function guardarModulosPersona(id: string, modulos_on: string[], modulos_off: string[]) {
@@ -303,6 +321,15 @@ export default function PerfilesPage() {
                   ))}
                 </select>
               </div>
+
+              <button
+                className="boton-secundario"
+                style={{ marginBottom: 14 }}
+                disabled={entrando === p.id}
+                onClick={() => verComo(p.id, p.nombre)}
+              >
+                {entrando === p.id ? "Entrando…" : `Ver la app como ${p.nombre.split(" ")[0]}`}
+              </button>
 
               <p className="muted" style={{ marginBottom: 6, fontSize: "0.8rem" }}>
                 Módulos activados a mano (además de los que le da su rol)

@@ -43,12 +43,15 @@ type Perfil = { nombre: string; roles: Rol[]; campus: "Punta Arenas" | "Puerto N
  * "Más" (Reuniones, Mi perfil, y la Administración de cada módulo). */
 const PRINCIPALES = ["inicio", "soporte", "bajas", "panorama", "cumpleanos"];
 
-function Shell({ children }: { children: React.ReactNode }) {
+type Impersonando = { target: { nombre: string; correo: string } } | null;
+
+function Shell({ children, impersonando }: { children: React.ReactNode; impersonando: Impersonando }) {
   const router = useRouter();
   const pathname = usePathname();
   const supabase = createClient();
   const [perfil, setPerfil] = useState<Perfil | null>(null);
   const [masAbierto, setMasAbierto] = useState(false);
+  const [saliendo, setSaliendo] = useState(false);
   const { campusActivo, puedeElegir, elegirCampus } = useCampus();
 
   useEffect(() => {
@@ -74,6 +77,13 @@ function Shell({ children }: { children: React.ReactNode }) {
     await supabase.auth.signOut();
     router.replace("/login");
     router.refresh();
+  }
+
+  async function salirDeLaVista() {
+    setSaliendo(true);
+    await fetch("/api/admin/impersonar", { method: "DELETE" });
+    router.refresh();
+    window.location.href = "/inicio";
   }
 
   const rol = perfil ? rolPrincipal(perfil.roles) : null;
@@ -126,6 +136,28 @@ function Shell({ children }: { children: React.ReactNode }) {
           )}
         </div>
       </header>
+
+      {impersonando && (
+        <div
+          style={{
+            position: "sticky", top: 0, zIndex: 45, display: "flex", alignItems: "center",
+            justifyContent: "space-between", gap: 10, padding: "8px 14px",
+            background: "var(--accent)", color: "var(--accent-ink)", fontSize: "0.8rem", fontWeight: 600,
+          }}
+        >
+          <span>Vista de {impersonando.target.nombre} · lo que registres queda guardado a su nombre.</span>
+          <button
+            onClick={salirDeLaVista}
+            disabled={saliendo}
+            style={{
+              background: "rgba(0,0,0,0.15)", border: 0, borderRadius: 999, color: "inherit",
+              fontWeight: 700, fontSize: "0.78rem", padding: "5px 12px", cursor: "pointer", flexShrink: 0,
+            }}
+          >
+            {saliendo ? "…" : "Salir de la vista"}
+          </button>
+        </div>
+      )}
 
       <main style={{ flex: 1, paddingBottom: 76 }}>{children}</main>
 
@@ -221,6 +253,7 @@ function Shell({ children }: { children: React.ReactNode }) {
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = createClient();
   const [campusFijo, setCampusFijo] = useState<"Punta Arenas" | "Puerto Natales" | null | undefined>(undefined);
+  const [impersonando, setImpersonando] = useState<Impersonando>(null);
 
   useEffect(() => {
     let cancelado = false;
@@ -229,8 +262,25 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) return;
+
+      // Si hay una "vista como X" activa, el campus (y todo lo demás que
+      // ve esta sesión) pasa a ser el de X, no el del Admin app real —
+      // ese es justo el punto de "Ver la app como X".
+      const resImp = await fetch("/api/admin/impersonar");
+      const jsonImp = await resImp.json();
+      if (cancelado) return;
+
+      if (jsonImp.ok && jsonImp.data.activo && jsonImp.data.target) {
+        setImpersonando({ target: { nombre: jsonImp.data.target.nombre, correo: jsonImp.data.target.correo } });
+        setCampusFijo(jsonImp.data.target.campus ?? null);
+        return;
+      }
+
       const { data } = await supabase.from("perfiles").select("campus").eq("id", user.id).maybeSingle();
-      if (!cancelado) setCampusFijo((data?.campus as "Punta Arenas" | "Puerto Natales" | null) ?? null);
+      if (!cancelado) {
+        setImpersonando(null);
+        setCampusFijo((data?.campus as "Punta Arenas" | "Puerto Natales" | null) ?? null);
+      }
     })();
     return () => {
       cancelado = true;
@@ -241,7 +291,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <CampusProvider campusFijo={campusFijo}>
-      <Shell>{children}</Shell>
+      <Shell impersonando={impersonando}>{children}</Shell>
     </CampusProvider>
   );
 }
