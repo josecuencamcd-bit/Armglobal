@@ -17,13 +17,13 @@ export async function POST(req: Request) {
   if ("error" in parsedBody) return parsedBody.error;
 
   const supabase = await createClient();
-  const { data, error } = await supabase
+  // Sin .select(): RLS solo permite leer solicitudes_acceso al Admin app, y un
+  // anónimo no puede releer la fila que acaba de insertar (ni debería poder).
+  const { error } = await supabase
     .from("solicitudes_acceso")
-    .insert({ ...parsedBody.data, estado: "Pendiente" })
-    .select()
-    .single();
+    .insert({ ...parsedBody.data, estado: "Pendiente" });
   if (error) return fromSupabaseError(error);
-  return ok(data, 201);
+  return ok({ correo: parsedBody.data.correo }, 201);
 }
 
 /** Gate: Admin app (RLS: solicitudes_acceso_admin). */
