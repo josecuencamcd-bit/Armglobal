@@ -28,6 +28,11 @@ function lunesDe(fecha: Date): string {
 }
 
 type MiTurno = { semana: string; campus: string };
+type Avisos = {
+  encuentros: { campus: string; encuentro: string; fecha: string; key: string }[];
+  notas: { campus: string; area: string; fecha: string; key: string }[];
+  total: number;
+};
 
 export default function InicioPage() {
   const router = useRouter();
@@ -35,6 +40,7 @@ export default function InicioPage() {
   const [nombre, setNombre] = useState("");
   const { campusActivo } = useCampus();
   const [miTurno, setMiTurno] = useState<MiTurno | null | undefined>(undefined);
+  const [avisos, setAvisos] = useState<Avisos | null>(null);
 
   useEffect(() => {
     let cancelado = false;
@@ -67,6 +73,12 @@ export default function InicioPage() {
     };
   }, [campusActivo]);
 
+  useEffect(() => {
+    fetch("/api/avisos").then((r) => r.json()).then((json) => {
+      if (json.ok) setAvisos(json.data);
+    });
+  }, []);
+
   const porClave = new Map(MODULOS.map((m) => [m.key, m]));
 
   return (
@@ -77,6 +89,26 @@ export default function InicioPage() {
         </h1>
         <span className="muted" style={{ fontSize: "0.8rem" }}>{campusActivo}</span>
       </div>
+
+      {!!avisos?.total && (
+        <div className="tarjeta" style={{ marginBottom: 20, borderColor: "var(--danger)" }}>
+          <p className="muted" style={{ margin: "0 0 6px", fontSize: "0.75rem" }}>PENDIENTES</p>
+          {avisos.encuentros.map((e) => (
+            <p
+              key={e.key}
+              style={{ margin: "2px 0", fontSize: "0.85rem", cursor: "pointer" }}
+              onClick={() => router.push(`/encuentros/${encodeURIComponent(e.key)}`)}
+            >
+              Falta finalizar {e.encuentro} del {e.fecha} · {e.campus}
+            </p>
+          ))}
+          {avisos.notas.map((n) => (
+            <p key={n.key} style={{ margin: "2px 0", fontSize: "0.85rem", cursor: "pointer" }} onClick={() => router.push("/equipos")}>
+              Nota sin cerrar de {n.area} del {n.fecha} · {n.campus}
+            </p>
+          ))}
+        </div>
+      )}
 
       {miTurno && (
         <div
