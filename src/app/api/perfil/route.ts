@@ -15,12 +15,21 @@ import { z } from "zod";
  * aunque el body incluya esos campos — solo Admin app puede tocarlos
  * (vía /api/perfiles/[id], ver api_perfilGuardar).
  */
+/**
+ * api_fotoGuardar en Code.gs no sube a Drive: guarda la data URL (jpeg/png/
+ * webp en base64, tope 45000 caracteres) directo en la celda — acá igual,
+ * directo en `foto_url`, sin pasar por el bucket de Storage.
+ */
 const MiPerfilSchema = z
   .object({
     nombre: z.string().trim().min(1).max(120).optional(),
     telefono: z.string().trim().max(30).optional(),
     nacimiento: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-    foto_url: z.string().url().optional(),
+    foto_url: z
+      .string()
+      .regex(/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/, "La foto no es válida.")
+      .max(45_000, "La foto es muy pesada. Prueba con otra.")
+      .optional(),
   })
   .refine((o) => Object.keys(o).length > 0, { message: "Nada que actualizar." });
 

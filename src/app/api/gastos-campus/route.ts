@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { ok, fromSupabaseError, parseBody } from "@/lib/api-helpers";
 import { CAMPUS, GASTOS_ITEMS } from "@/lib/sesiones";
+import { subirFotoJpeg } from "@/lib/fotos";
 import { z } from "zod";
 
 /**
@@ -46,7 +47,10 @@ const GastoSchema = z.object({
   comercio: z.string().trim().max(120).optional(),
   boleta: z.string().trim().max(60).optional(),
   descripcion: z.string().trim().min(5, "Escribe una breve descripción del gasto.").max(300),
-  foto_url: z.string().url().optional(),
+  // Igual que guardarFotoFin_ en Code.gs: la foto llega en el mismo body
+  // como data URL jpeg, y se sube server-side (antes a Drive, acá al
+  // bucket privado "fotos") — el cliente nunca maneja una URL propia.
+  foto: z.string().optional(),
   motivo: z.string().trim().max(300).optional(),
 });
 
@@ -67,9 +71,17 @@ export async function POST(req: Request) {
     (Date.now() - new Date(`${parsedBody.data.fecha}T00:00:00Z`).getTime()) / 86_400_000
   );
 
+  const { foto, ...resto } = parsedBody.data;
+  let foto_url: string | null = null;
+  try {
+    if (foto) foto_url = await subirFotoJpeg(foto, "fondos", `Gastos Campus - ${resto.campus} - ${Date.now()}.jpg`);
+  } catch (e) {
+    return fromSupabaseError(e as { message: string; code?: string });
+  }
+
   const { data, error } = await supabase
     .from("gastos_campus")
-    .insert({ ...parsedBody.data, estado: "Activo", por: perfil?.correo ?? null, tardio: diasDesdeFecha > 7 })
+    .insert({ ...resto, foto_url, estado: "Activo", por: perfil?.correo ?? null, tardio: diasDesdeFecha > 7 })
     .select()
     .single();
   if (error) return fromSupabaseError(error);

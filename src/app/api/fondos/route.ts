@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { ok, fail, fromSupabaseError, parseBody } from "@/lib/api-helpers";
 import { CAMPUS, AREAS, METODOS_FONDO, CATEG_GASTO } from "@/lib/sesiones";
+import { subirFotoJpeg } from "@/lib/fotos";
 import { z } from "zod";
 
 const AREAS_FONDO = [...AREAS, "Campus"] as const;
@@ -27,7 +28,7 @@ const AporteSchema = z.object({
   nombre: z.string().trim().min(3, "Escribe el nombre de quien aporta.").max(60),
   metodo: z.enum(METODOS_FONDO, { error: () => "Elige si fue en efectivo o por transferencia." }),
   descripcion: z.string().trim().max(120).optional(),
-  foto_url: z.string().url().optional(),
+  foto: z.string().optional(),
   motivo: z.string().trim().max(300).optional(),
 });
 
@@ -44,7 +45,7 @@ const GastoSchema = z.object({
   boleta: z.string().trim().min(1, "Escribe el número de boleta (o S/B si no tiene).").max(30),
   categoria: z.enum(CATEG_GASTO, { error: () => "Elige la categoría del gasto." }),
   descripcion: z.string().trim().min(5, "Cuenta en qué se gastó.").max(200),
-  foto_url: z.string().url().optional(),
+  foto: z.string().optional(),
   motivo: z.string().trim().max(300).optional(),
 });
 
@@ -96,10 +97,21 @@ export async function POST(req: Request) {
     (Date.now() - new Date(`${parsedBody.data.fecha}T00:00:00Z`).getTime()) / 86_400_000
   );
 
+  const { foto, ...resto } = parsedBody.data;
+  let foto_url: string | null = null;
+  try {
+    if (foto) {
+      foto_url = await subirFotoJpeg(foto, "fondos", `Fondo ${resto.area} - ${resto.campus} - ${resto.tipo} - ${Date.now()}.jpg`);
+    }
+  } catch (e) {
+    return fromSupabaseError(e as { message: string; code?: string });
+  }
+
   const { data, error } = await supabase
     .from("fondos_equipo")
     .insert({
-      ...parsedBody.data,
+      ...resto,
+      foto_url,
       estado: "Activo",
       por: perfil?.correo ?? null,
       tardio: diasDesdeFecha > 7,
