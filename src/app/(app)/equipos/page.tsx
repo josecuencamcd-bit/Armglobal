@@ -14,6 +14,25 @@ type Integrante = {
   estado: string;
 };
 
+type Ficha = {
+  id: number;
+  servicio: string;
+  tipo: string;
+  area: string;
+  fecha: string;
+  puesto: string;
+  nombre: string | null;
+  encargado: string | null;
+};
+
+/** Equivalente a FICHA_HOJAS/FICHA_AREAS de Code.gs: antes se sincronizaba
+ * sola desde una hoja de cálculo externa (Ficha) cada hora; acá el líder la
+ * carga a mano desde "Mi equipo" (api_fichaActualizar → /api/fichas-servicio). */
+const SERVICIOS = ["Jueves 8pm", "Domingo 11am", "Domingo 6pm"] as const;
+function hoyISO() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 /** Módulo Equipos (= "Mi equipo"/integrantes) — equivalente a api_ecoEquipo*
  * de la app vieja, contra /api/integrantes(/[id]), ya existentes. */
 export default function EquiposPage() {
@@ -24,6 +43,12 @@ export default function EquiposPage() {
   const [mostrarForm, setMostrarForm] = useState(false);
   const [guardando, setGuardando] = useState(false);
 
+  const [servicio, setServicio] = useState<(typeof SERVICIOS)[number]>(SERVICIOS[0]);
+  const [fechaFicha, setFechaFicha] = useState(hoyISO());
+  const [ficha, setFicha] = useState<Ficha[] | null>(null);
+  const [mostrarFormFicha, setMostrarFormFicha] = useState(false);
+  const [guardandoFicha, setGuardandoFicha] = useState(false);
+
   const cargar = useCallback(async (c: string, a: string) => {
     const res = await fetch(`/api/integrantes?campus=${encodeURIComponent(c)}&area=${encodeURIComponent(a)}`);
     const json = await res.json();
@@ -32,9 +57,55 @@ export default function EquiposPage() {
     setError(null);
   }, []);
 
+  const cargarFicha = useCallback(async (a: string, serv: string, f: string) => {
+    const res = await fetch(
+      `/api/fichas-servicio?servicio=${encodeURIComponent(serv)}&tipo=${encodeURIComponent(a)}&fecha=${encodeURIComponent(f)}`
+    );
+    const json = await res.json();
+    if (!json.ok) return;
+    setFicha(json.data.filter((x: Ficha) => x.area === a));
+  }, []);
+
   useEffect(() => {
     cargar(campus, area);
   }, [campus, area, cargar]);
+
+  useEffect(() => {
+    cargarFicha(area, servicio, fechaFicha);
+  }, [area, servicio, fechaFicha, cargarFicha]);
+
+  async function crearFicha(fd: FormData) {
+    setGuardandoFicha(true);
+    const res = await fetch("/api/fichas-servicio", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        servicio,
+        tipo: area,
+        area,
+        fecha: fechaFicha,
+        puesto: fd.get("puesto"),
+        nombre: fd.get("nombre") || undefined,
+        encargado: fd.get("encargado") || undefined,
+      }),
+    });
+    const json = await res.json();
+    setGuardandoFicha(false);
+    if (!json.ok) { setError(json.error); return; }
+    setMostrarFormFicha(false);
+    await cargarFicha(area, servicio, fechaFicha);
+  }
+
+  async function editarNombreFicha(id: number, nombre: string) {
+    const res = await fetch(`/api/fichas-servicio/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ nombre }),
+    });
+    const json = await res.json();
+    if (!json.ok) { setError(json.error); return; }
+    await cargarFicha(area, servicio, fechaFicha);
+  }
 
   async function crear(fd: FormData) {
     setGuardando(true);
@@ -126,6 +197,70 @@ export default function EquiposPage() {
           <button className="boton-peligro" onClick={() => darDeBaja(i.id)}>
             Dar de baja
           </button>
+        </div>
+      ))}
+
+      <h2 className="titulo" style={{ fontSize: "1.05rem", marginTop: 28 }}>Ficha de servicio</h2>
+      <p className="muted" style={{ fontSize: "0.82rem", marginTop: -8 }}>
+        Quién sirve en {area} para un servicio y fecha puntual.
+      </p>
+
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        <div className="campo" style={{ flex: 1, minWidth: 160 }}>
+          <label>Servicio</label>
+          <select value={servicio} onChange={(e) => setServicio(e.target.value as (typeof SERVICIOS)[number])}>
+            {SERVICIOS.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+        </div>
+        <div className="campo" style={{ flex: 1, minWidth: 140 }}>
+          <label>Fecha</label>
+          <input type="date" value={fechaFicha} onChange={(e) => setFechaFicha(e.target.value)} />
+        </div>
+      </div>
+
+      <button className="boton" style={{ marginBottom: 16 }} onClick={() => setMostrarFormFicha((v) => !v)}>
+        {mostrarFormFicha ? "Cerrar" : "Agregar puesto"}
+      </button>
+
+      {mostrarFormFicha && (
+        <form className="tarjeta" action={(fd) => crearFicha(fd)} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div className="campo">
+            <label>Puesto</label>
+            <input name="puesto" required />
+          </div>
+          <div className="campo">
+            <label>Nombre</label>
+            <input name="nombre" />
+          </div>
+          <div className="campo">
+            <label>Encargado</label>
+            <input name="encargado" />
+          </div>
+          <button className="boton" type="submit" disabled={guardandoFicha}>
+            {guardandoFicha ? "Guardando…" : "Agregar"}
+          </button>
+        </form>
+      )}
+
+      {ficha?.length === 0 && (
+        <p className="muted">Sin puestos cargados para {servicio} · {fechaFicha}.</p>
+      )}
+      {ficha?.map((f) => (
+        <div className="fila" key={f.id}>
+          <div>
+            <div>{f.puesto}</div>
+            <div className="muted" style={{ fontSize: "0.78rem" }}>{f.encargado || ""}</div>
+          </div>
+          <input
+            defaultValue={f.nombre ?? ""}
+            placeholder="Nombre"
+            style={{ maxWidth: 160 }}
+            onBlur={(e) => {
+              if (e.target.value !== (f.nombre ?? "")) editarNombreFicha(f.id, e.target.value);
+            }}
+          />
         </div>
       ))}
     </div>
