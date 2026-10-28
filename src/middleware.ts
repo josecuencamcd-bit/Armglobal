@@ -38,6 +38,8 @@ export async function middleware(request: NextRequest) {
   const esPublica =
     request.nextUrl.pathname.startsWith("/login") ||
     request.nextUrl.pathname.startsWith("/solicitar-acceso") ||
+    request.nextUrl.pathname.startsWith("/recuperar") ||
+    request.nextUrl.pathname.startsWith("/actualizar-clave") ||
     request.nextUrl.pathname.startsWith("/api/solicitudes-acceso") ||
     request.nextUrl.pathname.startsWith("/api/whatsapp") ||
     request.nextUrl.pathname.startsWith("/api/cron");

@@ -65,6 +65,11 @@ export default function LoginPage() {
         </button>
       </form>
       <p className="muted" style={{ textAlign: "center" }}>
+        <a href="/recuperar" style={{ color: "var(--accent)" }}>
+          ¿Olvidaste tu clave?
+        </a>
+      </p>
+      <p className="muted" style={{ textAlign: "center" }}>
         ¿No tienes cuenta?{" "}
         <a href="/solicitar-acceso" style={{ color: "var(--accent)" }}>
           Pide acceso
