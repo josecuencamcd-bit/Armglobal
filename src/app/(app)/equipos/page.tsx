@@ -42,6 +42,8 @@ export default function EquiposPage() {
   const [error, setError] = useState<string | null>(null);
   const [mostrarForm, setMostrarForm] = useState(false);
   const [guardando, setGuardando] = useState(false);
+  const [editando, setEditando] = useState<Integrante | null>(null);
+  const [guardandoEdit, setGuardandoEdit] = useState(false);
 
   const [servicio, setServicio] = useState<(typeof SERVICIOS)[number]>(SERVICIOS[0]);
   const [fechaFicha, setFechaFicha] = useState(hoyISO());
@@ -127,6 +129,26 @@ export default function EquiposPage() {
     await cargar(campus, area);
   }
 
+  async function guardarEdicion(fd: FormData) {
+    if (!editando) return;
+    setGuardandoEdit(true);
+    const res = await fetch(`/api/integrantes/${editando.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        nombre: fd.get("nombre"),
+        telefono: fd.get("telefono") || undefined,
+        correo: fd.get("correo") || undefined,
+        area: fd.get("area"),
+      }),
+    });
+    const json = await res.json();
+    setGuardandoEdit(false);
+    if (!json.ok) { setError(json.error); return; }
+    setEditando(null);
+    await cargar(campus, area);
+  }
+
   async function darDeBaja(id: number) {
     if (!confirm("¿Marcar como inactivo?")) return;
     const res = await fetch(`/api/integrantes/${id}`, { method: "DELETE" });
@@ -189,14 +211,46 @@ export default function EquiposPage() {
         <p className="muted">Sin integrantes activos en {area} · {campus}.</p>
       )}
       {lista?.filter((i) => i.estado === "Activo").map((i) => (
-        <div className="fila" key={i.id}>
-          <div>
-            <div>{i.nombre}</div>
-            <div className="muted" style={{ fontSize: "0.78rem" }}>{i.telefono || i.correo || ""}</div>
+        <div key={i.id}>
+          <div className="fila">
+            <div>
+              <div>{i.nombre}</div>
+              <div className="muted" style={{ fontSize: "0.78rem" }}>{i.telefono || i.correo || ""}</div>
+            </div>
+            <span style={{ display: "flex", gap: 8 }}>
+              <button className="boton-secundario" onClick={() => setEditando(editando?.id === i.id ? null : i)}>
+                {editando?.id === i.id ? "Cerrar" : "Editar"}
+              </button>
+              <button className="boton-peligro" onClick={() => darDeBaja(i.id)}>
+                Dar de baja
+              </button>
+            </span>
           </div>
-          <button className="boton-peligro" onClick={() => darDeBaja(i.id)}>
-            Dar de baja
-          </button>
+          {editando?.id === i.id && (
+            <form className="tarjeta" action={(fd) => guardarEdicion(fd)} style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 10 }}>
+              <div className="campo">
+                <label>Nombre</label>
+                <input name="nombre" defaultValue={i.nombre} required />
+              </div>
+              <div className="campo">
+                <label>Teléfono</label>
+                <input name="telefono" defaultValue={i.telefono ?? ""} />
+              </div>
+              <div className="campo">
+                <label>Correo</label>
+                <input name="correo" type="email" defaultValue={i.correo ?? ""} />
+              </div>
+              <div className="campo">
+                <label>Área</label>
+                <select name="area" defaultValue={i.area}>
+                  {AREAS.map((a) => <option key={a} value={a}>{a}</option>)}
+                </select>
+              </div>
+              <button className="boton" type="submit" disabled={guardandoEdit}>
+                {guardandoEdit ? "Guardando…" : "Guardar cambios"}
+              </button>
+            </form>
+          )}
         </div>
       ))}
 
