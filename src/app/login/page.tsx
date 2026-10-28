@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
@@ -27,6 +27,21 @@ function LoginForm() {
   const [error, setError] = useState<string | null>(
     searchParams.get("bloqueado") === "1" ? "Tu acceso está pendiente de aprobación." : null
   );
+  const [redirigiendo, setRedirigiendo] = useState(false);
+
+  useEffect(() => {
+    // Supabase recorta el redirectTo del correo de recuperación a la raíz
+    // del dominio (ignora la ruta /actualizar-clave), así que el link llega
+    // acá con la sesión de recuperación en el hash (#access_token=...&
+    // type=recovery). La reenviamos a donde sí se procesa, conservando el
+    // hash para que Supabase la detecte ahí.
+    if (window.location.hash.includes("type=recovery")) {
+      setRedirigiendo(true);
+      router.replace(`/actualizar-clave${window.location.hash}`);
+    }
+  }, [router]);
+
+  if (redirigiendo) return null;
 
   async function entrar(e: React.FormEvent) {
     e.preventDefault();

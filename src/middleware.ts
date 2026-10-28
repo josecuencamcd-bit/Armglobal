@@ -48,6 +48,7 @@ export async function middleware(request: NextRequest) {
   const hayUsuario = !!user && !bloqueado;
 
   const esPublica =
+    request.nextUrl.pathname === "/" ||
     request.nextUrl.pathname.startsWith("/login") ||
     request.nextUrl.pathname.startsWith("/solicitar-acceso") ||
     request.nextUrl.pathname.startsWith("/recuperar") ||
