@@ -12,6 +12,8 @@ export const ICONOS: Record<string, string> = {
   cumples: '<rect x="3" y="9" width="18" height="12" rx="2"/><path d="M12 9v12"/><path d="M3 14h18"/><path d="M12 9c-2.5 0-4-1-4-2.6S9.3 4 10.5 4C12 4 12 6.5 12 9zM12 9c2.5 0 4-1 4-2.6S14.7 4 13.5 4C12 4 12 6.5 12 9z"/>',
   perfiles: '<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>',
   reuniones: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/><path d="M9 16l2 2 4-4"/>',
+  soporte: '<path d="M12 2a7 7 0 0 0-7 7v3a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h1v-7a6 6 0 1 1 12 0v7h1a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2v-3a7 7 0 0 0-7-7z"/><path d="M8 16v2a4 4 0 0 0 4 4"/>',
+  mas: '<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>',
 };
 
 export function Icono({ id, size = 22 }: { id: string; size?: number }) {

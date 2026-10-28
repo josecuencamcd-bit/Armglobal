@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { CAMPUS } from "@/lib/sesiones";
+import { useCampus } from "@/lib/campus-context";
 
 const ESTADOS = ["Pendiente", "Contactado", "Agendado", "Reunido", "Sin respuesta"] as const;
 
@@ -20,7 +20,7 @@ type Visita = {
  * Conexión queda para una vuelta siguiente — por ahora el foco es registrar
  * y mover el estado, que es lo que usa Conexión día a día.) */
 export default function VisitasPage() {
-  const [campus, setCampus] = useState<(typeof CAMPUS)[number]>(CAMPUS[0]);
+  const { campusActivo: campus, puedeElegir, elegirCampus } = useCampus();
   const [lista, setLista] = useState<Visita[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [mostrarForm, setMostrarForm] = useState(false);
@@ -72,17 +72,18 @@ export default function VisitasPage() {
 
   return (
     <div className="contenedor" style={{ paddingTop: 24 }}>
-      <h1 className="titulo" style={{ fontSize: "1.3rem" }}>Visitas</h1>
-      {error && <p className="aviso">{error}</p>}
-
-      <div className="campo">
-        <label>Campus</label>
-        <select value={campus} onChange={(e) => setCampus(e.target.value as (typeof CAMPUS)[number])}>
-          {CAMPUS.map((c) => (
-            <option key={c} value={c}>{c}</option>
-          ))}
-        </select>
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
+        <h1 className="titulo" style={{ fontSize: "1.3rem" }}>Visitas</h1>
+        <span className="muted" style={{ fontSize: "0.82rem" }}>
+          {campus}
+          {puedeElegir && (
+            <button type="button" onClick={elegirCampus} style={{ background: "none", border: 0, color: "var(--accent)", marginLeft: 6, cursor: "pointer", padding: 0, font: "inherit" }}>
+              cambiar
+            </button>
+          )}
+        </span>
       </div>
+      {error && <p className="aviso">{error}</p>}
 
       <button className="boton" style={{ marginBottom: 16 }} onClick={() => setMostrarForm((v) => !v)}>
         {mostrarForm ? "Cerrar" : "Registrar visita"}

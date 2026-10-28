@@ -261,9 +261,9 @@ export default function PerfilesPage() {
                 <select
                   value={p.campus ?? ""}
                   disabled={guardando}
-                  onChange={(e) => guardarPerfil(p.id, { campus: e.target.value || undefined })}
+                  onChange={(e) => guardarPerfil(p.id, { campus: e.target.value ? e.target.value : null })}
                 >
-                  <option value="">Sin campus</option>
+                  <option value="">Ambos campus (elige al entrar)</option>
                   {CAMPUS.map((c) => (
                     <option key={c} value={c}>{c}</option>
                   ))}

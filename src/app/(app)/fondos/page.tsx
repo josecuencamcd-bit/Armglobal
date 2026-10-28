@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { METODOS_FONDO, CATEG_GASTO } from "@/lib/sesiones";
+import { useCampus } from "@/lib/campus-context";
 
 type Informe = {
   area: string;
@@ -31,6 +32,7 @@ const fmt = (n: number) => `$${n.toLocaleString("es-CL")}`;
  * /api/fondos/informe y /api/fondos, ya existentes. Se deja fuera por ahora
  * el cierre de mes y las autorizaciones (siguiente vuelta). */
 export default function FondosPage() {
+  const { campusActivo } = useCampus();
   const [informe, setInforme] = useState<Informe | null>(null);
   const [area, setArea] = useState<string | null>(null);
   const [movs, setMovs] = useState<Movimiento[] | null>(null);
@@ -40,8 +42,9 @@ export default function FondosPage() {
   const [guardando, setGuardando] = useState(false);
 
   const cargar = useCallback(async (a: string | null) => {
-    const url = a ? `/api/fondos/informe?area=${encodeURIComponent(a)}` : "/api/fondos/informe";
-    const res = await fetch(url);
+    const qs = new URLSearchParams({ campus: campusActivo });
+    if (a) qs.set("area", a);
+    const res = await fetch(`/api/fondos/informe?${qs.toString()}`);
     const json = await res.json();
     if (!json.ok) { setError(json.error); return; }
     setInforme(json.data);
@@ -50,7 +53,7 @@ export default function FondosPage() {
     const rm = await fetch(`/api/fondos?campus=${encodeURIComponent(json.data.campus)}&area=${encodeURIComponent(json.data.area)}`);
     const jm = await rm.json();
     if (jm.ok) setMovs(jm.data.slice(0, 20));
-  }, []);
+  }, [campusActivo]);
 
   useEffect(() => {
     cargar(null);

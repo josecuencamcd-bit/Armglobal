@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { Database } from "@/lib/supabase/types";
 import { MODULOS } from "@/lib/modulos";
 import { Icono } from "@/lib/iconos";
+import { CampusProvider, useCampus } from "@/lib/campus-context";
 
 type Rol = Database["public"]["Enums"]["rol_t"];
 
@@ -35,13 +36,20 @@ function iniciales(nombre: string): string {
     .join("");
 }
 
-type Perfil = { nombre: string; roles: Rol[]; campus: string | null };
+type Perfil = { nombre: string; roles: Rol[]; campus: "Punta Arenas" | "Puerto Natales" | null };
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+/** 4 módulos principales visibles directo en la barra inferior; el resto
+ * vive detrás de "Más" (mismo patrón que la app vieja: principal=4,
+ * resto=hoja). Así la barra no queda larga en pantallas chicas. */
+const PRINCIPALES = ["inicio", "encuentros", "fondos", "soporte"];
+
+function Shell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const supabase = createClient();
   const [perfil, setPerfil] = useState<Perfil | null>(null);
+  const [masAbierto, setMasAbierto] = useState(false);
+  const { campusActivo, puedeElegir, elegirCampus } = useCampus();
 
   useEffect(() => {
     let cancelado = false;
@@ -69,37 +77,65 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   const rol = perfil ? rolPrincipal(perfil.roles) : null;
+  const principales = MODULOS.filter((m) => PRINCIPALES.includes(m.key));
+  const resto = MODULOS.filter((m) => !PRINCIPALES.includes(m.key));
+  const hayActivoEnResto = resto.some((m) => pathname?.startsWith(m.href));
+
+  function ir(href: string) {
+    setMasAbierto(false);
+    router.push(href);
+  }
 
   return (
     <div style={{ minHeight: "100dvh", display: "flex", flexDirection: "column" }}>
-      <header className="brandbar" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div>
+      <header className="brandbar" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+        <div style={{ minWidth: 0 }}>
           <div style={{ fontWeight: 700, letterSpacing: "0.02em" }}>armglobal</div>
           <p className="tagline" style={{ margin: "2px 0 0" }}>
             La <em>Iglesia</em> es mucho más de lo que te dijeron
           </p>
         </div>
-        {perfil && (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
           <button
-            onClick={salir}
-            title={`Salir (${perfil.nombre} · ${rol}${perfil.campus ? " · " + perfil.campus : ""})`}
-            className="avatar"
-            style={{ cursor: "pointer" }}
+            onClick={elegirCampus}
+            disabled={!puedeElegir}
+            title={puedeElegir ? "Tocar para cambiar de campus" : undefined}
+            style={{
+              background: "var(--glass-2)",
+              border: "1px solid var(--hud-line)",
+              borderRadius: 999,
+              color: "var(--ink)",
+              fontSize: "0.72rem",
+              fontWeight: 600,
+              padding: "5px 10px",
+              cursor: puedeElegir ? "pointer" : "default",
+              whiteSpace: "nowrap",
+            }}
           >
-            {iniciales(perfil.nombre)}
+            {campusActivo}{puedeElegir ? " ▾" : ""}
           </button>
-        )}
+          {perfil && (
+            <button
+              onClick={salir}
+              title={`Salir (${perfil.nombre} · ${rol})`}
+              className="avatar"
+              style={{ cursor: "pointer" }}
+            >
+              {iniciales(perfil.nombre)}
+            </button>
+          )}
+        </div>
       </header>
 
       <main style={{ flex: 1, paddingBottom: 76 }}>{children}</main>
 
       <nav className="bottom-nav">
-        {MODULOS.map((m) => {
+        {principales.map((m) => {
           const activo = pathname?.startsWith(m.href);
           return (
             <button
               key={m.key}
-              onClick={() => m.listo && router.push(m.href)}
+              onClick={() => m.listo && ir(m.href)}
               disabled={!m.listo}
               aria-current={activo ? "true" : "false"}
             >
@@ -109,7 +145,83 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </button>
           );
         })}
+        <button onClick={() => setMasAbierto(true)} aria-current={hayActivoEnResto ? "true" : "false"}>
+          <Icono id="mas" size={21} />
+          <span>Más</span>
+        </button>
       </nav>
+
+      {masAbierto && (
+        <div
+          onClick={() => setMasAbierto(false)}
+          style={{
+            position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)",
+            display: "flex", alignItems: "flex-end", zIndex: 50,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="hoja-mas"
+            style={{
+              width: "100%", maxWidth: 480, margin: "0 auto",
+              background: "var(--surface-2)", borderTop: "1px solid var(--hud-line)",
+              borderRadius: "var(--r-lg) var(--r-lg) 0 0",
+              padding: "18px 14px 28px",
+              display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10,
+            }}
+          >
+            {resto.map((m) => {
+              const activo = pathname?.startsWith(m.href);
+              return (
+                <button
+                  key={m.key}
+                  onClick={() => m.listo && ir(m.href)}
+                  disabled={!m.listo}
+                  className="tarjeta"
+                  style={{
+                    display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
+                    padding: "14px 6px", cursor: m.listo ? "pointer" : "default",
+                    opacity: m.listo ? 1 : 0.5,
+                    border: activo ? "1px solid var(--accent)" : undefined,
+                  }}
+                >
+                  <Icono id={m.icon} size={24} />
+                  <span style={{ fontSize: "0.78rem", textAlign: "center" }}>{m.label}</span>
+                  {!m.listo && <span style={{ fontSize: "0.6rem", opacity: 0.8 }}>Pronto</span>}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+export default function AppLayout({ children }: { children: React.ReactNode }) {
+  const supabase = createClient();
+  const [campusFijo, setCampusFijo] = useState<"Punta Arenas" | "Puerto Natales" | null | undefined>(undefined);
+
+  useEffect(() => {
+    let cancelado = false;
+    (async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase.from("perfiles").select("campus").eq("id", user.id).maybeSingle();
+      if (!cancelado) setCampusFijo((data?.campus as "Punta Arenas" | "Puerto Natales" | null) ?? null);
+    })();
+    return () => {
+      cancelado = true;
+    };
+  }, [supabase]);
+
+  if (campusFijo === undefined) return null;
+
+  return (
+    <CampusProvider campusFijo={campusFijo}>
+      <Shell>{children}</Shell>
+    </CampusProvider>
   );
 }

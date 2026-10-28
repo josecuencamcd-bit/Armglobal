@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { CAMPUS } from "@/lib/sesiones";
+import { useCampus } from "@/lib/campus-context";
 
 type Turno = { semana: string; campus: string; nombres: string[] | null; correos: string[] | null };
 
@@ -17,7 +17,7 @@ function lunesDe(fecha: Date): string {
 /** Módulo Turnos: calendario de quién administra cada campus semana a
  * semana — equivalente a api_turnoLista/api_turnoGuardar, ya existentes. */
 export default function TurnosPage() {
-  const [campus, setCampus] = useState<(typeof CAMPUS)[number]>(CAMPUS[0]);
+  const { campusActivo: campus, puedeElegir, elegirCampus } = useCampus();
   const [lista, setLista] = useState<Turno[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [semana, setSemana] = useState(lunesDe(new Date()));
@@ -58,17 +58,18 @@ export default function TurnosPage() {
 
   return (
     <div className="contenedor" style={{ paddingTop: 24 }}>
-      <h1 className="titulo" style={{ fontSize: "1.3rem" }}>Turnos</h1>
-      {error && <p className="aviso">{error}</p>}
-
-      <div className="campo">
-        <label>Campus</label>
-        <select value={campus} onChange={(e) => setCampus(e.target.value as (typeof CAMPUS)[number])}>
-          {CAMPUS.map((c) => (
-            <option key={c} value={c}>{c}</option>
-          ))}
-        </select>
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
+        <h1 className="titulo" style={{ fontSize: "1.3rem" }}>Turnos</h1>
+        <span className="muted" style={{ fontSize: "0.82rem" }}>
+          {campus}
+          {puedeElegir && (
+            <button type="button" onClick={elegirCampus} style={{ background: "none", border: 0, color: "var(--accent)", marginLeft: 6, cursor: "pointer", padding: 0, font: "inherit" }}>
+              cambiar
+            </button>
+          )}
+        </span>
       </div>
+      {error && <p className="aviso">{error}</p>}
 
       <div className="tarjeta" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         <p style={{ fontWeight: 600, margin: 0 }}>Asignar semana</p>

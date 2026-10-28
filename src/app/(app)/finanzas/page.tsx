@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { GASTOS_ITEMS } from "@/lib/sesiones";
+import { useCampus } from "@/lib/campus-context";
 
 type Informe = {
   campus: string;
@@ -20,18 +21,19 @@ const fmt = (n: number) => `$${n.toLocaleString("es-CL")}`;
  * de campus por ítem, saldo. Contra /api/gastos-campus/informe (lectura) y
  * /api/gastos-campus (registrar gasto), ya existentes. */
 export default function FinanzasPage() {
+  const { campusActivo } = useCampus();
   const [informe, setInforme] = useState<Informe | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [mostrarForm, setMostrarForm] = useState(false);
   const [guardando, setGuardando] = useState(false);
 
   const cargar = useCallback(async () => {
-    const res = await fetch("/api/gastos-campus/informe");
+    const res = await fetch(`/api/gastos-campus/informe?campus=${encodeURIComponent(campusActivo)}`);
     const json = await res.json();
     if (!json.ok) { setError(json.error); return; }
     setInforme(json.data);
     setError(null);
-  }, []);
+  }, [campusActivo]);
 
   useEffect(() => {
     cargar();

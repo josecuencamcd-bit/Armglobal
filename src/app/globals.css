@@ -34,6 +34,10 @@ html, body {
   font-family: var(--font-body);
   margin: 0;
   padding: 0;
+  overscroll-behavior-y: none;
+  touch-action: manipulation;
+  width: 100%;
+  overflow-x: hidden;
 }
 
 a { color: inherit; }
@@ -48,6 +52,24 @@ input, select, button, textarea {
   margin: 0 auto;
   padding: 16px;
 }
+
+/* Escritorio: la columna mobile se mantiene legible pero el fondo de la
+ * página aprovecha el ancho — evita el look "app angosta perdida en
+ * medio de la pantalla" sin tener que rehacer cada página. */
+@media (min-width: 900px) {
+  .contenedor { max-width: 720px; padding: 24px 16px; }
+  .bottom-nav { width: 720px; max-width: 720px; left: 50%; right: auto; transform: translateX(-50%); border-radius: var(--r-lg) var(--r-lg) 0 0; }
+}
+
+.selector-campus {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  text-align: center;
+}
+.selector-campus .boton { width: 100%; max-width: 320px; }
 
 .tarjeta {
   background: var(--glass);

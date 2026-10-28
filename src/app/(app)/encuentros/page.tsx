@@ -2,19 +2,22 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { CAMPUS, ENCUENTROS, EVENTOS, proximaFecha } from "@/lib/sesiones";
+import { ENCUENTROS, EVENTOS, proximaFecha } from "@/lib/sesiones";
+import { useCampus } from "@/lib/campus-context";
 
-/** Selector de encuentro (campus/tipo/fecha), equivalente a la pantalla
- * inicial del módulo Encuentros en el HTML embebido de Code.gs. */
+/** Selector de encuentro (tipo/fecha), equivalente a la pantalla inicial
+ * del módulo Encuentros en el HTML embebido de Code.gs. El campus ya no
+ * se elige acá: viene del contexto de sesión (header / primer ingreso),
+ * para que toda la app quede segmentada por el mismo campus a la vez. */
 export default function SelectorEncuentroPage() {
   const router = useRouter();
-  const [campus, setCampus] = useState<(typeof CAMPUS)[number]>(CAMPUS[0]);
-  const [encuentro, setEncuentro] = useState(ENCUENTROS[CAMPUS[0]][0]);
+  const { campusActivo: campus, puedeElegir, elegirCampus } = useCampus();
+  const [encuentro, setEncuentro] = useState(ENCUENTROS[campus][0]);
   const [evento, setEvento] = useState(EVENTOS[0]);
   // La fecha por defecto siempre corresponde al tipo de encuentro elegido
   // (ver proximaFecha) — así "Abrir" sin tocar nada nunca cae en "Encuentro
   // no válido" por un desfase día/tipo.
-  const [fecha, setFecha] = useState(proximaFecha(ENCUENTROS[CAMPUS[0]][0]));
+  const [fecha, setFecha] = useState(proximaFecha(ENCUENTROS[campus][0]));
 
   function irA(e: React.FormEvent) {
     e.preventDefault();
@@ -25,29 +28,20 @@ export default function SelectorEncuentroPage() {
 
   return (
     <div className="contenedor" style={{ paddingTop: 32 }}>
-      <h1 className="titulo" style={{ fontSize: "1.3rem" }}>
-        Encuentros
-      </h1>
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
+        <h1 className="titulo" style={{ fontSize: "1.3rem" }}>
+          Encuentros
+        </h1>
+        <span className="muted" style={{ fontSize: "0.82rem" }}>
+          {campus}
+          {puedeElegir && (
+            <button type="button" onClick={elegirCampus} style={{ background: "none", border: 0, color: "var(--accent)", marginLeft: 6, cursor: "pointer", padding: 0, font: "inherit" }}>
+              cambiar
+            </button>
+          )}
+        </span>
+      </div>
       <form className="tarjeta" onSubmit={irA}>
-        <div className="campo">
-          <label htmlFor="campus">Campus</label>
-          <select
-            id="campus"
-            value={campus}
-            onChange={(e) => {
-              const c = e.target.value as (typeof CAMPUS)[number];
-              setCampus(c);
-              setEncuentro(ENCUENTROS[c][0]);
-              setFecha(proximaFecha(ENCUENTROS[c][0]));
-            }}
-          >
-            {CAMPUS.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-        </div>
         <div className="campo">
           <label htmlFor="encuentro">Encuentro</label>
           <select

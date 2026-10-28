@@ -20,7 +20,7 @@ const PerfilGuardarSchema = z
     roles: z.array(z.enum(ROLES)).optional(),
     areas: z.array(z.enum(AREAS)).optional(),
     sirve: z.array(z.enum(AREAS)).optional(),
-    campus: z.enum(CAMPUS).optional(),
+    campus: z.enum(CAMPUS).nullable().optional(),
     bloqueado: z.boolean().optional(),
   })
   .refine((o) => Object.keys(o).length > 0, { message: "Nada que actualizar." });
