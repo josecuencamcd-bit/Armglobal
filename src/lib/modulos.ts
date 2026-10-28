@@ -8,9 +8,8 @@ export type Modulo = { key: string; label: string; href: string; icon: string; l
 export const MODULOS: Modulo[] = [
   { key: "inicio", label: "Inicio", href: "/inicio", icon: "inicio", listo: true },
   { key: "encuentros", label: "Encuentros", href: "/encuentros", icon: "asistencia", listo: true },
-  { key: "aportes", label: "Aportes", href: "/aportes", icon: "aportes", listo: false },
   { key: "fondos", label: "Fondos", href: "/fondos", icon: "fondo", listo: true },
-  { key: "finanzas", label: "Finanzas", href: "/finanzas", icon: "finanzas", listo: false },
+  { key: "finanzas", label: "Finanzas", href: "/finanzas", icon: "finanzas", listo: true },
   { key: "equipos", label: "Equipos", href: "/equipos", icon: "equipo", listo: true },
   { key: "turnos", label: "Turnos", href: "/turnos", icon: "turnos", listo: true },
   { key: "visitas", label: "Visitas", href: "/visitas", icon: "visitas", listo: true },
