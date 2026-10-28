@@ -13,7 +13,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
  * haya un dominio verificado en Resend. */
 const FROM = "armglobal <onboarding@resend.dev>";
 
-export const APP_URL = "https://armglobal-jmnexia.vercel.app";
+export const APP_URL = "https://armglobal-gnmj.vercel.app";
 const LOGO_URL = `${APP_URL}/icon-512.png`;
 
 function layout(opts: {

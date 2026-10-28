@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { enviarCorreoRecuperarClave } from "@/lib/email";
+import { enviarCorreoRecuperarClave, APP_URL } from "@/lib/email";
 import { ok, parseBody } from "@/lib/api-helpers";
 import { z } from "zod";
 
@@ -17,21 +17,21 @@ export async function POST(req: Request) {
   const parsed = await parseBody(req, Schema);
   if ("error" in parsed) return parsed.error;
 
-  const admin = createAdminClient();
-  const { data, error } = await admin.auth.admin.generateLink({
-    type: "recovery",
-    email: parsed.data.correo,
-    options: { redirectTo: "https://armglobal-jmnexia.vercel.app/actualizar-clave" },
-  });
-
-  // No revelamos si el correo existe o no (evita enumerar cuentas) — siempre
-  // respondemos ok, pero solo mandamos el correo si realmente hay cuenta.
-  if (!error && data?.properties?.action_link) {
-    try {
+  // Todo lo de acá para adentro puede fallar por motivos ajenos al usuario
+  // (red, Resend, redirectTo no permitido en Supabase) — nunca debe traducirse
+  // en un 500 que delate si el correo existe o no.
+  try {
+    const admin = createAdminClient();
+    const { data, error } = await admin.auth.admin.generateLink({
+      type: "recovery",
+      email: parsed.data.correo,
+      options: { redirectTo: `${APP_URL}/actualizar-clave` },
+    });
+    if (!error && data?.properties?.action_link) {
       await enviarCorreoRecuperarClave(parsed.data.correo, data.properties.action_link);
-    } catch {
-      // seguimos igual: no delatamos fallos de envío al cliente
     }
+  } catch {
+    // seguimos igual: no delatamos fallos de envío al cliente
   }
   return ok({ enviado: true });
 }
