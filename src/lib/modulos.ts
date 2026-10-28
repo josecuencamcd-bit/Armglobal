@@ -9,7 +9,7 @@ export const MODULOS: Modulo[] = [
   { key: "inicio", label: "Inicio", href: "/inicio", icon: "inicio", listo: true },
   { key: "encuentros", label: "Encuentros", href: "/encuentros", icon: "asistencia", listo: true },
   { key: "aportes", label: "Aportes", href: "/aportes", icon: "aportes", listo: false },
-  { key: "fondos", label: "Fondos", href: "/fondos", icon: "fondo", listo: false },
+  { key: "fondos", label: "Fondos", href: "/fondos", icon: "fondo", listo: true },
   { key: "finanzas", label: "Finanzas", href: "/finanzas", icon: "finanzas", listo: false },
   { key: "equipos", label: "Equipos", href: "/equipos", icon: "equipo", listo: true },
   { key: "turnos", label: "Turnos", href: "/turnos", icon: "turnos", listo: true },
