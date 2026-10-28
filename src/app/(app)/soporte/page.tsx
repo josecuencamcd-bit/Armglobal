@@ -1,21 +1,31 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Icono } from "@/lib/iconos";
 
 type Acceso = { correo: string; nombre: string; nota: string | null; estado: string };
-type Baja = { id: number; nombre: string | null; campus: string; area: string; motivo: string; estado: string };
 type AutEncuentro = { id: number; nombre: string; campus: string; encuentro: string; fecha: string; motivo: string; estado: string };
 type AutFondos = { id: number; solicitante: string | null; campus: string; area: string; mes: string; motivo: string; estado: string };
 type Propuesta = { id: number; nombres: string; fecha: string; mensaje: string | null; estado: string };
 
-/** Soporte: hub de administración, equivalente al menú Soporte de la app
- * vieja — accesos nuevos, bajas de integrantes, cumpleaños por aprobar y
- * autorizaciones (reabrir un encuentro cerrado / un mes de fondos), todo
- * en un solo lugar para Admin app / Pastores. */
+const TILES: { key: string; label: string; icon: string; href?: string }[] = [
+  { key: "accesos", label: "Accesos", icon: "soporte" },
+  { key: "perfiles", label: "Perfiles", icon: "perfiles", href: "/perfiles" },
+  { key: "fondos", label: "Fondos", icon: "fondo", href: "/fondos" },
+  { key: "cumpleanos", label: "Cumpleaños", icon: "cumples", href: "/cumpleanos" },
+  { key: "turnos", label: "Turnos", icon: "turnos", href: "/turnos" },
+  { key: "nombres", label: "Nombres", icon: "perfiles", href: "/perfiles" },
+];
+
+/** Soporte: mismo menú de la app vieja (grilla Accesos/Perfiles/Fondos/
+ * Cumpleaños/Turnos/Nombres). "Accesos" se resuelve en esta misma
+ * pantalla; el resto son atajos a su módulo. Abajo, autorizaciones que no
+ * tienen otro lugar en el nav (reabrir un encuentro o un mes de fondos
+ * cerrado, y mensajes de cumpleaños por aprobar). */
 export default function SoportePage() {
+  const router = useRouter();
   const [accesos, setAccesos] = useState<Acceso[] | null>(null);
-  const [bajas, setBajas] = useState<Baja[] | null>(null);
   const [autEnc, setAutEnc] = useState<AutEncuentro[] | null>(null);
   const [autFon, setAutFon] = useState<AutFondos[] | null>(null);
   const [cumples, setCumples] = useState<Propuesta[] | null>(null);
@@ -23,16 +33,14 @@ export default function SoportePage() {
   const [ocupado, setOcupado] = useState<string | null>(null);
 
   const cargar = useCallback(async () => {
-    const [ra, rb, rae, raf, rc] = await Promise.all([
+    const [ra, rae, raf, rc] = await Promise.all([
       fetch("/api/solicitudes-acceso"),
-      fetch("/api/integrantes/solicitudes-baja"),
       fetch("/api/autorizaciones"),
       fetch("/api/fondos/autorizaciones"),
       fetch("/api/cumpleanos/propuestas"),
     ]);
-    const [ja, jb, jae, jaf, jc] = await Promise.all([ra.json(), rb.json(), rae.json(), raf.json(), rc.json()]);
+    const [ja, jae, jaf, jc] = await Promise.all([ra.json(), rae.json(), raf.json(), rc.json()]);
     if (ja.ok) setAccesos(ja.data.filter((x: Acceso) => x.estado === "Pendiente"));
-    if (jb.ok) setBajas(jb.data.filter((x: Baja) => x.estado === "Pendiente"));
     if (jae.ok) setAutEnc(jae.data.filter((x: AutEncuentro) => x.estado === "Pendiente"));
     if (jaf.ok) setAutFon(jaf.data.filter((x: AutFondos) => x.estado === "Pendiente Pastor" || x.estado === "Pendiente Admin"));
     if (jc.ok) setCumples(jc.data.filter((x: Propuesta) => x.estado === "Pendiente"));
@@ -73,15 +81,32 @@ export default function SoportePage() {
     await cargar();
   }
 
-  const cargando = accesos === null && bajas === null && autEnc === null && autFon === null && cumples === null;
-
   return (
     <div className="contenedor" style={{ paddingTop: 24 }}>
-      <h1 className="titulo" style={{ fontSize: "1.3rem" }}>Soporte</h1>
+      <h1 className="titulo" style={{ fontSize: "1.3rem", marginBottom: 16 }}>Soporte</h1>
       {error && <p className="aviso">{error}</p>}
-      {cargando && <p className="muted">Cargando…</p>}
 
-      <Seccion titulo="Solicitudes de acceso" vacio="Sin solicitudes pendientes." cantidad={accesos?.length}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10, marginBottom: 20 }}>
+        {TILES.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => t.href && router.push(t.href)}
+            className="tarjeta"
+            style={{
+              display: "flex", alignItems: "center", gap: 10, margin: 0, padding: "14px 16px",
+              cursor: "pointer", textAlign: "left",
+              background: t.key === "accesos" ? "var(--gold-grad)" : undefined,
+              color: t.key === "accesos" ? "#1a1203" : undefined,
+              border: t.key === "accesos" ? "none" : undefined,
+            }}
+          >
+            <Icono id={t.icon} size={20} />
+            <span style={{ fontWeight: 600 }}>{t.label}</span>
+          </button>
+        ))}
+      </div>
+
+      <Seccion titulo="Solicitudes de acceso" vacio="No hay solicitudes pendientes." cantidad={accesos?.length}>
         {accesos?.map((a) => (
           <div className="fila" key={a.correo}>
             <div>
@@ -91,21 +116,6 @@ export default function SoportePage() {
             <div style={{ display: "flex", gap: 6 }}>
               <button className="boton" style={{ padding: "6px 10px", fontSize: "0.82rem" }} disabled={ocupado === a.correo} onClick={() => resolverAcceso(a.correo, true)}>Aprobar</button>
               <button style={{ padding: "6px 10px", fontSize: "0.82rem", background: "none", border: "1px solid var(--line)", borderRadius: 8, color: "var(--muted)" }} disabled={ocupado === a.correo} onClick={() => resolverAcceso(a.correo, false)}>Rechazar</button>
-            </div>
-          </div>
-        ))}
-      </Seccion>
-
-      <Seccion titulo="Bajas de integrantes" vacio="Sin bajas pendientes." cantidad={bajas?.length}>
-        {bajas?.map((b) => (
-          <div className="fila" key={b.id}>
-            <div>
-              <div>{b.nombre ?? `Integrante #${b.id}`}</div>
-              <div className="muted" style={{ fontSize: "0.78rem" }}>{b.campus} · {b.area} · {b.motivo}</div>
-            </div>
-            <div style={{ display: "flex", gap: 6 }}>
-              <button className="boton" style={{ padding: "6px 10px", fontSize: "0.82rem" }} disabled={ocupado === `b${b.id}`} onClick={() => resolver(`/api/integrantes/solicitudes-baja/${b.id}`, `b${b.id}`, { aprobar: true })}>Aprobar</button>
-              <button style={{ padding: "6px 10px", fontSize: "0.82rem", background: "none", border: "1px solid var(--line)", borderRadius: 8, color: "var(--muted)" }} disabled={ocupado === `b${b.id}`} onClick={() => resolver(`/api/integrantes/solicitudes-baja/${b.id}`, `b${b.id}`, { aprobar: false })}>Rechazar</button>
             </div>
           </div>
         ))}
@@ -156,13 +166,6 @@ export default function SoportePage() {
         ))}
       </Seccion>
 
-      <p className="muted" style={{ margin: "20px 0 8px" }}>Gestión completa</p>
-      <Link href="/perfiles" className="tarjeta" style={{ display: "block", marginBottom: 12 }}>
-        Perfiles — roles, campus y módulos de cada persona →
-      </Link>
-      <Link href="/cumpleanos" className="tarjeta" style={{ display: "block" }}>
-        Cumpleaños — próximos y mensajes →
-      </Link>
     </div>
   );
 }

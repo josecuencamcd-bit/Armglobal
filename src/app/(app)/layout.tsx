@@ -38,10 +38,10 @@ function iniciales(nombre: string): string {
 
 type Perfil = { nombre: string; roles: Rol[]; campus: "Punta Arenas" | "Puerto Natales" | null };
 
-/** 4 módulos principales visibles directo en la barra inferior; el resto
- * vive detrás de "Más" (mismo patrón que la app vieja: principal=4,
- * resto=hoja). Así la barra no queda larga en pantallas chicas. */
-const PRINCIPALES = ["inicio", "encuentros", "fondos", "soporte"];
+/** Mismos 5 ítems directos en la barra inferior que la app vieja —
+ * Inicio, Soporte, Bajas, Panorama, Cumpleaños — el resto vive detrás de
+ * "Más" (Reuniones, Mi perfil, y la Administración de cada módulo). */
+const PRINCIPALES = ["inicio", "soporte", "bajas", "panorama", "cumpleanos"];
 
 function Shell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -167,30 +167,50 @@ function Shell({ children }: { children: React.ReactNode }) {
               background: "var(--surface-2)", borderTop: "1px solid var(--hud-line)",
               borderRadius: "var(--r-lg) var(--r-lg) 0 0",
               padding: "18px 14px 28px",
-              display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10,
             }}
           >
-            {resto.map((m) => {
-              const activo = pathname?.startsWith(m.href);
-              return (
+            <p style={{ fontWeight: 700, margin: "0 0 10px", fontSize: "0.9rem" }}>Más opciones</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 14 }}>
+              {resto.filter((m) => m.key === "reuniones" || m.key === "perfil").map((m) => (
                 <button
                   key={m.key}
-                  onClick={() => m.listo && ir(m.href)}
-                  disabled={!m.listo}
+                  onClick={() => ir(m.href)}
                   className="tarjeta"
-                  style={{
-                    display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
-                    padding: "14px 6px", cursor: m.listo ? "pointer" : "default",
-                    opacity: m.listo ? 1 : 0.5,
-                    border: activo ? "1px solid var(--accent)" : undefined,
-                  }}
+                  style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", cursor: "pointer", textAlign: "left", margin: 0 }}
                 >
-                  <Icono id={m.icon} size={24} />
-                  <span style={{ fontSize: "0.78rem", textAlign: "center" }}>{m.label}</span>
-                  {!m.listo && <span style={{ fontSize: "0.6rem", opacity: 0.8 }}>Pronto</span>}
+                  <Icono id={m.icon} size={20} />
+                  <span style={{ fontWeight: 600 }}>{m.label}</span>
                 </button>
-              );
-            })}
+              ))}
+            </div>
+
+            <p className="muted" style={{ margin: "0 0 8px", fontSize: "0.78rem", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+              Administración · {campusActivo}
+            </p>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+              {resto.filter((m) => m.key !== "reuniones" && m.key !== "perfil").map((m) => {
+                const activo = pathname?.startsWith(m.href);
+                return (
+                  <button
+                    key={m.key}
+                    onClick={() => m.listo && ir(m.href)}
+                    disabled={!m.listo}
+                    className="tarjeta"
+                    style={{
+                      display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
+                      padding: "14px 6px", cursor: m.listo ? "pointer" : "default",
+                      opacity: m.listo ? 1 : 0.5,
+                      border: activo ? "1px solid var(--accent)" : undefined,
+                      margin: 0,
+                    }}
+                  >
+                    <Icono id={m.icon} size={24} />
+                    <span style={{ fontSize: "0.78rem", textAlign: "center" }}>{m.label}</span>
+                    {!m.listo && <span style={{ fontSize: "0.6rem", opacity: 0.8 }}>Pronto</span>}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}

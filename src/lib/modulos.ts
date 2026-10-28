@@ -7,14 +7,17 @@ export type Modulo = { key: string; label: string; href: string; icon: string; l
  * del SVG de la app vieja — no emoji. */
 export const MODULOS: Modulo[] = [
   { key: "inicio", label: "Inicio", href: "/inicio", icon: "inicio", listo: true },
+  { key: "soporte", label: "Soporte", href: "/soporte", icon: "soporte", listo: true },
+  { key: "bajas", label: "Bajas", href: "/bajas", icon: "bajas", listo: true },
+  { key: "panorama", label: "Panorama", href: "/panorama", icon: "panorama", listo: true },
+  { key: "cumpleanos", label: "Cumpleaños", href: "/cumpleanos", icon: "cumples", listo: true },
   { key: "encuentros", label: "Encuentros", href: "/encuentros", icon: "asistencia", listo: true },
   { key: "fondos", label: "Fondos", href: "/fondos", icon: "fondo", listo: true },
-  { key: "soporte", label: "Soporte", href: "/soporte", icon: "soporte", listo: true },
   { key: "finanzas", label: "Finanzas", href: "/finanzas", icon: "finanzas", listo: true },
   { key: "equipos", label: "Equipos", href: "/equipos", icon: "equipo", listo: true },
   { key: "turnos", label: "Turnos", href: "/turnos", icon: "turnos", listo: true },
   { key: "visitas", label: "Visitas", href: "/visitas", icon: "visitas", listo: true },
-  { key: "cumpleanos", label: "Cumpleaños", href: "/cumpleanos", icon: "cumples", listo: true },
   { key: "perfiles", label: "Perfiles", href: "/perfiles", icon: "perfiles", listo: true },
   { key: "reuniones", label: "Reuniones", href: "/reuniones", icon: "reuniones", listo: true },
+  { key: "perfil", label: "Mi perfil", href: "/perfil", icon: "perfil", listo: true },
 ];

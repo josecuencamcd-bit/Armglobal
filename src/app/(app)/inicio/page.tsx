@@ -11,10 +11,11 @@ import { useCampus } from "@/lib/campus-context";
  * vez de un muro de 10 cuadros iguales (pedido: "que sea ordenado, sin
  * tener que estar scrolleando para buscar todo"). */
 const GRUPOS: { titulo: string; claves: string[] }[] = [
-  { titulo: "Hoy", claves: ["encuentros", "soporte"] },
+  { titulo: "Hoy", claves: ["encuentros", "panorama"] },
   { titulo: "Dinero", claves: ["fondos", "finanzas"] },
   { titulo: "Equipo", claves: ["equipos", "turnos", "visitas"] },
-  { titulo: "Personas", claves: ["perfiles", "cumpleanos", "reuniones"] },
+  { titulo: "Administración", claves: ["soporte", "bajas", "perfiles"] },
+  { titulo: "Personas", claves: ["cumpleanos", "reuniones", "perfil"] },
 ];
 
 export default function InicioPage() {
