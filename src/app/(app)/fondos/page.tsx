@@ -14,7 +14,16 @@ type Informe = {
   areas: string[];
   puedeEditar: boolean;
   cierre: { cerrado: boolean; por: string; cuando: string; auto: boolean };
+  comparacion: { actual: number; anterior: number; pct: number };
+  historico: number;
+  tendencia: { mes: string; monto: number }[];
 };
+
+function mesMover(mes: string, delta: number) {
+  const [y, m] = mes.split("-").map(Number);
+  const d = new Date(Date.UTC(y, m - 1 + delta, 1));
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}
 
 const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
 function nombreMes(mes: string) {
@@ -59,9 +68,10 @@ export default function FondosPage() {
   const [guardando, setGuardando] = useState(false);
   const [cerrando, setCerrando] = useState(false);
 
-  const cargar = useCallback(async (a: string | null) => {
+  const cargar = useCallback(async (a: string | null, mes?: string) => {
     const qs = new URLSearchParams({ campus: campusActivo });
     if (a) qs.set("area", a);
+    if (mes) qs.set("mes", mes);
     const res = await fetch(`/api/fondos/informe?${qs.toString()}`);
     const json = await res.json();
     if (!json.ok) { setError(json.error); return; }
@@ -70,12 +80,20 @@ export default function FondosPage() {
     setError(null);
     const rm = await fetch(`/api/fondos?campus=${encodeURIComponent(json.data.campus)}&area=${encodeURIComponent(json.data.area)}`);
     const jm = await rm.json();
-    if (jm.ok) setMovs(jm.data.slice(0, 20));
+    if (jm.ok) setMovs(jm.data.filter((m: Movimiento) => m.fecha.slice(0, 7) === json.data.mes).slice(0, 30));
   }, [campusActivo]);
 
   useEffect(() => {
     cargar(null);
   }, [cargar]);
+
+  async function anular(id: number) {
+    if (!confirm("¿Anular este movimiento?")) return;
+    const res = await fetch(`/api/fondos/${id}/anular`, { method: "POST" });
+    const json = await res.json();
+    if (!json.ok) { setError(json.error); return; }
+    await cargar(area, informe?.mes);
+  }
 
   async function registrar(fd: FormData) {
     if (!informe) return;
@@ -106,7 +124,7 @@ export default function FondosPage() {
     setGuardando(false);
     if (!json.ok) { setError(json.error); return; }
     setMostrarForm(false);
-    await cargar(area);
+    await cargar(area, informe.mes);
   }
 
   async function cerrarMes() {
@@ -120,7 +138,7 @@ export default function FondosPage() {
     const json = await res.json();
     setCerrando(false);
     if (!json.ok) { setError(json.error); return; }
-    await cargar(area);
+    await cargar(area, informe.mes);
   }
 
   if (!informe && !error) return <div className="contenedor">Cargando…</div>;
@@ -135,7 +153,7 @@ export default function FondosPage() {
           {informe.areas.length > 1 && (
             <div className="campo">
               <label>Equipo</label>
-              <select value={area ?? informe.area} onChange={(e) => cargar(e.target.value)}>
+              <select value={area ?? informe.area} onChange={(e) => cargar(e.target.value, informe.mes)}>
                 {informe.areas.map((a) => (
                   <option key={a} value={a}>{a}</option>
                 ))}
@@ -143,11 +161,20 @@ export default function FondosPage() {
             </div>
           )}
 
+          <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "4px 0 10px" }}>
+            <button className="boton-secundario" onClick={() => cargar(area, mesMover(informe.mes, -1))}>‹</button>
+            <strong>{nombreMes(informe.mes)}</strong>
+            <button className="boton-secundario" onClick={() => cargar(area, mesMover(informe.mes, 1))}>›</button>
+          </div>
+
           <div className="tarjeta">
             <p className="muted" style={{ margin: 0, fontSize: "0.75rem" }}>SALDO · {informe.area} · {informe.campus}</p>
             <p className="num" style={{ fontSize: "1.8rem", fontWeight: 700, margin: "4px 0" }}>{fmt(informe.saldo)}</p>
             <p className="muted" style={{ margin: 0, fontSize: "0.8rem" }}>
               Ingresos {fmt(informe.ingresos)} · Gastos {fmt(informe.egresos)}
+            </p>
+            <p className="muted" style={{ margin: "6px 0 0", fontSize: "0.78rem" }}>
+              {informe.comparacion.pct >= 0 ? "▲" : "▼"} {Math.abs(informe.comparacion.pct)}% vs. mes anterior ({fmt(informe.comparacion.anterior)}) · Histórico {fmt(informe.historico)}
             </p>
           </div>
 
@@ -242,16 +269,23 @@ export default function FondosPage() {
             </>
           )}
 
-          <p className="muted" style={{ margin: "16px 0 8px" }}>Últimos movimientos</p>
-          {movs?.length === 0 && <p className="muted">Sin movimientos registrados.</p>}
+          <p className="muted" style={{ margin: "16px 0 8px" }}>Movimientos de {nombreMes(informe.mes)}</p>
+          {movs?.length === 0 && <p className="muted">Sin movimientos registrados este mes.</p>}
           {movs?.map((m) => (
             <div className="fila" key={m.id}>
               <div>
                 <div>{m.tipo === "aporte" ? m.nombre : m.comercio}{m.anulado ? " (anulado)" : ""}</div>
                 <div className="muted" style={{ fontSize: "0.78rem" }}>{m.fecha} · {m.tipo}</div>
               </div>
-              <span className="num" style={{ color: m.tipo === "aporte" ? "var(--ok)" : "var(--danger)" }}>
-                {m.tipo === "aporte" ? "+" : "-"}{fmt(m.monto)}
+              <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span className="num" style={{ color: m.tipo === "aporte" ? "var(--ok)" : "var(--danger)" }}>
+                  {m.tipo === "aporte" ? "+" : "-"}{fmt(m.monto)}
+                </span>
+                {informe.puedeEditar && !m.anulado && (
+                  <button className="boton-peligro" style={{ fontSize: "0.72rem", padding: "4px 8px" }} onClick={() => anular(m.id)}>
+                    Anular
+                  </button>
+                )}
               </span>
             </div>
           ))}

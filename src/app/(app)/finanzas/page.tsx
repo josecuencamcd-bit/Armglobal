@@ -14,7 +14,15 @@ type Informe = {
   gastos: { id: number; fecha: string; item: string; monto: number; comercio: string | null; descripcion: string; anulado: boolean }[];
   extras: { id: number; fecha: string; nombre: string; monto: number; metodo: string; descripcion: string | null; anulado: boolean }[];
   cierre: { cerrado: boolean; por: string; cuando: string; auto: boolean };
+  comparacion: { actual: number; anterior: number; pct: number };
+  historico: number;
 };
+
+function mesMover(mes: string, delta: number) {
+  const [y, m] = mes.split("-").map(Number);
+  const d = new Date(Date.UTC(y, m - 1 + delta, 1));
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}
 
 const fmt = (n: number) => `$${n.toLocaleString("es-CL")}`;
 
@@ -48,13 +56,23 @@ export default function FinanzasPage() {
   const [guardandoAporte, setGuardandoAporte] = useState(false);
   const [esPastor, setEsPastor] = useState(false);
 
-  const cargar = useCallback(async () => {
-    const res = await fetch(`/api/gastos-campus/informe?campus=${encodeURIComponent(campusActivo)}`);
+  const cargar = useCallback(async (mes?: string) => {
+    const qs = new URLSearchParams({ campus: campusActivo });
+    if (mes) qs.set("mes", mes);
+    const res = await fetch(`/api/gastos-campus/informe?${qs.toString()}`);
     const json = await res.json();
     if (!json.ok) { setError(json.error); return; }
     setInforme(json.data);
     setError(null);
   }, [campusActivo]);
+
+  async function anularGasto(id: number) {
+    if (!confirm("¿Anular este gasto?")) return;
+    const res = await fetch(`/api/gastos-campus/${id}/anular`, { method: "POST" });
+    const json = await res.json();
+    if (!json.ok) { setError(json.error); return; }
+    await cargar(informe?.mes);
+  }
 
   useEffect(() => {
     cargar();
@@ -89,7 +107,7 @@ export default function FinanzasPage() {
     setGuardandoAporte(false);
     if (!json.ok) { setError(json.error); return; }
     setMostrarFormAporte(false);
-    await cargar();
+    await cargar(informe.mes);
   }
 
   async function anularAporte(id: number) {
@@ -97,7 +115,7 @@ export default function FinanzasPage() {
     const res = await fetch(`/api/fondos/${id}/anular`, { method: "POST" });
     const json = await res.json();
     if (!json.ok) { setError(json.error); return; }
-    await cargar();
+    await cargar(informe?.mes);
   }
 
   async function registrar(fd: FormData) {
@@ -120,7 +138,7 @@ export default function FinanzasPage() {
     setGuardando(false);
     if (!json.ok) { setError(json.error); return; }
     setMostrarForm(false);
-    await cargar();
+    await cargar(informe.mes);
   }
 
   async function cerrarMes() {
@@ -134,7 +152,7 @@ export default function FinanzasPage() {
     const json = await res.json();
     setCerrando(false);
     if (!json.ok) { setError(json.error); return; }
-    await cargar();
+    await cargar(informe.mes);
   }
 
   if (!informe && !error) return <div className="contenedor">Cargando…</div>;
@@ -146,11 +164,20 @@ export default function FinanzasPage() {
 
       {informe && (
         <>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "4px 0 10px" }}>
+            <button className="boton-secundario" onClick={() => cargar(mesMover(informe.mes, -1))}>‹</button>
+            <strong>{nombreMes(informe.mes)}</strong>
+            <button className="boton-secundario" onClick={() => cargar(mesMover(informe.mes, 1))}>›</button>
+          </div>
+
           <div className="tarjeta">
             <p className="muted" style={{ margin: 0, fontSize: "0.75rem" }}>SALDO · {informe.campus} · {informe.mes}</p>
             <p className="num" style={{ fontSize: "1.8rem", fontWeight: 700, margin: "4px 0" }}>{fmt(informe.saldo)}</p>
             <p className="muted" style={{ margin: 0, fontSize: "0.8rem" }}>
               Ingresos {fmt(informe.ingresos.total)} (encuentros {fmt(informe.ingresos.encuentros)} + extraordinarios {fmt(informe.ingresos.extraordinarios)}) · Gastos {fmt(informe.egresos)}
+            </p>
+            <p className="muted" style={{ margin: "6px 0 0", fontSize: "0.78rem" }}>
+              {informe.comparacion.pct >= 0 ? "▲" : "▼"} {Math.abs(informe.comparacion.pct)}% vs. mes anterior ({fmt(informe.comparacion.anterior)}) · Histórico {fmt(informe.historico)}
             </p>
           </div>
 
@@ -282,7 +309,14 @@ export default function FinanzasPage() {
                 <div>{g.item}{g.comercio ? ` · ${g.comercio}` : ""}{g.anulado ? " (anulado)" : ""}</div>
                 <div className="muted" style={{ fontSize: "0.78rem" }}>{g.fecha} · {g.descripcion}</div>
               </div>
-              <span className="num" style={{ color: "var(--danger)" }}>-{fmt(g.monto)}</span>
+              <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span className="num" style={{ color: "var(--danger)" }}>-{fmt(g.monto)}</span>
+                {!g.anulado && (
+                  <button className="boton-peligro" style={{ fontSize: "0.72rem", padding: "4px 8px" }} onClick={() => anularGasto(g.id)}>
+                    Anular
+                  </button>
+                )}
+              </span>
             </div>
           ))}
         </>
