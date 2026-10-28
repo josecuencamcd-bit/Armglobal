@@ -79,6 +79,26 @@ export async function enviarCorreoRecuperarClave(correo: string, link: string) {
   });
 }
 
+/** Resultado de una solicitud de acceso (api_accesoResolver, correo al
+ * solicitante — no al admin). Si fue aprobada ya puede entrar con la clave
+ * que eligió al pedir el acceso; no hace falta un link de recuperación. */
+export async function avisarResultadoAcceso(correo: string, nombre: string, aprobado: boolean) {
+  return resend.emails.send({
+    from: FROM,
+    to: correo,
+    subject: aprobado ? "Tu acceso fue aprobado — armglobal" : "Tu solicitud de acceso — armglobal",
+    html: layout({
+      etiqueta: "ACCESO A LA APP",
+      titulo: aprobado ? `¡Bienvenido, ${nombre}!` : "Sobre tu solicitud",
+      parrafos: aprobado
+        ? ["Tu acceso a la app de armglobal fue aprobado. Entra con tu correo y la clave que elegiste al pedir el acceso."]
+        : ["Tu solicitud de acceso no fue aprobada. Si crees que es un error, habla con el administrador."],
+      botonTexto: aprobado ? "Entrar a la app" : "Ir a la app",
+      botonUrl: aprobado ? `${APP_URL}/login` : APP_URL,
+    }),
+  });
+}
+
 /** Reemplaza avisoAdmin_: notifica a uno o más admins de algo que necesita su acción. */
 export async function avisarAdmins(opts: {
   destinatarios: string[];

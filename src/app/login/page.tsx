@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 export const dynamic = "force-dynamic";
@@ -11,11 +11,14 @@ export const dynamic = "force-dynamic";
  * (hash seguro, tokens, expiración). */
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createClient();
   const [correo, setCorreo] = useState("");
   const [clave, setClave] = useState("");
   const [cargando, setCargando] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(
+    searchParams.get("bloqueado") === "1" ? "Tu acceso está pendiente de aprobación." : null
+  );
 
   async function entrar(e: React.FormEvent) {
     e.preventDefault();

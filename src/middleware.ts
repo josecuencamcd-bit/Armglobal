@@ -35,6 +35,18 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Code.gs revisaba u.b (bloqueado) en cada api_*; acá el middleware es el
+  // único punto de paso obligado, así que el chequeo va aquí — una cuenta
+  // recién pedida (pendiente de aprobación) queda bloqueada hasta que un
+  // Admin app la apruebe (ver /api/solicitudes-acceso).
+  let bloqueado = false;
+  if (user) {
+    const { data: perfil } = await supabase.from("perfiles").select("bloqueado").eq("id", user.id).maybeSingle();
+    bloqueado = !!perfil?.bloqueado;
+    if (bloqueado) await supabase.auth.signOut();
+  }
+  const hayUsuario = !!user && !bloqueado;
+
   const esPublica =
     request.nextUrl.pathname.startsWith("/login") ||
     request.nextUrl.pathname.startsWith("/solicitar-acceso") ||
@@ -43,8 +55,9 @@ export async function middleware(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/api/solicitudes-acceso") ||
     request.nextUrl.pathname.startsWith("/api/whatsapp") ||
     request.nextUrl.pathname.startsWith("/api/cron");
-  if (!user && !esPublica) {
+  if (!hayUsuario && !esPublica) {
     const url = request.nextUrl.clone();
+    if (bloqueado) url.searchParams.set("bloqueado", "1");
     url.pathname = "/login";
     return NextResponse.redirect(url);
   }

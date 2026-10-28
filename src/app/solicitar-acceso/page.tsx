@@ -8,6 +8,7 @@ export default function SolicitarAccesoPage() {
   const [correo, setCorreo] = useState("");
   const [nombre, setNombre] = useState("");
   const [nota, setNota] = useState("");
+  const [clave, setClave] = useState("");
   const [enviado, setEnviado] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cargando, setCargando] = useState(false);
@@ -19,7 +20,7 @@ export default function SolicitarAccesoPage() {
     const res = await fetch("/api/solicitudes-acceso", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ correo, nombre, nota }),
+      body: JSON.stringify({ correo, nombre, nota, clave }),
     });
     const json = await res.json();
     setCargando(false);
@@ -34,7 +35,7 @@ export default function SolicitarAccesoPage() {
     return (
       <div className="contenedor" style={{ paddingTop: 64 }}>
         <div className="tarjeta">
-          <p className="ok">Listo, pedimos tu acceso. Te avisaremos cuando esté aprobado.</p>
+          <p className="ok">Listo, pedimos tu acceso. Te avisaremos por correo cuando esté aprobado — entra con la clave que elegiste.</p>
         </div>
       </div>
     );
@@ -53,6 +54,18 @@ export default function SolicitarAccesoPage() {
         <div className="campo">
           <label htmlFor="nombre">Nombre</label>
           <input id="nombre" required value={nombre} onChange={(e) => setNombre(e.target.value)} />
+        </div>
+        <div className="campo">
+          <label htmlFor="clave">Elige una clave</label>
+          <input
+            id="clave"
+            type="password"
+            autoComplete="new-password"
+            required
+            minLength={6}
+            value={clave}
+            onChange={(e) => setClave(e.target.value)}
+          />
         </div>
         <div className="campo">
           <label htmlFor="nota">¿Algo que quieras contarnos? (opcional)</label>
