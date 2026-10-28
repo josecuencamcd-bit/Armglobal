@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { CAMPUS, AREAS } from "@/lib/sesiones";
+import { MODULOS_APP, DEFAULTS_NOMBRE_MOD, TITULOS_MOD } from "@/lib/modulosApp";
 
 const ROLES = [
   "Pastor principal", "Pastor de campus", "Pastor", "Ministro",
@@ -16,6 +17,8 @@ type Perfil = {
   areas: string[];
   campus: string | null;
   bloqueado: boolean;
+  modulos_on: string[];
+  modulos_off: string[];
 };
 
 type Solicitud = {
@@ -38,13 +41,24 @@ export default function PerfilesPage() {
   const [error, setError] = useState<string | null>(null);
   const [abierto, setAbierto] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
+  const [nombresMod, setNombresMod] = useState<Record<string, string>>({});
+  const [mostrarNombres, setMostrarNombres] = useState(false);
 
   const cargar = useCallback(async () => {
-    const [rp, rs] = await Promise.all([fetch("/api/perfiles"), fetch("/api/solicitudes-acceso")]);
-    const [jp, js] = await Promise.all([rp.json(), rs.json()]);
+    const [rp, rs, rn] = await Promise.all([
+      fetch("/api/perfiles"),
+      fetch("/api/solicitudes-acceso"),
+      fetch("/api/nombres-modulo"),
+    ]);
+    const [jp, js, jn] = await Promise.all([rp.json(), rs.json(), rn.json()]);
     if (!jp.ok) { setError(jp.error); return; }
     setPerfiles(jp.data);
     if (js.ok) setSolicitudes(js.data.filter((s: Solicitud) => s.estado === "Pendiente"));
+    if (jn.ok) {
+      const mapa: Record<string, string> = {};
+      jn.data.forEach((r: { clave: string; nombre: string }) => (mapa[r.clave] = r.nombre));
+      setNombresMod(mapa);
+    }
     setError(null);
   }, []);
 
@@ -77,6 +91,43 @@ export default function PerfilesPage() {
     setPerfiles((prev) => prev?.map((p) => (p.id === id ? { ...p, ...json.data } : p)) ?? null);
   }
 
+  async function guardarModulosPersona(id: string, modulos_on: string[], modulos_off: string[]) {
+    setGuardando(true);
+    const res = await fetch(`/api/perfiles/${id}/modulos`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ modulos_on, modulos_off }),
+    });
+    const json = await res.json();
+    setGuardando(false);
+    if (!json.ok) { setError(json.error); return; }
+    setPerfiles((prev) => prev?.map((p) => (p.id === id ? { ...p, ...json.data } : p)) ?? null);
+  }
+
+  function toggleModuloPersona(p: Perfil, clave: string) {
+    const encendido = p.modulos_on.includes(clave);
+    const apagado = p.modulos_off.includes(clave);
+    // ciclo: heredado (ninguno) → forzado ON → forzado OFF → heredado
+    let on = p.modulos_on, off = p.modulos_off;
+    if (!encendido && !apagado) on = [...on, clave];
+    else if (encendido) { on = on.filter((x) => x !== clave); off = [...off, clave]; }
+    else off = off.filter((x) => x !== clave);
+    guardarModulosPersona(p.id, on, off);
+  }
+
+  async function guardarNombreModulo(clave: string, nombre: string) {
+    const actual = nombresMod[clave] ?? DEFAULTS_NOMBRE_MOD[clave];
+    if (!nombre.trim() || nombre === actual) return;
+    const res = await fetch("/api/nombres-modulo", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ clave, nombre: nombre.trim() }),
+    });
+    const json = await res.json();
+    if (!json.ok) { setError(json.error); return; }
+    setNombresMod((prev) => ({ ...prev, [clave]: nombre.trim() }));
+  }
+
   if (!perfiles && !error) return <div className="contenedor">Cargando…</div>;
 
   return (
@@ -104,6 +155,28 @@ export default function PerfilesPage() {
           ))}
         </section>
       )}
+
+      <section className="tarjeta" style={{ marginBottom: 20 }}>
+        <button
+          onClick={() => setMostrarNombres((v) => !v)}
+          style={{ width: "100%", background: "none", border: 0, color: "inherit", textAlign: "left", cursor: "pointer", padding: 0, fontWeight: 600 }}
+        >
+          Nombres de módulo {mostrarNombres ? "▲" : "▼"}
+        </button>
+        {mostrarNombres && (
+          <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+            {Object.keys(DEFAULTS_NOMBRE_MOD).map((clave) => (
+              <div className="campo" key={clave} style={{ marginBottom: 0 }}>
+                <label>{DEFAULTS_NOMBRE_MOD[clave]}</label>
+                <input
+                  defaultValue={nombresMod[clave] ?? DEFAULTS_NOMBRE_MOD[clave]}
+                  onBlur={(e) => guardarNombreModulo(clave, e.target.value)}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
 
       <p className="muted" style={{ marginBottom: 8 }}>Todos ({perfiles?.length ?? 0})</p>
       {perfiles?.map((p) => (
@@ -195,6 +268,35 @@ export default function PerfilesPage() {
                     <option key={c} value={c}>{c}</option>
                   ))}
                 </select>
+              </div>
+
+              <p className="muted" style={{ marginBottom: 6, fontSize: "0.8rem" }}>
+                Módulos activados a mano (además de los que le da su rol)
+              </p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 14 }}>
+                {MODULOS_APP.map((m) => {
+                  const encendido = p.modulos_on.includes(m);
+                  const apagado = p.modulos_off.includes(m);
+                  return (
+                    <button
+                      key={m}
+                      disabled={guardando}
+                      onClick={() => toggleModuloPersona(p, m)}
+                      title={encendido ? "Forzado encendido — toca para apagarlo" : apagado ? "Forzado apagado — toca para volver a heredar del rol" : "Según su rol — toca para forzar encendido"}
+                      style={{
+                        padding: "6px 10px",
+                        borderRadius: 999,
+                        fontSize: "0.75rem",
+                        border: `1px solid ${encendido ? "var(--ok)" : apagado ? "var(--danger)" : "var(--line)"}`,
+                        background: encendido ? "var(--ok)" : apagado ? "transparent" : "transparent",
+                        color: encendido ? "#0a1f14" : apagado ? "var(--danger)" : "var(--muted)",
+                        cursor: "pointer",
+                      }}
+                    >
+                      {nombresMod[m] ?? TITULOS_MOD[m]}
+                    </button>
+                  );
+                })}
               </div>
 
               <button
