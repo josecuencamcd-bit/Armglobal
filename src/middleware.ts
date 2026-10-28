@@ -53,6 +53,7 @@ export async function middleware(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/recuperar") ||
     request.nextUrl.pathname.startsWith("/actualizar-clave") ||
     request.nextUrl.pathname.startsWith("/api/solicitudes-acceso") ||
+    request.nextUrl.pathname.startsWith("/api/auth") ||
     request.nextUrl.pathname.startsWith("/api/whatsapp") ||
     request.nextUrl.pathname.startsWith("/api/cron");
   if (!hayUsuario && !esPublica) {
