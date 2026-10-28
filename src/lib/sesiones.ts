@@ -55,6 +55,20 @@ export function hoy(): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Punta_Arenas" }).format(new Date());
 }
 
+/** Próxima fecha (hoy o en adelante) cuyo día de semana coincide con
+ * DIA[encuentro]. Si el encuentro no tiene día fijo (p. ej. "Evento
+ * Especial"), devuelve hoy() tal cual. El selector de /encuentros la usa
+ * para no ofrecer por defecto una combinación tipo+fecha que la validación
+ * de ArgsSchema va a rechazar (ver `DIA` y el superRefine más abajo). */
+export function proximaFecha(encuentro: string): string {
+  const diaEsperado = DIA[encuentro];
+  if (diaEsperado === undefined) return hoy();
+  const base = new Date(`${hoy()}T12:00:00Z`);
+  const delta = (diaEsperado - base.getUTCDay() + 7) % 7;
+  base.setUTCDate(base.getUTCDate() + delta);
+  return base.toISOString().slice(0, 10);
+}
+
 export function equiposVigentes(): string[] {
   return hoy() >= CAMBIO_ROLES ? EQUIPOS_NUEVOS : EQUIPOS_ANT;
 }

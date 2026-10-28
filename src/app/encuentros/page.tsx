@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { CAMPUS, ENCUENTROS, EVENTOS, hoy } from "@/lib/sesiones";
+import { CAMPUS, ENCUENTROS, EVENTOS, proximaFecha } from "@/lib/sesiones";
 
 /** Selector de encuentro (campus/tipo/fecha), equivalente a la pantalla
  * inicial del módulo Encuentros en el HTML embebido de Code.gs. */
@@ -11,7 +11,10 @@ export default function SelectorEncuentroPage() {
   const [campus, setCampus] = useState<(typeof CAMPUS)[number]>(CAMPUS[0]);
   const [encuentro, setEncuentro] = useState(ENCUENTROS[CAMPUS[0]][0]);
   const [evento, setEvento] = useState(EVENTOS[0]);
-  const [fecha, setFecha] = useState(hoy());
+  // La fecha por defecto siempre corresponde al tipo de encuentro elegido
+  // (ver proximaFecha) — así "Abrir" sin tocar nada nunca cae en "Encuentro
+  // no válido" por un desfase día/tipo.
+  const [fecha, setFecha] = useState(proximaFecha(ENCUENTROS[CAMPUS[0]][0]));
 
   function irA(e: React.FormEvent) {
     e.preventDefault();
@@ -35,6 +38,7 @@ export default function SelectorEncuentroPage() {
               const c = e.target.value as (typeof CAMPUS)[number];
               setCampus(c);
               setEncuentro(ENCUENTROS[c][0]);
+              setFecha(proximaFecha(ENCUENTROS[c][0]));
             }}
           >
             {CAMPUS.map((c) => (
@@ -46,7 +50,14 @@ export default function SelectorEncuentroPage() {
         </div>
         <div className="campo">
           <label htmlFor="encuentro">Encuentro</label>
-          <select id="encuentro" value={encuentro} onChange={(e) => setEncuentro(e.target.value)}>
+          <select
+            id="encuentro"
+            value={encuentro}
+            onChange={(e) => {
+              setEncuentro(e.target.value);
+              setFecha(proximaFecha(e.target.value));
+            }}
+          >
             {ENCUENTROS[campus].map((t) => (
               <option key={t} value={t}>
                 {t}
