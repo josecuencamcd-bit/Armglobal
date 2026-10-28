@@ -26,10 +26,20 @@ function rolPrincipal(roles: Rol[]): Rol | null {
 }
 
 /** Barra inferior de navegación entre módulos — equivalente a
- * `pintarBottomNav()` de la app vieja. Se va sumando un ítem acá por cada
- * módulo que se migra; por ahora solo Encuentros está portado. */
-const MODULOS: { key: string; label: string; href: string }[] = [
-  { key: "encuentros", label: "Encuentros", href: "/encuentros" },
+ * `pintarBottomNav()` de la app vieja. Se lista el menú completo (como en
+ * Code.gs) para que no se vea vacío; `listo:false` son los que todavía no
+ * se migraron a Supabase — se desactiva href cuando se portan uno a uno. */
+const MODULOS: { key: string; label: string; href: string; listo: boolean }[] = [
+  { key: "encuentros", label: "Encuentros", href: "/encuentros", listo: true },
+  { key: "aportes", label: "Aportes", href: "/aportes", listo: false },
+  { key: "fondos", label: "Fondos", href: "/fondos", listo: false },
+  { key: "finanzas", label: "Finanzas", href: "/finanzas", listo: false },
+  { key: "equipos", label: "Equipos", href: "/equipos", listo: false },
+  { key: "turnos", label: "Turnos", href: "/turnos", listo: false },
+  { key: "visitas", label: "Visitas", href: "/visitas", listo: false },
+  { key: "cumpleanos", label: "Cumpleaños", href: "/cumpleanos", listo: false },
+  { key: "perfiles", label: "Perfiles", href: "/perfiles", listo: false },
+  { key: "reuniones", label: "Reuniones", href: "/reuniones", listo: false },
 ];
 
 type Perfil = { nombre: string; roles: Rol[]; campus: string | null };
@@ -111,9 +121,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           left: 0,
           right: 0,
           display: "flex",
-          justifyContent: "center",
-          gap: 4,
-          padding: "8px 12px",
+          overflowX: "auto",
+          gap: 2,
+          padding: "8px 10px",
           background: "var(--surface)",
           borderTop: "1px solid var(--line)",
         }}
@@ -123,20 +133,26 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           return (
             <button
               key={m.key}
-              onClick={() => router.push(m.href)}
+              onClick={() => m.listo && router.push(m.href)}
+              disabled={!m.listo}
               style={{
-                flex: 1,
-                maxWidth: 120,
+                flex: "0 0 auto",
+                minWidth: 76,
                 background: "transparent",
                 border: "none",
-                color: activo ? "var(--accent)" : "var(--muted)",
+                color: !m.listo ? "#55555c" : activo ? "var(--accent)" : "var(--muted)",
                 fontWeight: activo ? 600 : 500,
-                fontSize: "0.8rem",
-                padding: "8px 4px",
-                cursor: "pointer",
+                fontSize: "0.75rem",
+                padding: "8px 6px",
+                cursor: m.listo ? "pointer" : "default",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 2,
               }}
             >
-              {m.label}
+              <span>{m.label}</span>
+              {!m.listo && <span style={{ fontSize: "0.6rem" }}>Pronto</span>}
             </button>
           );
         })}
