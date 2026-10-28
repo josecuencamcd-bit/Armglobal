@@ -13,8 +13,8 @@ export const MODULOS: Modulo[] = [
   { key: "finanzas", label: "Finanzas", href: "/finanzas", icon: "finanzas", listo: false },
   { key: "equipos", label: "Equipos", href: "/equipos", icon: "equipo", listo: false },
   { key: "turnos", label: "Turnos", href: "/turnos", icon: "turnos", listo: false },
-  { key: "visitas", label: "Visitas", href: "/visitas", icon: "visitas", listo: false },
-  { key: "cumpleanos", label: "Cumpleaños", href: "/cumpleanos", icon: "cumples", listo: false },
+  { key: "visitas", label: "Visitas", href: "/visitas", icon: "visitas", listo: true },
+  { key: "cumpleanos", label: "Cumpleaños", href: "/cumpleanos", icon: "cumples", listo: true },
   { key: "perfiles", label: "Perfiles", href: "/perfiles", icon: "perfiles", listo: true },
-  { key: "reuniones", label: "Reuniones", href: "/reuniones", icon: "reuniones", listo: false },
+  { key: "reuniones", label: "Reuniones", href: "/reuniones", icon: "reuniones", listo: true },
 ];
