@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { ok, fail } from "@/lib/api-helpers";
 import { CAMPUS, CATEGORIAS, METODOS, ASIS_IDS, VOL_IDS } from "@/lib/sesiones";
+import { identidadActuante } from "@/lib/identidad";
 
 export const dynamic = "force-dynamic";
 
@@ -252,13 +253,10 @@ async function statsCampus(
  */
 export async function GET(req: Request) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return fail("No autenticado.", 401);
+  const identidad = await identidadActuante(supabase);
+  if (!identidad) return fail("No autenticado.", 401);
 
-  const { data: perfil } = await supabase.from("perfiles").select("roles").eq("id", user.id).single();
-  const roles = (perfil?.roles as string[] | null) ?? [];
+  const roles = (identidad.perfil.roles as string[] | null) ?? [];
   const esPastor = roles.includes("Pastor principal") || roles.includes("Pastor de campus") || roles.includes("Pastor");
   if (!esPastor && !roles.includes("Admin app")) {
     return fail("Tu perfil no tiene acceso a las estadísticas.", 403);

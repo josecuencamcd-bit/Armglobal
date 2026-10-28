@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { ok, fail, fromSupabaseError, parseBody } from "@/lib/api-helpers";
+import { identidadActuante } from "@/lib/identidad";
 import { z } from "zod";
 
 /** api_ecoMarcar: marca el resultado de una visita/llamada de seguimiento programada. */
@@ -15,16 +16,11 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   if ("error" in parsedBody) return parsedBody.error;
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const { data: perfil } = user
-    ? await supabase.from("perfiles").select("correo").eq("id", user.id).single()
-    : { data: null };
+  const identidad = await identidadActuante(supabase);
 
   const { data, error, count } = await supabase
     .from("integrante_seguimiento")
-    .update({ ...parsedBody.data, marcado_por: perfil?.correo ?? null }, { count: "exact" })
+    .update({ ...parsedBody.data, marcado_por: identidad?.perfil.correo ?? null }, { count: "exact" })
     .eq("id", Number(params.id))
     .select()
     .maybeSingle();

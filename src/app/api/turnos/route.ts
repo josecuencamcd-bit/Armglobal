@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { ok, fromSupabaseError, parseBody } from "@/lib/api-helpers";
 import { CAMPUS } from "@/lib/sesiones";
+import { identidadActuante } from "@/lib/identidad";
 import { z } from "zod";
 
 /** api_turnoLista / api_turnoGuardar. PK compuesta (semana, campus).
@@ -31,18 +32,13 @@ export async function POST(req: Request) {
   if ("error" in parsedBody) return parsedBody.error;
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const { data: perfil } = user
-    ? await supabase.from("perfiles").select("correo").eq("id", user.id).single()
-    : { data: null };
+  const identidad = await identidadActuante(supabase);
 
   const { data, error } = await supabase
     .from("turnos")
     .upsert({
       ...parsedBody.data,
-      por: perfil?.correo ?? null,
+      por: identidad?.perfil.correo ?? null,
       actualizado: new Date().toISOString(),
     })
     .select()

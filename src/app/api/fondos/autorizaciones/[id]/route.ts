@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { ok, fail, fromSupabaseError, parseBody } from "@/lib/api-helpers";
 import { registrarBitacora } from "@/lib/bitacora";
+import { identidadActuante } from "@/lib/identidad";
 import { z } from "zod";
 
 /**
@@ -26,17 +27,14 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   if ("error" in parsedBody) return parsedBody.error;
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return fail("No autenticado.", 401);
-
-  const { data: perfil, error: ePerfil } = await supabase
-    .from("perfiles")
-    .select("correo, nombre")
-    .eq("id", user.id)
-    .single<{ correo: string; nombre: string }>();
-  if (ePerfil) return fromSupabaseError(ePerfil);
+  const identidad = await identidadActuante(supabase);
+  if (!identidad) return fail("No autenticado.", 401);
+  // El paso del Pastor queda a nombre de la identidad EFECTIVA (si hay una
+  // "vista como X" activa y X es Pastor, resuelve como X); el paso final
+  // de Admin app siempre queda a nombre del admin REAL (auth_es_admin_app()
+  // no cambia con la impersonación — ver auth_id_efectivo()).
+  const perfilPastor = identidad.perfil;
+  const perfilAdmin = identidad.real;
 
   const { data: actual, error: eActual } = await supabase
     .from("autorizaciones_fondos")
@@ -51,10 +49,10 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
 
   if (actual.estado === "Pendiente Pastor") {
     const cambios = aprobar
-      ? { estado: "Pendiente Admin", pastor: perfil.nombre, pastor_en: cuando }
+      ? { estado: "Pendiente Admin", pastor: perfilPastor.nombre, pastor_en: cuando }
       : {
           estado: "Rechazada",
-          pastor: perfil.nombre,
+          pastor: perfilPastor.nombre,
           pastor_en: cuando,
           rechazo: motivo_rechazo || "El Pastor de campus no dio el Ok.",
         };
@@ -67,8 +65,8 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     if (error) return fromSupabaseError(error);
     if (count === 0) return fail("Solo el Pastor de campus da el Ok.", 403);
     await registrarBitacora({
-      actorCorreo: perfil.correo,
-      actorNombre: perfil.nombre,
+      actorCorreo: perfilPastor.correo,
+      actorNombre: perfilPastor.nombre,
       accion: aprobar ? "fondos_reapertura_ok_pastor" : "fondos_reapertura_rechazada_pastor",
       entidad: "autorizaciones_fondos",
       entidadId: params.id,
@@ -80,10 +78,10 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   if (actual.estado === "Pendiente Admin") {
     const vence = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
     const cambios = aprobar
-      ? { estado: "Aprobada", admin: perfil.nombre, admin_en: cuando, vence }
+      ? { estado: "Aprobada", admin: perfilAdmin.nombre, admin_en: cuando, vence }
       : {
           estado: "Rechazada",
-          admin: perfil.nombre,
+          admin: perfilAdmin.nombre,
           admin_en: cuando,
           rechazo: motivo_rechazo || "El administrador no aprobó.",
         };
@@ -96,8 +94,8 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     if (error) return fromSupabaseError(error);
     if (count === 0) return fail("La aprobación final la da Admin app.", 403);
     await registrarBitacora({
-      actorCorreo: perfil.correo,
-      actorNombre: perfil.nombre,
+      actorCorreo: perfilAdmin.correo,
+      actorNombre: perfilAdmin.nombre,
       accion: aprobar ? "fondos_reapertura_aprobada_admin" : "fondos_reapertura_rechazada_admin",
       entidad: "autorizaciones_fondos",
       entidadId: params.id,

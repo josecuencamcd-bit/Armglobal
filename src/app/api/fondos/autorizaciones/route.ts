@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { ok, fromSupabaseError, parseBody } from "@/lib/api-helpers";
 import { CAMPUS, AREAS } from "@/lib/sesiones";
+import { identidadActuante } from "@/lib/identidad";
 import { z } from "zod";
 
 /** "Campus" no es un area_t real: significa "finanzas de todo el campus",
@@ -27,19 +28,14 @@ export async function POST(req: Request) {
   if ("error" in parsedBody) return parsedBody.error;
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const { data: perfil } = user
-    ? await supabase.from("perfiles").select("correo, nombre").eq("id", user.id).single<{ correo: string; nombre: string }>()
-    : { data: null };
+  const identidad = await identidadActuante(supabase);
 
   const { data, error } = await supabase
     .from("autorizaciones_fondos")
     .insert({
       ...parsedBody.data,
-      solicitante: perfil?.nombre ?? null,
-      correo: perfil?.correo ?? null,
+      solicitante: identidad?.perfil.nombre ?? null,
+      correo: identidad?.perfil.correo ?? null,
       estado: "Pendiente Pastor",
       pedido: new Date().toISOString(),
     })

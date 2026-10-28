@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { ok, fail, fromSupabaseError, parseBody } from "@/lib/api-helpers";
 import { CAMPUS, AREAS } from "@/lib/sesiones";
+import { identidadActuante } from "@/lib/identidad";
 import { z } from "zod";
 
 /** api_ecoNota: notas internas por área/fecha/hora (PK = key, construida igual
@@ -37,12 +38,7 @@ export async function POST(req: Request) {
   if ("error" in parsedBody) return parsedBody.error;
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const { data: perfil } = user
-    ? await supabase.from("perfiles").select("correo").eq("id", user.id).single()
-    : { data: null };
+  const identidad = await identidadActuante(supabase);
 
   const { data, error } = await supabase
     .from("notas")
@@ -53,7 +49,7 @@ export async function POST(req: Request) {
       fecha: parsedBody.data.fecha,
       hora: parsedBody.data.hora,
       nota: parsedBody.data.nota,
-      por: perfil?.correo ?? null,
+      por: identidad?.perfil.correo ?? null,
       actualizado: new Date().toISOString(),
     })
     .select()

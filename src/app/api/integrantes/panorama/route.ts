@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { ok, fail, fromSupabaseError } from "@/lib/api-helpers";
 import { CAMPUS } from "@/lib/sesiones";
+import { identidadActuante } from "@/lib/identidad";
 
 /**
  * api_ecoPanorama: vista general para Pastor/Admin app de todas las áreas
@@ -35,13 +36,10 @@ function resumenAnos(lista: Persona[]) {
 
 export async function GET(req: Request) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return fail("No autenticado.", 401);
+  const identidad = await identidadActuante(supabase);
+  if (!identidad) return fail("No autenticado.", 401);
 
-  const { data: perfil } = await supabase.from("perfiles").select("roles").eq("id", user.id).single();
-  const roles = (perfil?.roles as string[] | null) ?? [];
+  const roles = (identidad.perfil.roles as string[] | null) ?? [];
   const esPastor = roles.includes("Pastor principal") || roles.includes("Pastor de campus") || roles.includes("Pastor");
   if (!esPastor && !roles.includes("Admin app")) return fail("Tu perfil no tiene acceso a esta sección.", 403);
 

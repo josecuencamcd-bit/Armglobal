@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { ok, fail, fromSupabaseError } from "@/lib/api-helpers";
 import { AREAS } from "@/lib/sesiones";
+import { identidadActuante } from "@/lib/identidad";
 import {
   campusFin,
   mesOk,
@@ -24,21 +25,19 @@ import {
  */
 export async function GET(req: Request) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return fail("No autenticado.", 401);
+  const identidad = await identidadActuante(supabase);
+  if (!identidad) return fail("No autenticado.", 401);
 
-  const { data: perfil } = await supabase.from("perfiles").select("campus, roles, modulos_on").eq("id", user.id).single();
-  const roles = (perfil?.roles as string[] | null) ?? [];
-  const modulosOn = (perfil?.modulos_on as string[] | null) ?? [];
+  const perfil = identidad.perfil;
+  const roles = (perfil.roles as string[] | null) ?? [];
+  const modulosOn = (perfil.modulos_on as string[] | null) ?? [];
   const esPastor = roles.includes("Pastor principal") || roles.includes("Pastor de campus") || roles.includes("Pastor");
   if (!esPastor && !modulosOn.includes("finanzas") && !modulosOn.includes("informe")) {
     return fail("Tu perfil no tiene acceso a las finanzas del campus.", 403);
   }
 
   const { searchParams } = new URL(req.url);
-  const campus = campusFin(perfil?.campus ?? null, searchParams.get("campus"));
+  const campus = campusFin(perfil.campus ?? null, searchParams.get("campus"));
   const mes = mesOk(searchParams.get("mes"));
   const mesA = mesAnt(mes);
 

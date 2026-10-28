@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { ok, fail, fromSupabaseError, parseBody } from "@/lib/api-helpers";
+import { identidadActuante } from "@/lib/identidad";
 import { z } from "zod";
 
 /** api_ecoVisitaAsignar: asigna la visita a alguien (Pastor de campus, o un
@@ -16,17 +17,12 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   if ("error" in parsedBody) return parsedBody.error;
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const { data: perfil } = user
-    ? await supabase.from("perfiles").select("correo").eq("id", user.id).single()
-    : { data: null };
+  const identidad = await identidadActuante(supabase);
 
   const { data, error, count } = await supabase
     .from("visitas")
     .update(
-      { ...parsedBody.data, actualizado_por: perfil?.correo ?? null, actualizado_en: new Date().toISOString() },
+      { ...parsedBody.data, actualizado_por: identidad?.perfil.correo ?? null, actualizado_en: new Date().toISOString() },
       { count: "exact" }
     )
     .eq("id", Number(params.id))

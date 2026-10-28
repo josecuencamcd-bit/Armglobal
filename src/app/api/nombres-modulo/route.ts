@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { ok, fail, fromSupabaseError, parseBody } from "@/lib/api-helpers";
+import { identidadActuante } from "@/lib/identidad";
 import { z } from "zod";
 
 /** Equivalente a api_nombresModulo / api_nombreModuloGuardar: nombres
@@ -22,16 +23,13 @@ export async function POST(req: Request) {
   if ("error" in parsedBody) return parsedBody.error;
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const { data: perfil } = user
-    ? await supabase.from("perfiles").select("correo").eq("id", user.id).single()
-    : { data: null };
+  // Gate: solo Admin app (RLS nombres_modulo_admin, real-identity-only) —
+  // se atribuye al admin REAL, igual que perfiles/[id] y ayuda/[id].
+  const identidad = await identidadActuante(supabase);
 
   const { data, error } = await supabase
     .from("nombres_modulo")
-    .upsert({ ...parsedBody.data, por: perfil?.correo ?? null, actualizado: new Date().toISOString() })
+    .upsert({ ...parsedBody.data, por: identidad?.real.correo ?? null, actualizado: new Date().toISOString() })
     .select()
     .single();
   if (error) {

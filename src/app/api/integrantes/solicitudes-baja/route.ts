@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { ok, fromSupabaseError, parseBody } from "@/lib/api-helpers";
 import { CAMPUS, AREAS } from "@/lib/sesiones";
+import { identidadActuante } from "@/lib/identidad";
 import { z } from "zod";
 
 /** api_ecoSolicitudes: lista de solicitudes de baja de un integrante. */
@@ -33,16 +34,11 @@ export async function POST(req: Request) {
   if ("error" in parsedBody) return parsedBody.error;
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const { data: perfil } = user
-    ? await supabase.from("perfiles").select("correo").eq("id", user.id).single()
-    : { data: null };
+  const identidad = await identidadActuante(supabase);
 
   const { data, error } = await supabase
     .from("solicitudes_baja")
-    .insert({ ...parsedBody.data, estado: "Pendiente", solicitante: perfil?.correo ?? null })
+    .insert({ ...parsedBody.data, estado: "Pendiente", solicitante: identidad?.perfil.correo ?? null })
     .select()
     .single();
   if (error) return fromSupabaseError(error);

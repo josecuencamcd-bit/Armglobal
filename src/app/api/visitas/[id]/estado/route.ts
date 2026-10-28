@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { ok, fail, fromSupabaseError, parseBody } from "@/lib/api-helpers";
+import { identidadActuante } from "@/lib/identidad";
 import { z } from "zod";
 
 /** api_ecoVisitaEstado: cambia el estado de una visita y deja constancia en
@@ -19,12 +20,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
 
   const id = Number(params.id);
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const { data: perfil } = user
-    ? await supabase.from("perfiles").select("correo").eq("id", user.id).single()
-    : { data: null };
+  const identidad = await identidadActuante(supabase);
 
   const { data, error, count } = await supabase
     .from("visitas")
@@ -32,7 +28,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
       {
         estado: parsedBody.data.estado,
         proximo: parsedBody.data.proximo,
-        actualizado_por: perfil?.correo ?? null,
+        actualizado_por: identidad?.perfil.correo ?? null,
         actualizado_en: new Date().toISOString(),
       },
       { count: "exact" }
@@ -48,7 +44,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     estado: parsedBody.data.estado,
     nota: parsedBody.data.nota,
     proximo: parsedBody.data.proximo,
-    correo: perfil?.correo ?? null,
+    correo: identidad?.perfil.correo ?? null,
   });
   if (eHist) return fromSupabaseError(eHist);
 

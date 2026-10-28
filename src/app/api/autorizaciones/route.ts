@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { ok, fail, fromSupabaseError, parseBody } from "@/lib/api-helpers";
 import { ArgsSchema, CAMPUS, claveSesion } from "@/lib/sesiones";
+import { identidadActuante } from "@/lib/identidad";
 import { z } from "zod";
 
 /**
@@ -26,17 +27,9 @@ export async function POST(req: Request) {
 
   const supabase = await createClient();
   try {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return fail("No autenticado.", 401);
-
-    const { data: perfil, error: ePerfil } = await supabase
-      .from("perfiles")
-      .select("correo, nombre")
-      .eq("id", user.id)
-      .single<{ correo: string; nombre: string }>();
-    if (ePerfil) throw ePerfil;
+    const identidad = await identidadActuante(supabase);
+    if (!identidad) return fail("No autenticado.", 401);
+    const perfil = identidad.perfil;
 
     const { data, error } = await supabase
       .from("autorizaciones_encuentro")

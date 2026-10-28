@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { ok, fail, fromSupabaseError, parseBody } from "@/lib/api-helpers";
+import { identidadActuante } from "@/lib/identidad";
 import { z } from "zod";
 
 /**
@@ -35,14 +36,12 @@ const MiPerfilSchema = z
 
 export async function GET() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return fail("No autenticado.", 401);
+  const identidad = await identidadActuante(supabase);
+  if (!identidad) return fail("No autenticado.", 401);
 
-  const { data, error } = await supabase.from("perfiles").select("*").eq("id", user.id).single();
-  if (error) return fromSupabaseError(error);
-  return ok(data);
+  // "Mi perfil" durante una "vista como X" es el perfil de X (modo prueba:
+  // se puede usar todo, igual que en la app vieja) — ya viene resuelto.
+  return ok(identidad.perfil);
 }
 
 export async function PATCH(req: Request) {
@@ -50,15 +49,17 @@ export async function PATCH(req: Request) {
   if ("error" in parsedBody) return parsedBody.error;
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return fail("No autenticado.", 401);
+  const identidad = await identidadActuante(supabase);
+  if (!identidad) return fail("No autenticado.", 401);
 
+  // Si hay una "vista como X" activa, se edita el perfil de X (la policy
+  // perfiles_update_admin_app igual lo permite porque el admin REAL sigue
+  // siendo Admin app) — igual que la app vieja. correo/clave no están en
+  // MiPerfilSchema, así que nunca se pueden tocar desde acá.
   const { data, error } = await supabase
     .from("perfiles")
     .update({ ...parsedBody.data, actualizado_en: new Date().toISOString() })
-    .eq("id", user.id)
+    .eq("id", identidad.perfil.id)
     .select()
     .single();
   if (error) return fromSupabaseError(error);
