@@ -30,13 +30,6 @@
 
 html, body {
   background-color: #060607;
-  background-image:
-    radial-gradient(900px 420px at 85% -160px, rgba(245, 166, 35, 0.14), transparent 60%),
-    radial-gradient(600px 300px at -10% 30%, rgba(255, 159, 28, 0.05), transparent 60%),
-    linear-gradient(rgba(245, 166, 35, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(245, 166, 35, 0.035) 1px, transparent 1px);
-  background-size: auto, auto, 28px 28px, 28px 28px;
-  background-attachment: fixed;
   color: var(--ink);
   font-family: var(--font-body);
   margin: 0;
