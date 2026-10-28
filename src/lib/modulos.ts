@@ -28,5 +28,7 @@ export const MODULOS: Modulo[] = [
   // todavía sin pantalla propia (listo:false → aparece gris, "Pronto",
   // en vez de desaparecer, para no perder el mapa del menú real).
   { key: "estadisticas", label: "Estadísticas", href: "/estadisticas", icon: "actividad", listo: true },
-  { key: "aportes", label: "Aportes", href: "/aportes", icon: "aportes", listo: false },
+  // En la app vieja era un atajo directo a la pestaña "Aportes" de Finanzas
+  // para quien no es Pastor de campus (no necesita el informe completo).
+  { key: "aportes", label: "Aportes", href: "/finanzas", icon: "aportes", listo: true },
 ];

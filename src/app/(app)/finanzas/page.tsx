@@ -12,6 +12,7 @@ type Informe = {
   porItem: Record<string, number>;
   saldo: number;
   gastos: { id: number; fecha: string; item: string; monto: number; comercio: string | null; descripcion: string; anulado: boolean }[];
+  extras: { id: number; fecha: string; nombre: string; monto: number; metodo: string; descripcion: string | null; anulado: boolean }[];
   cierre: { cerrado: boolean; por: string; cuando: string; auto: boolean };
 };
 
@@ -43,6 +44,9 @@ export default function FinanzasPage() {
   const [mostrarForm, setMostrarForm] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [cerrando, setCerrando] = useState(false);
+  const [mostrarFormAporte, setMostrarFormAporte] = useState(false);
+  const [guardandoAporte, setGuardandoAporte] = useState(false);
+  const [esPastor, setEsPastor] = useState(false);
 
   const cargar = useCallback(async () => {
     const res = await fetch(`/api/gastos-campus/informe?campus=${encodeURIComponent(campusActivo)}`);
@@ -55,6 +59,46 @@ export default function FinanzasPage() {
   useEffect(() => {
     cargar();
   }, [cargar]);
+
+  useEffect(() => {
+    fetch("/api/perfil").then((r) => r.json()).then((json) => {
+      if (!json.ok) return;
+      const roles: string[] = json.data.roles ?? [];
+      setEsPastor(roles.includes("Pastor principal") || roles.includes("Pastor de campus") || roles.includes("Pastor"));
+    });
+  }, []);
+
+  async function registrarAporte(fd: FormData) {
+    if (!informe) return;
+    setGuardandoAporte(true);
+    const res = await fetch("/api/fondos", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        tipo: "aporte",
+        campus: informe.campus,
+        area: "Campus",
+        fecha: fd.get("fecha"),
+        nombre: fd.get("nombre"),
+        monto: Number(fd.get("monto")),
+        metodo: fd.get("metodo"),
+        descripcion: fd.get("descripcion") || undefined,
+      }),
+    });
+    const json = await res.json();
+    setGuardandoAporte(false);
+    if (!json.ok) { setError(json.error); return; }
+    setMostrarFormAporte(false);
+    await cargar();
+  }
+
+  async function anularAporte(id: number) {
+    if (!confirm("¿Anular este aporte?")) return;
+    const res = await fetch(`/api/fondos/${id}/anular`, { method: "POST" });
+    const json = await res.json();
+    if (!json.ok) { setError(json.error); return; }
+    await cargar();
+  }
 
   async function registrar(fd: FormData) {
     if (!informe) return;
@@ -138,7 +182,61 @@ export default function FinanzasPage() {
             </div>
           )}
 
-          <button className="boton" style={{ marginBottom: 16 }} onClick={() => setMostrarForm((v) => !v)}>
+          <p className="muted" style={{ margin: "16px 0 8px" }}>Aportes extraordinarios del mes</p>
+          {esPastor && (
+            <button className="boton-secundario" style={{ marginBottom: 12 }} onClick={() => setMostrarFormAporte((v) => !v)}>
+              {mostrarFormAporte ? "Cerrar" : "+ Registrar aporte extraordinario"}
+            </button>
+          )}
+          {mostrarFormAporte && (
+            <form className="tarjeta" action={(fd) => registrarAporte(fd)} style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 12 }}>
+              <div className="campo">
+                <label>Fecha</label>
+                <input name="fecha" type="date" defaultValue={new Date().toISOString().slice(0, 10)} required />
+              </div>
+              <div className="campo">
+                <label>Quién aporta</label>
+                <input name="nombre" required minLength={3} />
+              </div>
+              <div className="campo">
+                <label>Monto</label>
+                <input name="monto" type="number" required />
+              </div>
+              <div className="campo">
+                <label>¿Cómo aportó?</label>
+                <select name="metodo">
+                  <option value="Efectivo">Efectivo</option>
+                  <option value="Transferencia">Transferencia</option>
+                </select>
+              </div>
+              <div className="campo">
+                <label>Nota (opcional)</label>
+                <textarea name="descripcion" rows={2} />
+              </div>
+              <button className="boton" type="submit" disabled={guardandoAporte}>
+                {guardandoAporte ? "Guardando…" : "Registrar"}
+              </button>
+            </form>
+          )}
+          {informe.extras.length === 0 && <p className="muted">No hay aportes extraordinarios este mes.</p>}
+          {informe.extras.map((x) => (
+            <div className="fila" key={x.id}>
+              <div>
+                <div>{x.nombre}{x.anulado ? " (anulado)" : ""}</div>
+                <div className="muted" style={{ fontSize: "0.78rem" }}>{x.fecha} · {x.metodo}{x.descripcion ? ` · ${x.descripcion}` : ""}</div>
+              </div>
+              <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span className="num" style={{ color: "var(--ok)" }}>+{fmt(x.monto)}</span>
+                {esPastor && !x.anulado && (
+                  <button className="boton-peligro" style={{ fontSize: "0.72rem", padding: "4px 8px" }} onClick={() => anularAporte(x.id)}>
+                    Anular
+                  </button>
+                )}
+              </span>
+            </div>
+          ))}
+
+          <button className="boton" style={{ marginBottom: 16, marginTop: 20 }} onClick={() => setMostrarForm((v) => !v)}>
             {mostrarForm ? "Cerrar" : "Registrar gasto"}
           </button>
 
