@@ -13,12 +13,15 @@ type Visita = {
   nota: string | null;
   proximo: string | null;
   estado: string;
+  asignado_correo: string | null;
+  asignado_nombre: string | null;
 };
 
+type Persona = { correo: string; nombre: string; campus: string | null; roles: string[] | null };
+type Historial = { id: number; estado: string; nota: string | null; proximo: string | null; correo: string | null; creado_en: string };
+
 /** Módulo Visitas/Conexión — equivalente a api_ecoVisitas / api_ecoVisitaAdd /
- * api_ecoVisitaEstado, ya existentes. (Asignar a alguien del equipo de
- * Conexión queda para una vuelta siguiente — por ahora el foco es registrar
- * y mover el estado, que es lo que usa Conexión día a día.) */
+ * api_ecoVisitaEstado / api_ecoVisitaAsignar, ya existentes. */
 export default function VisitasPage() {
   const { campusActivo: campus, puedeElegir, elegirCampus } = useCampus();
   const [lista, setLista] = useState<Visita[] | null>(null);
@@ -27,6 +30,10 @@ export default function VisitasPage() {
   const [guardando, setGuardando] = useState(false);
   const [busqueda, setBusqueda] = useState("");
   const [filtroEstado, setFiltroEstado] = useState<string>("");
+  const [directorio, setDirectorio] = useState<Persona[] | null>(null);
+  const [asignando, setAsignando] = useState<number | null>(null);
+  const [expandido, setExpandido] = useState<number | null>(null);
+  const [historial, setHistorial] = useState<Record<number, Historial[]>>({});
 
   const cargar = useCallback(async (c: string) => {
     const res = await fetch(`/api/visitas?campus=${encodeURIComponent(c)}`);
@@ -67,7 +74,42 @@ export default function VisitasPage() {
     });
     const json = await res.json();
     if (!json.ok) { setError(json.error); return; }
+    if (historial[id]) await cargarHistorial(id);
     await cargar(campus);
+  }
+
+  async function abrirAsignar(id: number) {
+    const abrir = asignando === id ? null : id;
+    setAsignando(abrir);
+    if (abrir && !directorio) {
+      const res = await fetch("/api/reuniones/directorio");
+      const json = await res.json();
+      if (json.ok) setDirectorio(json.data);
+    }
+  }
+
+  async function asignar(id: number, p: Persona) {
+    const res = await fetch(`/api/visitas/${id}/asignar`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ asignado_correo: p.correo, asignado_nombre: p.nombre }),
+    });
+    const json = await res.json();
+    if (!json.ok) { setError(json.error); return; }
+    setAsignando(null);
+    await cargar(campus);
+  }
+
+  async function cargarHistorial(id: number) {
+    const res = await fetch(`/api/visitas/${id}/historial`);
+    const json = await res.json();
+    if (json.ok) setHistorial((h) => ({ ...h, [id]: json.data }));
+  }
+
+  async function toggleHistorial(id: number) {
+    const abrir = expandido === id ? null : id;
+    setExpandido(abrir);
+    if (abrir && !historial[id]) await cargarHistorial(id);
   }
 
   if (!lista && !error) return <div className="contenedor">Cargando…</div>;
@@ -156,7 +198,10 @@ export default function VisitasPage() {
           <p className="muted" style={{ margin: "2px 0 10px", fontSize: "0.8rem" }}>
             {v.telefono || "Sin teléfono"}{v.nota ? ` · ${v.nota}` : ""}
           </p>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+          <p className="muted" style={{ margin: "0 0 10px", fontSize: "0.78rem" }}>
+            Asignado a: {v.asignado_nombre || "nadie"}
+          </p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
             {ESTADOS.map((e) => {
               const activo = v.estado === e;
               return (
@@ -178,6 +223,43 @@ export default function VisitasPage() {
               );
             })}
           </div>
+
+          <div style={{ display: "flex", gap: 8 }}>
+            <button className="boton-secundario" style={{ fontSize: "0.78rem" }} onClick={() => abrirAsignar(v.id)}>
+              {asignando === v.id ? "Cerrar" : "Asignar"}
+            </button>
+            <button className="boton-secundario" style={{ fontSize: "0.78rem" }} onClick={() => toggleHistorial(v.id)}>
+              {expandido === v.id ? "Ocultar historial" : "Ver historial"}
+            </button>
+          </div>
+
+          {asignando === v.id && (
+            <div style={{ marginTop: 10 }}>
+              {!directorio && <p className="muted" style={{ fontSize: "0.78rem" }}>Cargando personas…</p>}
+              {directorio?.map((p) => (
+                <button
+                  key={p.correo}
+                  className="fila"
+                  style={{ width: "100%", textAlign: "left", background: "none", cursor: "pointer" }}
+                  onClick={() => asignar(v.id, p)}
+                >
+                  <span>{p.nombre}</span>
+                  <span className="muted" style={{ fontSize: "0.72rem" }}>{(p.roles ?? []).join(", ") || p.campus || ""}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {expandido === v.id && (
+            <div style={{ marginTop: 10 }}>
+              {!historial[v.id]?.length && <p className="muted" style={{ fontSize: "0.78rem" }}>Sin cambios registrados.</p>}
+              {historial[v.id]?.map((h) => (
+                <p key={h.id} className="muted" style={{ fontSize: "0.76rem", margin: "4px 0" }}>
+                  {h.creado_en.slice(0, 10)} · {h.estado}{h.nota ? ` — ${h.nota}` : ""}
+                </p>
+              ))}
+            </div>
+          )}
         </div>
       ))}
     </div>
