@@ -1,14 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
 
 export const dynamic = "force-dynamic";
 
-/** Reemplaza api_olvide de Code.gs: pide el correo y dispara el email de
- * recuperación nativo de Supabase Auth (el link lleva a /actualizar-clave). */
+/** Reemplaza api_olvide de Code.gs: pide el correo y dispara /api/auth/recuperar
+ * (genera el link con el cliente admin y lo manda con marca ARM Global vía
+ * Resend, en vez del mailer nativo de Supabase). */
 export default function RecuperarPage() {
-  const supabase = createClient();
   const [correo, setCorreo] = useState("");
   const [enviado, setEnviado] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -18,12 +17,13 @@ export default function RecuperarPage() {
     e.preventDefault();
     setCargando(true);
     setError(null);
-    const { error } = await supabase.auth.resetPasswordForEmail(correo, {
-      redirectTo: `${window.location.origin}/actualizar-clave`,
+    const res = await fetch("/api/auth/recuperar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ correo }),
     });
     setCargando(false);
-    // No revelamos si el correo existe o no (evita enumerar cuentas).
-    if (error && error.status && error.status >= 500) {
+    if (!res.ok) {
       setError("No se pudo enviar el correo. Intenta de nuevo en un momento.");
       return;
     }

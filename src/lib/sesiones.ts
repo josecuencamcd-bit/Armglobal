@@ -24,6 +24,13 @@ export const EVENTOS = [
 export const MODALIDADES = ["Presencial", "Virtual"] as const;
 export const CATEGORIAS = ["Ofrenda", "Siembra Especial", "Diezmo", "Amor por la Casa"] as const;
 export const METODOS = ["Tarjeta", "Efectivo", "Transferencia"] as const;
+/** Fondos de equipo (Fondo Voluntariado) y gastos de campus — mismos enums de Code.gs. */
+export const METODOS_FONDO = ["Efectivo", "Transferencia"] as const;
+export const CATEG_GASTO = [
+  "Insumos mensuales", "Alimentación", "Transporte", "Actividad especial", "Gastos mensuales", "Otros",
+] as const;
+export const CATEG_LIBRE = ["Gastos mensuales", "Otros"];
+export const GASTOS_ITEMS = ["Luz", "Gas", "Agua", "Alquiler", "Otros"] as const;
 export const ASIS_IDS = ["auditorio", "kids", "tweens", "bebes", "papas", "sensorial"];
 export const VOL_IDS = [
   "servicio", "tecnica", "kids", "tweens", "worship", "cocina", "rrss",

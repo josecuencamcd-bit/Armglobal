@@ -7,25 +7,11 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.18"
   }
   public: {
     Tables: {
-      _test_ddl_probe: {
-        Row: {
-          id: number | null
-        }
-        Insert: {
-          id?: number | null
-        }
-        Update: {
-          id?: number | null
-        }
-        Relationships: []
-      }
       aportes: {
         Row: {
           campus: Database["public"]["Enums"]["campus_t"]
@@ -1156,6 +1142,7 @@ export type Database = {
         | "Conexión"
         | "Voluntariado"
         | "Stand de Oración"
+        | "Campus"
       campus_t: "Punta Arenas" | "Puerto Natales"
       categoria_aporte_t:
         | "Ofrenda"
@@ -1315,6 +1302,7 @@ export const Constants = {
         "Conexión",
         "Voluntariado",
         "Stand de Oración",
+        "Campus",
       ],
       campus_t: ["Punta Arenas", "Puerto Natales"],
       categoria_aporte_t: [
