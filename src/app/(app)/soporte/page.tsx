@@ -30,6 +30,7 @@ export default function SoportePage() {
   const [autEnc, setAutEnc] = useState<AutEncuentro[] | null>(null);
   const [autFon, setAutFon] = useState<AutFondos[] | null>(null);
   const [cumples, setCumples] = useState<Propuesta[] | null>(null);
+  const [ultimosSaludos, setUltimosSaludos] = useState<Propuesta[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState<string | null>(null);
 
@@ -44,7 +45,15 @@ export default function SoportePage() {
     if (ja.ok) setAccesos(ja.data.filter((x: Acceso) => x.estado === "Pendiente"));
     if (jae.ok) setAutEnc(jae.data.filter((x: AutEncuentro) => x.estado === "Pendiente"));
     if (jaf.ok) setAutFon(jaf.data.filter((x: AutFondos) => x.estado === "Pendiente Pastor" || x.estado === "Pendiente Admin"));
-    if (jc.ok) setCumples(jc.data.filter((x: Propuesta) => x.estado === "Pendiente"));
+    if (jc.ok) {
+      setCumples(jc.data.filter((x: Propuesta) => x.estado === "Pendiente"));
+      setUltimosSaludos(
+        jc.data
+          .filter((x: Propuesta) => x.estado === "Enviada")
+          .sort((a: Propuesta, b: Propuesta) => (a.fecha < b.fecha ? 1 : -1))
+          .slice(0, 8)
+      );
+    }
   }, []);
 
   useEffect(() => {
@@ -133,6 +142,15 @@ export default function SoportePage() {
               <button className="boton" style={{ padding: "6px 10px", fontSize: "0.82rem" }} disabled={ocupado === `c${c.id}`} onClick={() => resolverCumple(c.id, true)}>Aprobar</button>
               <button style={{ padding: "6px 10px", fontSize: "0.82rem", background: "none", border: "1px solid var(--line)", borderRadius: 8, color: "var(--muted)" }} disabled={ocupado === `c${c.id}`} onClick={() => resolverCumple(c.id, false)}>Anular</button>
             </div>
+          </div>
+        ))}
+      </Seccion>
+
+      <Seccion titulo="Últimos saludos" vacio="Aún no se ha enviado ningún saludo." cantidad={ultimosSaludos?.length}>
+        {ultimosSaludos?.map((c) => (
+          <div className="fila" key={c.id}>
+            <div>{c.nombres}</div>
+            <span className="muted" style={{ fontSize: "0.78rem" }}>{c.fecha}</span>
           </div>
         ))}
       </Seccion>
