@@ -15,6 +15,6 @@ export const MODULOS: Modulo[] = [
   { key: "turnos", label: "Turnos", href: "/turnos", icon: "turnos", listo: false },
   { key: "visitas", label: "Visitas", href: "/visitas", icon: "visitas", listo: false },
   { key: "cumpleanos", label: "Cumpleaños", href: "/cumpleanos", icon: "cumples", listo: false },
-  { key: "perfiles", label: "Perfiles", href: "/perfiles", icon: "perfiles", listo: false },
+  { key: "perfiles", label: "Perfiles", href: "/perfiles", icon: "perfiles", listo: true },
   { key: "reuniones", label: "Reuniones", href: "/reuniones", icon: "reuniones", listo: false },
 ];
