@@ -1,28 +1,28 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { encuentrosPendientes, notasPendientes, debeAvisar } from "@/lib/vigilantes";
+import { encuentrosPendientes, notasPendientes, debeAvisar, vigilanteFondos } from "@/lib/vigilantes";
 import { enviarWhatsApp, telefonoWa } from "@/lib/whatsapp";
 
 export const dynamic = "force-dynamic";
 
 /**
- * Puerto parcial de `cumpleVigilante_()` (el trigger de 15 min de Code.gs
- * que llamaba a vigilanteFondos_/vigilanteEncuentros_/vigilanteNotas_).
+ * Puerto de `cumpleVigilante_()` (el trigger de 15 min de Code.gs que
+ * llamaba a vigilanteFondos_/vigilanteEncuentros_/vigilanteNotas_).
  * Pensado como Vercel Cron Job (ver vercel.json) corriendo cada 15 min.
  *
- * Cubierto en esta pasada: encuentros pendientes de finalizar
- * (vigilanteEncuentros_) y áreas que no cerraron su asistencia
- * (vigilanteNotas_), con el mismo throttle (máx. 3 avisos, ≥110 min entre
- * cada uno) vía `avisos_vigilante`.
+ * Cubierto: encuentros pendientes de finalizar (vigilanteEncuentros_),
+ * áreas que no cerraron su asistencia (vigilanteNotas_, throttle vía
+ * `avisos_vigilante`) y cierre automático de mes + recordatorio de fondos
+ * sin cerrar (vigilanteFondos_, por correo vía Resend).
  *
  * Pendiente, NO fabricado para no fingir fidelidad que no es real:
- * - vigilanteFondos_ (cierre automático de mes + recordatorio de cierre)
  * - cumpleVigilante_ propiamente tal (crear/enviar saludos de cumpleaños —
  *   necesita portar cumpleCrear_/cumpleEnviar_/cumpleHtml_, que componen un
- *   mensaje largo con plantillas de Code.gs no revisadas en este pase)
- * - el envío por correo de avisoA_ (Code.gs usaba GmailApp/MailApp; acá no
- *   hay proveedor de email conectado todavía — se envía por WhatsApp cuando
- *   hay teléfono guardado, y se deja un TODO para cuando se defina el
- *   proveedor de correo transaccional, p.ej. Resend)
+ *   mensaje largo con imágenes embebidas en base64 — plantillas de Code.gs
+ *   no revisadas en este pase, queda como tarea aparte)
+ * - encuentros/notas siguen avisando por WhatsApp (sin credenciales
+ *   configuradas por decisión explícita del usuario — "no usaremos
+ *   WhatsApp por ahora"), a diferencia de vigilanteFondos_ que siempre fue
+ *   por correo en Code.gs y acá ya usa Resend.
  */
 export async function GET(req: Request) {
   if (process.env.CRON_SECRET) {
@@ -33,10 +33,14 @@ export async function GET(req: Request) {
   }
 
   const supabase = createAdminClient();
-  const resultado = { encuentros_avisados: 0, notas_avisadas: 0, roles_aplicados: 0 };
+  const resultado = { encuentros_avisados: 0, notas_avisadas: 0, roles_aplicados: 0, fondos_cerrados: 0, fondos_avisos: 0 };
 
   const { data: rolesAplicados } = await supabase.rpc("aplicar_roles_programados");
   resultado.roles_aplicados = rolesAplicados ?? 0;
+
+  const fondos = await vigilanteFondos(supabase);
+  resultado.fondos_cerrados = fondos.meses_cerrados;
+  resultado.fondos_avisos = fondos.avisos;
 
   const pendEncuentros = await encuentrosPendientes(supabase);
   for (const e of pendEncuentros) {
