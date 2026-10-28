@@ -1,17 +1,29 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 export const dynamic = "force-dynamic";
 
-/** Reemplaza api_restablecer de Code.gs. Supabase redirige acá con una sesión
- * de recuperación temporal (tras click en el link del correo); updateUser
- * fija la clave nueva. También sirve para que cualquier usuario logueado
- * cambie su clave. */
+/** Reemplaza api_restablecer de Code.gs. El link del correo trae
+ * ?token_hash=...&type=recovery (lo armamos nosotros en /api/auth/recuperar,
+ * sin pasar por el redirect de Supabase — ver el comentario de esa ruta);
+ * acá lo canjeamos directo con verifyOtp para abrir la sesión temporal, y
+ * updateUser fija la clave nueva. También sirve para que cualquier usuario
+ * logueado cambie su clave (en ese caso ya hay sesión y no hace falta
+ * token_hash). */
 export default function ActualizarClavePage() {
+  return (
+    <Suspense>
+      <ActualizarClaveForm />
+    </Suspense>
+  );
+}
+
+function ActualizarClaveForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createClient();
   const [listo, setListo] = useState(false);
   const [clave, setClave] = useState("");
@@ -21,16 +33,23 @@ export default function ActualizarClavePage() {
   const [cargando, setCargando] = useState(false);
 
   useEffect(() => {
-    // onAuthStateChange dispara PASSWORD_RECOVERY cuando el link del correo
-    // ya estableció la sesión temporal en el navegador.
-    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") setListo(true);
-    });
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) setListo(true);
-    });
-    return () => sub.subscription.unsubscribe();
-  }, [supabase]);
+    let cancelado = false;
+    (async () => {
+      const tokenHash = searchParams.get("token_hash");
+      if (tokenHash) {
+        const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: "recovery" });
+        if (!cancelado && !error) setListo(true);
+        return;
+      }
+      // Sin token_hash en la URL: puede ser un usuario ya logueado que
+      // simplemente quiere cambiar su clave.
+      const { data } = await supabase.auth.getSession();
+      if (!cancelado && data.session) setListo(true);
+    })();
+    return () => {
+      cancelado = true;
+    };
+  }, [supabase, searchParams]);
 
   async function guardar(e: React.FormEvent) {
     e.preventDefault();
