@@ -20,4 +20,5 @@ export const MODULOS: Modulo[] = [
   { key: "perfiles", label: "Perfiles", href: "/perfiles", icon: "perfiles", listo: true },
   { key: "reuniones", label: "Reuniones", href: "/reuniones", icon: "reuniones", listo: true },
   { key: "perfil", label: "Mi perfil", href: "/perfil", icon: "perfil", listo: true },
+  { key: "actividad", label: "Actividad", href: "/actividad", icon: "actividad", listo: true },
 ];

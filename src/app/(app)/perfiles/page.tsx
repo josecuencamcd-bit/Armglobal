@@ -19,6 +19,9 @@ type Perfil = {
   bloqueado: boolean;
   modulos_on: string[];
   modulos_off: string[];
+  roles_nuevos: string[] | null;
+  areas_nuevas: string[] | null;
+  rol_cambia_desde: string | null;
 };
 
 type Solicitud = {
@@ -78,7 +81,7 @@ export default function PerfilesPage() {
     await cargar();
   }
 
-  async function guardarPerfil(id: string, cambios: Partial<Pick<Perfil, "roles" | "areas" | "campus" | "bloqueado">>) {
+  async function guardarPerfil(id: string, cambios: Partial<Pick<Perfil, "roles" | "areas" | "campus" | "bloqueado" | "roles_nuevos" | "areas_nuevas" | "rol_cambia_desde">>) {
     setGuardando(true);
     const res = await fetch(`/api/perfiles/${id}`, {
       method: "PATCH",
@@ -228,6 +231,8 @@ export default function PerfilesPage() {
                 })}
               </div>
 
+              <ProgramarRol perfil={p} guardando={guardando} onGuardar={guardarPerfil} />
+
               <p className="muted" style={{ marginBottom: 6, fontSize: "0.8rem" }}>Área</p>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 14 }}>
                 {AREAS.map((a) => {
@@ -311,6 +316,115 @@ export default function PerfilesPage() {
           )}
         </div>
       ))}
+    </div>
+  );
+}
+
+/** Cambio de rol programado — equivalente a la "autonomía" de la app
+ * vieja donde una persona quedaba con un rol nuevo automáticamente a
+ * partir de una fecha (ej. "desde noviembre pasa a Líder"). Se guarda en
+ * roles_nuevos/rol_cambia_desde y lo aplica solo la función
+ * aplicar_roles_programados() (cron diario + cada vez que se abre
+ * Perfiles) — nadie tiene que volver a tocarlo ese día. */
+function ProgramarRol({
+  perfil,
+  guardando,
+  onGuardar,
+}: {
+  perfil: Perfil;
+  guardando: boolean;
+  onGuardar: (id: string, cambios: { roles_nuevos?: string[] | null; rol_cambia_desde?: string | null }) => void;
+}) {
+  const [abierto, setAbierto] = useState(false);
+  const [roles, setRoles] = useState<string[]>(perfil.roles_nuevos ?? perfil.roles);
+  const [fecha, setFecha] = useState(perfil.rol_cambia_desde ?? "");
+
+  const pendiente = !!perfil.rol_cambia_desde && !!perfil.roles_nuevos?.length;
+
+  if (!abierto && !pendiente) {
+    return (
+      <button
+        type="button"
+        onClick={() => setAbierto(true)}
+        style={{ background: "none", border: 0, color: "var(--accent)", fontSize: "0.8rem", cursor: "pointer", padding: 0, marginBottom: 14 }}
+      >
+        Programar cambio de rol desde una fecha
+      </button>
+    );
+  }
+
+  if (pendiente && !abierto) {
+    return (
+      <div className="tarjeta" style={{ margin: "0 0 14px", padding: 10 }}>
+        <p style={{ margin: 0, fontSize: "0.82rem" }}>
+          Cambia a <strong>{perfil.roles_nuevos!.join(", ")}</strong> desde el {perfil.rol_cambia_desde}
+        </p>
+        <div style={{ display: "flex", gap: 10, marginTop: 6 }}>
+          <button type="button" onClick={() => setAbierto(true)} style={{ background: "none", border: 0, color: "var(--accent)", fontSize: "0.78rem", cursor: "pointer", padding: 0 }}>
+            Editar
+          </button>
+          <button
+            type="button"
+            disabled={guardando}
+            onClick={() => onGuardar(perfil.id, { roles_nuevos: null, rol_cambia_desde: null })}
+            style={{ background: "none", border: 0, color: "var(--muted)", fontSize: "0.78rem", cursor: "pointer", padding: 0 }}
+          >
+            Cancelar
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="tarjeta" style={{ margin: "0 0 14px", padding: 10 }}>
+      <p className="muted" style={{ margin: "0 0 6px", fontSize: "0.78rem" }}>Nuevos roles desde…</p>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
+        {ROLES.map((r) => {
+          const activo = roles.includes(r);
+          return (
+            <button
+              key={r}
+              type="button"
+              onClick={() => setRoles(activo ? roles.filter((x) => x !== r) : [...roles, r])}
+              style={{
+                padding: "6px 10px", borderRadius: 999, fontSize: "0.75rem",
+                border: `1px solid ${activo ? "var(--accent)" : "var(--line)"}`,
+                background: activo ? "var(--accent)" : "transparent",
+                color: activo ? "var(--accent-ink)" : "var(--muted)",
+                cursor: "pointer",
+              }}
+            >
+              {r}
+            </button>
+          );
+        })}
+      </div>
+      <div className="campo">
+        <label>Desde</label>
+        <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} />
+      </div>
+      <div style={{ display: "flex", gap: 8 }}>
+        <button
+          type="button"
+          className="boton"
+          style={{ flex: 1 }}
+          disabled={guardando || !fecha || roles.length === 0}
+          onClick={() => {
+            onGuardar(perfil.id, { roles_nuevos: roles, rol_cambia_desde: fecha });
+            setAbierto(false);
+          }}
+        >
+          Guardar
+        </button>
+        <button
+          type="button"
+          onClick={() => setAbierto(false)}
+          style={{ flex: 1, background: "none", border: "1px solid var(--line)", borderRadius: 10, color: "var(--muted)", cursor: "pointer" }}
+        >
+          Cerrar
+        </button>
+      </div>
     </div>
   );
 }

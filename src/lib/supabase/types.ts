@@ -7,6 +7,8 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.18"
   }
@@ -232,6 +234,39 @@ export type Database = {
           resuelto_en?: string | null
           resuelto_por?: string | null
           tipo?: string | null
+        }
+        Relationships: []
+      }
+      bitacora: {
+        Row: {
+          accion: string
+          actor_correo: string | null
+          actor_nombre: string | null
+          detalle: Json | null
+          en: string
+          entidad: string
+          entidad_id: string | null
+          id: number
+        }
+        Insert: {
+          accion: string
+          actor_correo?: string | null
+          actor_nombre?: string | null
+          detalle?: Json | null
+          en?: string
+          entidad: string
+          entidad_id?: string | null
+          id?: never
+        }
+        Update: {
+          accion?: string
+          actor_correo?: string | null
+          actor_nombre?: string | null
+          detalle?: Json | null
+          en?: string
+          entidad?: string
+          entidad_id?: string | null
+          id?: never
         }
         Relationships: []
       }

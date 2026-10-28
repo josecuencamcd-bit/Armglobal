@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { ok, fail, fromSupabaseError, parseBody } from "@/lib/api-helpers";
+import { registrarBitacora } from "@/lib/bitacora";
 import { z } from "zod";
 
 /**
@@ -47,6 +48,15 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
       .maybeSingle();
     if (error) throw error;
     if (count === 0) return fail("No tienes permiso, o la solicitud no existe.", 403);
+
+    await registrarBitacora({
+      actorCorreo: perfil.correo,
+      accion: parsedBody.data.aprobar ? "encuentro_reabierto" : "encuentro_reapertura_rechazada",
+      entidad: "autorizaciones_encuentro",
+      entidadId: params.id,
+      detalle: { campus: data?.campus, encuentro: data?.encuentro, fecha: data?.fecha },
+    });
+
     return ok(data);
   } catch (e) {
     return fromSupabaseError(e as { message: string; code?: string });

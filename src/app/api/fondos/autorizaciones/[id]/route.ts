@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { ok, fail, fromSupabaseError, parseBody } from "@/lib/api-helpers";
+import { registrarBitacora } from "@/lib/bitacora";
 import { z } from "zod";
 
 /**
@@ -65,6 +66,14 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
       .maybeSingle();
     if (error) return fromSupabaseError(error);
     if (count === 0) return fail("Solo el Pastor de campus da el Ok.", 403);
+    await registrarBitacora({
+      actorCorreo: perfil.correo,
+      actorNombre: perfil.nombre,
+      accion: aprobar ? "fondos_reapertura_ok_pastor" : "fondos_reapertura_rechazada_pastor",
+      entidad: "autorizaciones_fondos",
+      entidadId: params.id,
+      detalle: { campus: actual.campus, area: actual.area, mes: actual.mes },
+    });
     return ok(data);
   }
 
@@ -86,6 +95,14 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
       .maybeSingle();
     if (error) return fromSupabaseError(error);
     if (count === 0) return fail("La aprobación final la da Admin app.", 403);
+    await registrarBitacora({
+      actorCorreo: perfil.correo,
+      actorNombre: perfil.nombre,
+      accion: aprobar ? "fondos_reapertura_aprobada_admin" : "fondos_reapertura_rechazada_admin",
+      entidad: "autorizaciones_fondos",
+      entidadId: params.id,
+      detalle: { campus: actual.campus, area: actual.area, mes: actual.mes },
+    });
     return ok(data);
   }
 

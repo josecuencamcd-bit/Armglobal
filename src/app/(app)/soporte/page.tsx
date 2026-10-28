@@ -16,6 +16,7 @@ const TILES: { key: string; label: string; icon: string; href?: string }[] = [
   { key: "cumpleanos", label: "Cumpleaños", icon: "cumples", href: "/cumpleanos" },
   { key: "turnos", label: "Turnos", icon: "turnos", href: "/turnos" },
   { key: "nombres", label: "Nombres", icon: "perfiles", href: "/perfiles" },
+  { key: "actividad", label: "Actividad", icon: "actividad", href: "/actividad" },
 ];
 
 /** Soporte: mismo menú de la app vieja (grilla Accesos/Perfiles/Fondos/
