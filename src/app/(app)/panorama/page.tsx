@@ -64,8 +64,8 @@ export default function PanoramaPage() {
             <Kpi titulo="Integrantes" valor={datos.total} />
             <Kpi titulo="Años en la iglesia (prom.)" valor={datos.anos.promIglesia} />
             <Kpi titulo="Años sirviendo (prom.)" valor={datos.anos.promServ} />
-            <Kpi titulo="Visitas por contactar" valor={datos.visitas.pendientes} />
-            <Kpi titulo="Bajas por aprobar" valor={datos.solicitudes} />
+            <Kpi titulo="Visitas por contactar" valor={datos.visitas.pendientes} alerta={datos.visitas.pendientes > 0} />
+            <Kpi titulo="Bajas por aprobar" valor={datos.solicitudes} alerta={datos.solicitudes > 0} />
           </div>
 
           <p className="muted" style={{ margin: "20px 0 8px" }}>Equipos de {campus}</p>
@@ -93,11 +93,11 @@ export default function PanoramaPage() {
   );
 }
 
-function Kpi({ titulo, valor }: { titulo: string; valor: number }) {
+function Kpi({ titulo, valor, alerta }: { titulo: string; valor: number; alerta?: boolean }) {
   return (
     <div className="tarjeta" style={{ margin: 0 }}>
       <p className="muted" style={{ margin: 0, fontSize: "0.72rem", textTransform: "uppercase" }}>{titulo}</p>
-      <p className="num" style={{ fontSize: "1.8rem", fontWeight: 700, margin: "4px 0 0", color: "var(--accent)" }}>{valor}</p>
+      <p className="num" style={{ fontSize: "1.8rem", fontWeight: 700, margin: "4px 0 0", color: alerta ? "var(--danger)" : "var(--accent)" }}>{valor}</p>
     </div>
   );
 }
