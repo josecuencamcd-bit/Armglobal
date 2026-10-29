@@ -58,10 +58,17 @@ function LoginForm() {
   }
 
   return (
-    <div className="contenedor" style={{ paddingTop: 64 }}>
-      <h1 className="titulo" style={{ fontSize: "1.4rem", textAlign: "center" }}>
-        armglobal
-      </h1>
+    <div className="contenedor" style={{ paddingTop: 48 }}>
+      <div className="tarjeta" style={{ textAlign: "center", padding: "24px 20px", marginBottom: 20 }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/cumple/lw.png" alt="armglobal" style={{ height: 28, margin: "0 auto 14px" }} />
+        <p style={{ margin: 0, fontSize: "0.9rem", color: "var(--accent)" }}>
+          La <em style={{ fontStyle: "italic" }}>Iglesia</em> es mucho más de lo que te dijeron
+        </p>
+        <p className="muted" style={{ margin: "8px 0 0", fontSize: "0.82rem" }}>
+          Campus Punta Arenas · Campus Puerto Natales
+        </p>
+      </div>
       <form className="tarjeta" onSubmit={entrar}>
         <div className="campo">
           <label htmlFor="correo">Correo</label>

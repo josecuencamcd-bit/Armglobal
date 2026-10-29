@@ -21,10 +21,21 @@ export const viewport = {
   viewportFit: "cover",
 };
 
+const SW_REGISTER = `
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('/sw.js').catch(function () {});
+  });
+}
+`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es">
-      <body>{children}</body>
+      <body>
+        {children}
+        <script dangerouslySetInnerHTML={{ __html: SW_REGISTER }} />
+      </body>
     </html>
   );
 }
