@@ -68,5 +68,11 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  // Excluye también los archivos estáticos de /public (logo, íconos,
+  // manifest, service worker): antes solo se excluía _next/static,
+  // _next/image y favicon.ico, así que esos archivos quedaban atrapados por
+  // el middleware y, sin sesión, redirigidos a /login (HTML en vez de la
+  // imagen) — el logo del login salía roto y el manifest/íconos del PWA
+  // también fallaban, bloqueando la instalación real de la app.
+  matcher: ["/((?!_next/static|_next/image|.*\\.(?:png|jpg|jpeg|svg|gif|webp|ico|json|js|txt|xml|woff|woff2)$).*)"],
 };
