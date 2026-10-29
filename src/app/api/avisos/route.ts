@@ -1,10 +1,32 @@
 import { createClient } from "@/lib/supabase/server";
 import { ok, fail, fromSupabaseError } from "@/lib/api-helpers";
 import { CAMPUS } from "@/lib/sesiones";
+import { cierreSimplificado } from "@/lib/informe-fondos";
 import { identidadActuante } from "@/lib/identidad";
+
+const FONDO_AREAS = ["Kids", "Tweens", "Técnica", "Worship", "Conexión", "Voluntariado"] as const;
 
 function hoyISO() {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Punta_Arenas" }).format(new Date());
+}
+
+/** mesAnt_: mes calendario anterior a `mes` (yyyy-mm). */
+function mesAnt(mes: string): string {
+  const [y, m] = mes.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 2, 1, 12)).toISOString().slice(0, 7);
+}
+function ultimoDiaMes(mes: string): number {
+  const [y, m] = mes.split("-").map(Number);
+  return new Date(Date.UTC(y, m, 0, 12)).getUTCDate();
+}
+/** mesPorCerrar_: el mes "en ventana de cierre" ahora mismo (últimos 2 días
+ * del mes o primeros 4 del siguiente), o '' si ninguno aplica. */
+function mesPorCerrar(hoy: string): string {
+  const dia = Number(hoy.slice(8));
+  const act = hoy.slice(0, 7);
+  if (dia <= 4) return mesAnt(act);
+  if (ultimoDiaMes(act) - dia <= 2) return act;
+  return "";
 }
 
 /**
@@ -23,9 +45,11 @@ export async function GET() {
   const roles = (perfil.roles as string[] | null) ?? [];
   const areasPerfil = (perfil.areas as string[] | null) ?? [];
   const esAdmin = roles.includes("Admin app");
-  const esPastorCampus = roles.includes("Pastor de campus") || roles.includes("Pastor principal");
+  const esPastorCampus = roles.includes("Pastor de campus") || roles.includes("Pastor principal") || roles.includes("Pastor");
   const esAdministrador = roles.includes("Administrador");
   const esLider = roles.includes("Líder");
+  const esPastor = roles.includes("Pastor principal") || roles.includes("Pastor de campus") || roles.includes("Pastor");
+  const liderFondos = esLider ? areasPerfil.filter((a) => (FONDO_AREAS as readonly string[]).includes(a)) : [];
 
   const hoy = hoyISO();
   const campusVisibles: readonly string[] =
@@ -61,7 +85,42 @@ export async function GET() {
       (data ?? []).forEach((n) => notas.push(n));
     }
 
-    return ok({ encuentros, notas, total: encuentros.length + notas.length });
+    // mesPorCerrar_ + fondosCierre_: qué fondos "míos" siguen sin cierre en
+    // el mes que está en ventana (últimos 2 días del mes / primeros 4 del
+    // siguiente) — mismo aviso de api_ecoAvisos en Code.gs.
+    const cierres: { campus: string; area: string; mes: string }[] = [];
+    const mes = mesPorCerrar(hoy);
+    if (mes) {
+      for (const c of campusVisibles) {
+        for (const ar of [...FONDO_AREAS, "Campus"] as const) {
+          const mio = ar === "Campus" ? esPastor : liderFondos.includes(ar) || esPastorCampus;
+          if (!mio) continue;
+          const cierre = await cierreSimplificado(supabase, c as "Punta Arenas" | "Puerto Natales", ar, mes);
+          if (!cierre.cerrado) cierres.push({ campus: c, area: ar, mes });
+        }
+      }
+    }
+
+    // api_fonAutLista: autorizaciones de reapertura de fondos que esperan
+    // la acción de ESTA persona (Pastor de campus da el "Ok" primero,
+    // Admin app aprueba después).
+    let autorizaciones = 0;
+    if (esPastorCampus || esAdmin) {
+      const { data: aut, error: eAut } = await supabase.from("autorizaciones_fondos").select("campus, estado");
+      if (eAut) throw eAut;
+      autorizaciones = (aut ?? []).filter((x) => {
+        if (esAdmin) return x.estado === "Pendiente Admin";
+        return x.estado === "Pendiente Pastor" && (perfil.campus == null || x.campus === perfil.campus);
+      }).length;
+    }
+
+    return ok({
+      encuentros,
+      notas,
+      cierres,
+      autorizaciones,
+      total: encuentros.length + notas.length + cierres.length + (autorizaciones > 0 ? 1 : 0),
+    });
   } catch (e) {
     return fromSupabaseError(e as { message: string; code?: string });
   }

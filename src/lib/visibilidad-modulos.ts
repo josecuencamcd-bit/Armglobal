@@ -13,34 +13,43 @@ export type PerfilVisibilidad = {
   modulos_off: string[];
 };
 
-function tiene(p: PerfilVisibilidad, r: Rol) {
+export function tiene(p: PerfilVisibilidad, r: Rol) {
   return p.roles.includes(r);
 }
-function esPastorC(p: PerfilVisibilidad) {
+export function esPastorC(p: PerfilVisibilidad) {
   return tiene(p, "Pastor de campus") || tiene(p, "Pastor") || tiene(p, "Pastor principal");
 }
-function esAlto(p: PerfilVisibilidad) {
+export function esAlto(p: PerfilVisibilidad) {
   return esPastorC(p) || tiene(p, "Ministro");
 }
-function esFin(p: PerfilVisibilidad) {
+export function esFin(p: PerfilVisibilidad) {
   return esAlto(p) || tiene(p, "Administrador");
 }
 function esPanorama(p: PerfilVisibilidad) {
   return esPastorC(p) || tiene(p, "Admin app");
 }
-function esLider(p: PerfilVisibilidad) {
+export function esLider(p: PerfilVisibilidad) {
   return tiene(p, "Líder");
 }
 function esConex(p: PerfilVisibilidad) {
   return p.areas.includes("Conexión") || p.sirve.includes("Conexión");
 }
-function fondosMios(p: PerfilVisibilidad): Area[] {
+export function fondosMios(p: PerfilVisibilidad): Area[] {
   if (esPastorC(p)) return FONDO_AREAS.slice();
   if (tiene(p, "Líder")) return p.areas.filter((a) => (FONDO_AREAS as string[]).includes(a));
   return [];
 }
-function puedeSoporte(p: PerfilVisibilidad) {
+export function puedeSoporte(p: PerfilVisibilidad) {
   return tiene(p, "Admin app") || tiene(p, "Pastor de campus") || tiene(p, "Pastor");
+}
+export function esAppAdmin(p: PerfilVisibilidad) {
+  return tiene(p, "Admin app");
+}
+/** puedeVerEquipo: a quién le muestra Inicio la tarjeta "Tu equipo" — un
+ * Líder que no sea además un rol alto (ese ve el panel completo en
+ * Estadísticas/Panorama, no esta tarjeta resumida). */
+export function puedeVerEquipo(p: PerfilVisibilidad) {
+  return esLider(p) && !esAlto(p);
 }
 
 /**
