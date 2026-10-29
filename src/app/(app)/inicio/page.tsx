@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { MODULOS, type Modulo } from "@/lib/modulos";
 import { Icono } from "@/lib/iconos";
 import { useCampus } from "@/lib/campus-context";
+import { modulosVisibles, CLAVE_A_MODULO_APP, type PerfilVisibilidad } from "@/lib/visibilidad-modulos";
 
 /** Grupos del dashboard — mismas funciones, pero organizadas por tema en
  * vez de un muro de 10 cuadros iguales (pedido: "que sea ordenado, sin
@@ -41,6 +42,7 @@ export default function InicioPage() {
   const { campusActivo } = useCampus();
   const [miTurno, setMiTurno] = useState<MiTurno | null | undefined>(undefined);
   const [avisos, setAvisos] = useState<Avisos | null>(null);
+  const [visibles, setVisibles] = useState<Set<string> | null>(null);
 
   useEffect(() => {
     let cancelado = false;
@@ -49,8 +51,14 @@ export default function InicioPage() {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) return;
-      const { data } = await supabase.from("perfiles").select("nombre").eq("id", user.id).maybeSingle();
-      if (!cancelado && data) setNombre(data.nombre.split(" ")[0]);
+      const { data } = await supabase
+        .from("perfiles")
+        .select("nombre, roles, areas, sirve, modulos_on, modulos_off")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (cancelado || !data) return;
+      setNombre(data.nombre.split(" ")[0]);
+      setVisibles(modulosVisibles(data as unknown as PerfilVisibilidad));
     })();
     return () => {
       cancelado = true;
@@ -79,7 +87,15 @@ export default function InicioPage() {
     });
   }, []);
 
-  const porClave = new Map(MODULOS.map((m) => [m.key, m]));
+  // Mismo filtro que el menú inferior (ver layout): un tile mapeado a un
+  // módulo de la lista vieja solo se muestra si esta persona lo tiene
+  // visible por rol o por lo que el Admin app haya ajustado en /perfiles.
+  const modulosVisiblesAqui = MODULOS.filter((m) => {
+    const claveVieja = CLAVE_A_MODULO_APP[m.key];
+    if (!claveVieja || !visibles) return true;
+    return visibles.has(claveVieja);
+  });
+  const porClave = new Map(modulosVisiblesAqui.map((m) => [m.key, m]));
 
   return (
     <div className="contenedor" style={{ paddingTop: 28 }}>

@@ -7,6 +7,7 @@ import type { Database } from "@/lib/supabase/types";
 import { MODULOS } from "@/lib/modulos";
 import { Icono } from "@/lib/iconos";
 import { CampusProvider, useCampus } from "@/lib/campus-context";
+import { modulosVisibles, CLAVE_A_MODULO_APP } from "@/lib/visibilidad-modulos";
 
 type Rol = Database["public"]["Enums"]["rol_t"];
 
@@ -36,7 +37,16 @@ function iniciales(nombre: string): string {
     .join("");
 }
 
-type Perfil = { nombre: string; roles: Rol[]; campus: "Punta Arenas" | "Puerto Natales" | null };
+type Area = Database["public"]["Enums"]["area_t"];
+type Perfil = {
+  nombre: string;
+  roles: Rol[];
+  campus: "Punta Arenas" | "Puerto Natales" | null;
+  areas: Area[];
+  sirve: Area[];
+  modulos_on: string[];
+  modulos_off: string[];
+};
 
 /** Mismos 5 ítems directos en la barra inferior que la app vieja —
  * Inicio, Soporte, Bajas, Panorama, Cumpleaños — el resto vive detrás de
@@ -63,7 +73,7 @@ function Shell({ children, impersonando }: { children: React.ReactNode; imperson
       if (!user) return;
       const { data } = await supabase
         .from("perfiles")
-        .select("nombre, roles, campus")
+        .select("nombre, roles, campus, areas, sirve, modulos_on, modulos_off")
         .eq("id", user.id)
         .maybeSingle();
       if (!cancelado && data) setPerfil(data as Perfil);
@@ -87,8 +97,21 @@ function Shell({ children, impersonando }: { children: React.ReactNode; imperson
   }
 
   const rol = perfil ? rolPrincipal(perfil.roles) : null;
-  const principales = MODULOS.filter((m) => PRINCIPALES.includes(m.key));
-  const resto = MODULOS.filter((m) => !PRINCIPALES.includes(m.key));
+  // Qué tiles muestra realmente esta persona: los módulos que mapean a la
+  // lista vieja (CLAVE_A_MODULO_APP) se filtran por su rol + lo que un
+  // Admin app haya activado/desactivado para ella en /perfiles. Los que no
+  // tienen equivalente ahí (turnos, perfiles, actividad, etc.) se quedan
+  // visibles como antes.
+  const visibles = perfil
+    ? modulosVisibles({ roles: perfil.roles, areas: perfil.areas, sirve: perfil.sirve, modulos_on: perfil.modulos_on, modulos_off: perfil.modulos_off })
+    : null;
+  const modulosDeEstaPersona = MODULOS.filter((m) => {
+    const claveVieja = CLAVE_A_MODULO_APP[m.key];
+    if (!claveVieja || !visibles) return true;
+    return visibles.has(claveVieja);
+  });
+  const principales = modulosDeEstaPersona.filter((m) => PRINCIPALES.includes(m.key));
+  const resto = modulosDeEstaPersona.filter((m) => !PRINCIPALES.includes(m.key));
   const hayActivoEnResto = resto.some((m) => pathname?.startsWith(m.href));
 
   function ir(href: string) {
