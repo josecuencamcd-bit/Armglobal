@@ -292,28 +292,51 @@ export default function EncuentroPage() {
             <div className="fila" style={{ fontWeight: 700 }}><span>Total general</span><span className="num">{totAsis + totVol}</span></div>
           </div>
 
-          <div style={{ display: "flex", gap: 10, marginTop: 16, marginBottom: 8 }}>
+          <div style={{ display: "flex", gap: 8, marginTop: 16, marginBottom: 4 }}>
             <button
               type="button"
-              className="boton-secundario"
-              style={{ flex: 1, background: "var(--ok)", color: "#06281c", border: "none", fontWeight: 600 }}
+              style={{
+                flex: 1, background: "var(--ok)", color: "#06281c", border: "none", fontWeight: 700,
+                borderRadius: 10, padding: "12px 6px", cursor: "pointer", fontSize: "0.85rem",
+              }}
               onClick={compartir}
             >
               Compartir
             </button>
-            {!estado.finalizado ? (
-              <button className="boton" style={{ flex: 1 }} onClick={finalizar}>Encuentro finalizado</button>
-            ) : (
-              <button
-                type="button"
-                className="boton-secundario"
-                style={{ flex: 1 }}
-                onClick={() => alert("Pide a un Admin app que autorice la edición de este encuentro ya finalizado.")}
-              >
-                Modificar registro
-              </button>
-            )}
+            <button
+              type="button"
+              disabled={estado.finalizado}
+              onClick={finalizar}
+              style={{
+                flex: 1, borderRadius: 10, padding: "12px 6px", fontWeight: 700, fontSize: "0.85rem",
+                border: "none", cursor: estado.finalizado ? "default" : "pointer",
+                background: estado.finalizado ? "var(--gold-grad)" : "var(--surface-2)",
+                color: estado.finalizado ? "var(--accent-ink)" : "var(--ink)",
+                opacity: estado.finalizado ? 1 : 0.9,
+                whiteSpace: "pre-line",
+              }}
+            >
+              Encuentro{"\n"}finalizado
+            </button>
+            <button
+              type="button"
+              disabled={!estado.finalizado}
+              onClick={() => alert("Pide a un Admin app que autorice la edición de este encuentro ya finalizado.")}
+              style={{
+                flex: 1, borderRadius: 10, padding: "12px 6px", fontWeight: 600, fontSize: "0.85rem",
+                border: "1px solid var(--line)", background: "var(--surface-2)",
+                color: estado.finalizado ? "var(--ink)" : "var(--muted)",
+                cursor: estado.finalizado ? "pointer" : "default", opacity: estado.finalizado ? 1 : 0.5,
+                whiteSpace: "pre-line",
+              }}
+            >
+              Modificar{"\n"}registro
+            </button>
           </div>
+          <p className="sync-status">
+            <span className="punto" />
+            Sincronizado · {new Date(estado.sesion?.actualizado ?? Date.now()).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit", hour12: false })}
+          </p>
         </>
       )}
     </div>

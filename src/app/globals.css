@@ -89,6 +89,39 @@ button {
   position: relative;
 }
 
+/* Esquina "HUD" (porteada 1:1 del visual de Code.gs): un corchete sutil
+ * arriba a la derecha de cada tarjeta. */
+.tarjeta::after {
+  content: "";
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 10px;
+  height: 10px;
+  border-top: 1.5px solid var(--hud-line-2);
+  border-right: 1.5px solid var(--hud-line-2);
+  border-radius: 0 3px 0 0;
+  pointer-events: none;
+}
+
+.sync-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 10px 0 4px;
+  font-size: 0.72rem;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+.sync-status .punto {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ok);
+  flex-shrink: 0;
+}
+
 .campo {
   display: flex;
   flex-direction: column;
