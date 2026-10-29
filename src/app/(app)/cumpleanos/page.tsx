@@ -49,12 +49,18 @@ export default function CumpleanosPage() {
 
   if (!datos && !error) return <div className="contenedor">Cargando…</div>;
 
-  // Agrupa por mes (solo relevante en modo "todo el año").
+  // Agrupa por mes EN ORDEN (solo relevante en modo "todo el año"): la
+  // lista ya viene ordenada por "próximo cumpleaños" (faltan), así que un
+  // mismo mes puede repetirse más adelante si alguien de ese mes ya pasó
+  // su cumpleaños este año y el siguiente cae recién el próximo (ej.
+  // "Octubre" puede aparecer, luego "Noviembre", y más abajo "Octubre" de
+  // nuevo) — igual que en la app vieja. Por eso se agrupa por tramos
+  // consecutivos, nunca se fusionan meses repetidos no consecutivos.
   const grupos: { mes: number; items: Item[] }[] = [];
   for (const item of datos?.lista ?? []) {
-    let g = grupos.find((x) => x.mes === item.mes);
-    if (!g) { g = { mes: item.mes, items: [] }; grupos.push(g); }
-    g.items.push(item);
+    const ultimo = grupos[grupos.length - 1];
+    if (ultimo && ultimo.mes === item.mes) ultimo.items.push(item);
+    else grupos.push({ mes: item.mes, items: [item] });
   }
 
   return (
