@@ -7,7 +7,7 @@ import type { Database } from "@/lib/supabase/types";
 import { MODULOS, type Modulo } from "@/lib/modulos";
 import { Icono } from "@/lib/iconos";
 import { CampusProvider, useCampus } from "@/lib/campus-context";
-import { modulosVisibles, clavesPrincipalesNav, CLAVE_A_MODULO_APP } from "@/lib/visibilidad-modulos";
+import { modulosVisibles, clavesPrincipalesNav, adminSubnav, CLAVE_A_MODULO_APP, type PerfilVisibilidad } from "@/lib/visibilidad-modulos";
 
 /** Inverso de CLAVE_A_MODULO_APP: de una clave vieja (tabsPorRol) a
  * nuestra clave de módulo real. Una clave vieja sin tile propio acá
@@ -65,6 +65,7 @@ function Shell({ children, impersonando }: { children: React.ReactNode; imperson
   const supabase = createClient();
   const [perfil, setPerfil] = useState<Perfil | null>(null);
   const [masAbierto, setMasAbierto] = useState(false);
+  const [menuAdminAbierto, setMenuAdminAbierto] = useState(false);
   const [saliendo, setSaliendo] = useState(false);
   const { campusActivo, puedeElegir, elegirCampus } = useCampus();
 
@@ -129,8 +130,28 @@ function Shell({ children, impersonando }: { children: React.ReactNode; imperson
   const resto = modulosDeEstaPersona.filter((m) => !principales.some((p) => p.key === m.key));
   const hayActivoEnResto = resto.some((m) => pathname?.startsWith(m.href));
 
+  // pintarBottomNav() de la app vieja: la barra no aparece en Aportes,
+  // Reporte ni Estadísticas (tab === "aportes" || "reporte" || "stats").
+  const navOculta =
+    !!pathname &&
+    (pathname.startsWith("/finanzas") ||
+      pathname.startsWith("/estadisticas") ||
+      /^\/encuentros\/[^/]+\/aportes/.test(pathname));
+
+  // Dentro de "Administración" la barra cambia a Inicio/Volver/Menú (el
+  // campus abre la hoja con ADMIN_SUBNAV), en vez de la barra normal.
+  const enAdministracion = pathname === "/administracion";
+  const itemsAdmin: { clave: string; label: string; href: string }[] =
+    enAdministracion && perfil
+      ? adminSubnav(
+          { roles: perfil.roles, areas: perfil.areas, sirve: perfil.sirve, modulos_on: perfil.modulos_on, modulos_off: perfil.modulos_off } as PerfilVisibilidad,
+          campusActivo
+        )
+      : [];
+
   function ir(href: string) {
     setMasAbierto(false);
+    setMenuAdminAbierto(false);
     router.push(href);
   }
 
@@ -197,29 +218,83 @@ function Shell({ children, impersonando }: { children: React.ReactNode; imperson
         </div>
       )}
 
-      <main style={{ flex: 1, paddingBottom: 76 }}>{children}</main>
+      <main style={{ flex: 1, paddingBottom: navOculta ? 0 : 76 }}>{children}</main>
 
-      <nav className="bottom-nav">
-        {principales.map((m) => {
-          const activo = pathname?.startsWith(m.href);
-          return (
-            <button
-              key={m.key}
-              onClick={() => m.listo && ir(m.href)}
-              disabled={!m.listo}
-              aria-current={activo ? "true" : "false"}
-            >
-              <Icono id={m.icon} size={21} />
-              <span>{m.label}</span>
-              {!m.listo && <span style={{ fontSize: "0.56rem", opacity: 0.8 }}>Pronto</span>}
-            </button>
-          );
-        })}
-        <button onClick={() => setMasAbierto(true)} aria-current={hayActivoEnResto ? "true" : "false"}>
-          <Icono id="mas" size={21} />
-          <span>Más</span>
-        </button>
-      </nav>
+      {!navOculta && enAdministracion && (
+        <nav className="bottom-nav">
+          <button onClick={() => ir("/inicio")} aria-current="false">
+            <Icono id="inicio" size={21} />
+            <span>Inicio</span>
+          </button>
+          <button onClick={() => router.back()} aria-current="false">
+            <Icono id="volver" size={21} />
+            <span>Volver</span>
+          </button>
+          <button onClick={() => setMenuAdminAbierto(true)} aria-current="true">
+            <Icono id="menu" size={21} />
+            <span>{campusActivo}</span>
+          </button>
+        </nav>
+      )}
+
+      {!navOculta && !enAdministracion && (
+        <nav className="bottom-nav">
+          {principales.map((m) => {
+            const activo = pathname?.startsWith(m.href);
+            return (
+              <button
+                key={m.key}
+                onClick={() => m.listo && ir(m.href)}
+                disabled={!m.listo}
+                aria-current={activo ? "true" : "false"}
+              >
+                <Icono id={m.icon} size={21} />
+                <span>{m.label}</span>
+                {!m.listo && <span style={{ fontSize: "0.56rem", opacity: 0.8 }}>Pronto</span>}
+              </button>
+            );
+          })}
+          <button onClick={() => setMasAbierto(true)} aria-current={hayActivoEnResto ? "true" : "false"}>
+            <Icono id="mas" size={21} />
+            <span>Más</span>
+          </button>
+        </nav>
+      )}
+
+      {menuAdminAbierto && (
+        <div
+          onClick={() => setMenuAdminAbierto(false)}
+          style={{
+            position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)",
+            display: "flex", alignItems: "flex-end", zIndex: 50,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="hoja-mas"
+            style={{
+              width: "100%", maxWidth: 480, margin: "0 auto",
+              background: "var(--surface-2)", borderTop: "1px solid var(--hud-line)",
+              borderRadius: "var(--r-lg) var(--r-lg) 0 0",
+              padding: "18px 14px 28px",
+            }}
+          >
+            <p style={{ fontWeight: 700, margin: "0 0 10px", fontSize: "0.9rem" }}>Administración · {campusActivo}</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              {itemsAdmin.map((it) => (
+                <button
+                  key={it.clave}
+                  onClick={() => ir(it.href)}
+                  className="tarjeta"
+                  style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", cursor: "pointer", textAlign: "left", margin: 0 }}
+                >
+                  <span style={{ fontWeight: 600 }}>{it.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {masAbierto && (
         <div
