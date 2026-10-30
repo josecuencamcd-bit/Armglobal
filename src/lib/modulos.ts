@@ -28,7 +28,9 @@ export const MODULOS: Modulo[] = [
   // todavía sin pantalla propia (listo:false → aparece gris, "Pronto",
   // en vez de desaparecer, para no perder el mapa del menú real).
   { key: "estadisticas", label: "Estadísticas", href: "/estadisticas", icon: "actividad", listo: true },
-  // En la app vieja era un atajo directo a la pestaña "Aportes" de Finanzas
-  // para quien no es Pastor de campus (no necesita el informe completo).
-  { key: "aportes", label: "Aportes", href: "/finanzas", icon: "aportes", listo: true },
+  // Aportes de un encuentro (Ofrenda/Diezmo/Siembra/Amor por la Casa por
+  // categoría y forma de pago) es una actividad propia, distinta del
+  // informe de Finanzas — mismo encuentro que Asistencia, así que entra
+  // por el mismo selector y de ahí a /encuentros/[key]/aportes.
+  { key: "aportes", label: "Aportes", href: "/encuentros", icon: "aportes", listo: true },
 ];

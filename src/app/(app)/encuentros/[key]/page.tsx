@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ASIS_IDS, VOL_IDS, CATEGORIAS, METODOS, MODALIDADES, equiposVigentes } from "@/lib/sesiones";
+import { ASIS_IDS, VOL_IDS, MODALIDADES, equiposVigentes } from "@/lib/sesiones";
 
 const ASIS_LABELS: Record<string, string> = {
   auditorio: "Auditorio", kids: "Kids", tweens: "Tweens",
@@ -81,30 +81,6 @@ export default function EncuentroPage() {
     const json = await res.json();
     if (!json.ok) { setError(json.error); return; }
     setEstado(json.data);
-  }
-
-  async function agregarAporte(form: FormData) {
-    const res = await fetch(`/api/sesiones/${key}/aportes`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        nombre: form.get("nombre"),
-        monto: Number(form.get("monto")),
-        categoria: form.get("categoria"),
-        metodo: form.get("metodo"),
-      }),
-    });
-    const json = await res.json();
-    if (!json.ok) { setError(json.error); return; }
-    await cargar();
-  }
-
-  async function borrarAporte(id: string) {
-    if (!confirm("¿Eliminar este aporte?")) return;
-    const res = await fetch(`/api/sesiones/${key}/aportes/${id}`, { method: "DELETE" });
-    const json = await res.json();
-    if (!json.ok) { setError(json.error); return; }
-    await cargar();
   }
 
   async function compartir() {
@@ -260,31 +236,15 @@ export default function EncuentroPage() {
             </div>
           </div>
 
-          <div className="tarjeta">
-            <p className="titulo" style={{ fontSize: "1rem", marginTop: 0 }}>Aportes</p>
-            {estado.aportes.map((ap) => (
-              <div className="fila" key={ap.id}>
-                <span>{ap.nombre} · {ap.categoria} · {ap.metodo}</span>
-                <span className="num">
-                  ${ap.monto.toLocaleString("es-CL")}{" "}
-                  <button className="boton-peligro" type="button" onClick={() => borrarAporte(ap.id)} disabled={estado.finalizado}>✕</button>
-                </span>
-              </div>
-            ))}
-            {!estado.finalizado && (
-              <form action={(fd) => agregarAporte(fd)} style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
-                <input name="nombre" placeholder="Nombre" required />
-                <input name="monto" type="number" placeholder="Monto" required />
-                <select name="categoria" defaultValue={CATEGORIAS[0]}>
-                  {CATEGORIAS.map((c) => <option key={c} value={c}>{c}</option>)}
-                </select>
-                <select name="metodo" defaultValue={METODOS[0]}>
-                  {METODOS.map((m) => <option key={m} value={m}>{m}</option>)}
-                </select>
-                <button className="boton-secundario" type="submit">Agregar aporte</button>
-              </form>
-            )}
-          </div>
+          <Link href={`/encuentros/${key}/aportes`} className="tarjeta" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", textDecoration: "none", color: "inherit" }}>
+            <div>
+              <p style={{ margin: 0, fontWeight: 600 }}>Aportes</p>
+              <p className="muted" style={{ margin: "2px 0 0", fontSize: "0.8rem" }}>
+                {estado.aportes.length} registrado{estado.aportes.length === 1 ? "" : "s"} · ${estado.aportes.reduce((s, a) => s + a.monto, 0).toLocaleString("es-CL")}
+              </p>
+            </div>
+            <span className="muted">›</span>
+          </Link>
 
           <div className="tarjeta">
             <div className="fila"><span className="muted">Asistencia</span><span className="num">{totAsis}</span></div>
