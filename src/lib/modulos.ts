@@ -30,9 +30,9 @@ export const MODULOS: Modulo[] = [
   { key: "estadisticas", label: "Estadísticas", href: "/estadisticas", icon: "actividad", listo: true },
   // Aportes de un encuentro (Ofrenda/Diezmo/Siembra/Amor por la Casa por
   // categoría y forma de pago) es una actividad propia, distinta del
-  // informe de Finanzas — mismo encuentro que Asistencia, así que entra
-  // por el mismo selector y de ahí a /encuentros/[key]/aportes.
-  { key: "aportes", label: "Aportes", href: "/encuentros", icon: "aportes", listo: true },
+  // informe de Finanzas — entra por su propio selector de encuentro/fecha
+  // y va directo a /encuentros/[key]/aportes (no pasa por el Reporte).
+  { key: "aportes", label: "Aportes", href: "/encuentros/aportes", icon: "aportes", listo: true },
   // Única puerta para Ministro/Administrador a Mi equipo/Asistencia/Fondo
   // de equipo/Conexión/Bajas/Estadísticas/Reporte/Aportes (esFin() los
   // saca del menú normal) — y para Pastor/Pastor de campus, a Turnos/

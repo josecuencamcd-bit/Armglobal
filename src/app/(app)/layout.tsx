@@ -130,13 +130,15 @@ function Shell({ children, impersonando }: { children: React.ReactNode; imperson
   const resto = modulosDeEstaPersona.filter((m) => !principales.some((p) => p.key === m.key));
   const hayActivoEnResto = resto.some((m) => pathname?.startsWith(m.href));
 
-  // pintarBottomNav() de la app vieja: la barra no aparece en Aportes,
-  // Reporte ni Estadísticas (tab === "aportes" || "reporte" || "stats").
-  const navOculta =
-    !!pathname &&
-    (pathname.startsWith("/finanzas") ||
-      pathname.startsWith("/estadisticas") ||
-      /^\/encuentros\/[^/]+\/aportes/.test(pathname));
+  // pintarBottomNav() de la app vieja: la barra no aparece en los tabs
+  // "aportes"/"reporte" DEL ENCUENTRO (registrar asistencia/aportes de una
+  // sesión puntual) — nuestras /encuentros/[key] y /encuentros/[key]/aportes
+  // y el selector dedicado /encuentros/aportes. OJO: "reporte"/"finanzas"
+  // (el informe MENSUAL, vFinanzas) y "estadisticas" (equipostats, Mi
+  // equipo) son pantallas distintas que sí mantienen la barra normal —
+  // "stats" (la de Panorama) es la única que la oculta y no tiene pantalla
+  // propia todavía en esta migración.
+  const navOculta = !!pathname && pathname.startsWith("/encuentros/") && pathname !== "/encuentros";
 
   // Dentro de "Administración" la barra cambia a Inicio/Volver/Menú (el
   // campus abre la hoja con ADMIN_SUBNAV), en vez de la barra normal.
