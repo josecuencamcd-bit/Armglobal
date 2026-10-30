@@ -7,7 +7,12 @@ import { Icono } from "@/lib/iconos";
 type Acceso = { correo: string; nombre: string; nota: string | null; estado: string };
 type AutEncuentro = { id: number; nombre: string; campus: string; encuentro: string; fecha: string; motivo: string; estado: string };
 type AutFondos = { id: number; solicitante: string | null; campus: string; area: string; mes: string; motivo: string; estado: string };
-type Propuesta = { id: number; nombres: string; fecha: string; mensaje: string | null; estado: string };
+type Propuesta = {
+  id: number; nombres: string; fecha: string; estado: string;
+  saludo: string | null; mensaje: string | null; abrazo: string | null;
+  gracias: string | null; versiculo: string | null; html?: string;
+};
+type CampoCumple = "saludo" | "mensaje" | "abrazo" | "gracias" | "versiculo";
 
 const TILES: { key: string; label: string; icon: string; href?: string }[] = [
   { key: "accesos", label: "Accesos", icon: "soporte" },
@@ -33,6 +38,8 @@ export default function SoportePage() {
   const [ultimosSaludos, setUltimosSaludos] = useState<Propuesta[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState<string | null>(null);
+  const [editando, setEditando] = useState<number | null>(null);
+  const [borrador, setBorrador] = useState<Record<CampoCumple, string>>({ saludo: "", mensaje: "", abrazo: "", gracias: "", versiculo: "" });
 
   const cargar = useCallback(async () => {
     const [ra, rae, raf, rc] = await Promise.all([
@@ -91,6 +98,28 @@ export default function SoportePage() {
     await cargar();
   }
 
+  function abrirEdicion(c: Propuesta) {
+    setEditando(c.id);
+    setBorrador({
+      saludo: c.saludo ?? "", mensaje: c.mensaje ?? "", abrazo: c.abrazo ?? "",
+      gracias: c.gracias ?? "", versiculo: c.versiculo ?? "",
+    });
+  }
+
+  async function guardarEdicion(id: number) {
+    setOcupado(`c${id}`);
+    const res = await fetch(`/api/cumpleanos/propuestas/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(borrador),
+    });
+    const json = await res.json();
+    setOcupado(null);
+    if (!json.ok) { setError(json.error); return; }
+    setEditando(null);
+    await cargar();
+  }
+
   return (
     <div className="contenedor" style={{ paddingTop: 24 }}>
       <h1 className="titulo" style={{ fontSize: "1.3rem", marginBottom: 16 }}>Soporte</h1>
@@ -132,16 +161,46 @@ export default function SoportePage() {
       </Seccion>
 
       <Seccion titulo="Cumpleaños por aprobar" vacio="Sin mensajes pendientes." cantidad={cumples?.length}>
-        {cumples?.map((c) => (
-          <div className="fila" key={c.id}>
-            <div>
-              <div>{c.nombres}</div>
-              <div className="muted" style={{ fontSize: "0.78rem" }}>{c.fecha}</div>
+        {cumples?.map((c, i) => (
+          <div key={c.id} style={{ padding: "10px 0", borderBottom: i < (cumples?.length ?? 0) - 1 ? "1px solid var(--line)" : "none" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
+              <b style={{ fontSize: "0.92rem" }}>{JSON.parse(c.nombres || "[]").map((p: { n: string }) => p.n).join(", ") || c.nombres}</b>
+              <span className="muted" style={{ fontSize: "0.78rem" }}>{c.fecha}</span>
             </div>
-            <div style={{ display: "flex", gap: 6 }}>
-              <button className="boton" style={{ padding: "6px 10px", fontSize: "0.82rem" }} disabled={ocupado === `c${c.id}`} onClick={() => resolverCumple(c.id, true)}>Aprobar</button>
-              <button style={{ padding: "6px 10px", fontSize: "0.82rem", background: "none", border: "1px solid var(--line)", borderRadius: 8, color: "var(--muted)" }} disabled={ocupado === `c${c.id}`} onClick={() => resolverCumple(c.id, false)}>Anular</button>
-            </div>
+
+            {c.html && (
+              <div
+                style={{ borderRadius: 14, overflow: "hidden", marginBottom: 10, border: "1px solid var(--line)" }}
+                dangerouslySetInnerHTML={{ __html: c.html }}
+              />
+            )}
+
+            {editando === c.id ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 10 }}>
+                {(["saludo", "mensaje", "abrazo", "versiculo", "gracias"] as CampoCumple[]).map((campo) => (
+                  <div className="campo" key={campo} style={{ marginBottom: 0 }}>
+                    <label>{campo === "gracias" ? "Agradecimiento (opcional)" : campo.charAt(0).toUpperCase() + campo.slice(1)}</label>
+                    <textarea
+                      rows={campo === "versiculo" ? 2 : 2}
+                      value={borrador[campo]}
+                      onChange={(e) => setBorrador((b) => ({ ...b, [campo]: e.target.value }))}
+                      maxLength={700}
+                    />
+                  </div>
+                ))}
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button className="boton" style={{ padding: "6px 10px", fontSize: "0.82rem" }} disabled={ocupado === `c${c.id}`} onClick={() => guardarEdicion(c.id)}>Guardar</button>
+                  <button style={{ padding: "6px 10px", fontSize: "0.82rem", background: "none", border: "1px solid var(--line)", borderRadius: 8, color: "var(--muted)" }} onClick={() => setEditando(null)}>Cancelar</button>
+                </div>
+                <p className="muted" style={{ fontSize: "0.72rem", margin: 0 }}>Al guardar vuelve a quedar Pendiente: hay que aprobarlo de nuevo.</p>
+              </div>
+            ) : (
+              <div style={{ display: "flex", gap: 6 }}>
+                <button className="boton" style={{ padding: "6px 10px", fontSize: "0.82rem" }} disabled={ocupado === `c${c.id}`} onClick={() => resolverCumple(c.id, true)}>Aprobar</button>
+                <button style={{ padding: "6px 10px", fontSize: "0.82rem", background: "none", border: "1px solid var(--line)", borderRadius: 8, color: "var(--ink)" }} disabled={ocupado === `c${c.id}`} onClick={() => abrirEdicion(c)}>Editar texto</button>
+                <button style={{ padding: "6px 10px", fontSize: "0.82rem", background: "none", border: "1px solid var(--line)", borderRadius: 8, color: "var(--muted)" }} disabled={ocupado === `c${c.id}`} onClick={() => resolverCumple(c.id, false)}>No enviar</button>
+              </div>
+            )}
           </div>
         ))}
       </Seccion>

@@ -1,11 +1,15 @@
 import { createClient } from "@/lib/supabase/server";
 import { ok, fromSupabaseError, parseBody } from "@/lib/api-helpers";
+import { cumpleHtml } from "@/lib/cumpleanos";
 import { z } from "zod";
 
 /** api_cumpleProps / api_cumplePropGuardar: mensajes propuestos por el
  * vigilante de cumpleaños (cumpleVigilante_) para que un Admin apruebe antes
  * de enviarse por WhatsApp. Lectura abierta; creación solo Admin app
- * (normalmente la hace el cron, con service_role — ver /api/cron/cumpleanos). */
+ * (normalmente la hace el cron, con service_role — ver /api/cron/cumpleanos).
+ * cumpleVista_: cada fila trae su `html` ya renderizado (tarjeta + mensaje
+ * completo) para que Soporte > Cumpleaños muestre la vista previa real,
+ * igual que la app vieja, en vez de una lista pelada. */
 export async function GET() {
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -13,7 +17,8 @@ export async function GET() {
     .select("*")
     .order("fecha", { ascending: true });
   if (error) return fromSupabaseError(error);
-  return ok(data ?? []);
+  const conVista = (data ?? []).map((p) => ({ ...p, html: cumpleHtml(p).html }));
+  return ok(conVista);
 }
 
 const PropuestaSchema = z.object({

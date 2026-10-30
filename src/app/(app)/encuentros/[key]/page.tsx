@@ -50,6 +50,16 @@ export default function EncuentroPage() {
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
 
+  // Autorización para modificar un encuentro finalizado (api_autPedir /
+  // auth_autorizado): si tengo una solicitud "Autorizada" y vigente para
+  // esta misma sesión, los campos se vuelven a habilitar; si tengo una
+  // "Pendiente", muestro ese estado en vez del formulario para pedir otra.
+  const [autorizado, setAutorizado] = useState(false);
+  const [solicitudPendiente, setSolicitudPendiente] = useState(false);
+  const [pidiendo, setPidiendo] = useState(false);
+  const [motivo, setMotivo] = useState("");
+  const [enviandoMotivo, setEnviandoMotivo] = useState(false);
+
   const cargar = useCallback(async () => {
     const res = await fetch(`/api/sesiones/${key}`);
     const json = await res.json();
@@ -58,9 +68,38 @@ export default function EncuentroPage() {
     setError(null);
   }, [key]);
 
+  const cargarAutorizacion = useCallback(async () => {
+    const [rp, ra] = await Promise.all([fetch("/api/perfil"), fetch("/api/autorizaciones")]);
+    const [jp, ja] = await Promise.all([rp.json(), ra.json()]);
+    if (!jp.ok || !ja.ok) return;
+    const mias = (ja.data as { sesion_key: string; correo: string; estado: string; vence: string | null }[])
+      .filter((a) => a.sesion_key === key && a.correo === jp.data.correo);
+    setAutorizado(mias.some((a) => a.estado === "Autorizada" && a.vence && new Date(a.vence) > new Date()));
+    setSolicitudPendiente(mias.some((a) => a.estado === "Pendiente"));
+  }, [key]);
+
   useEffect(() => {
     cargar();
-  }, [cargar]);
+    cargarAutorizacion();
+  }, [cargar, cargarAutorizacion]);
+
+  async function pedirAutorizacion() {
+    if (!motivo.trim()) { setError("Cuéntanos el motivo para pedir autorización."); return; }
+    setEnviandoMotivo(true);
+    const [c, e, ev, f] = decodeURIComponent(key).split("|");
+    const res = await fetch("/api/autorizaciones", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ campus: c, encuentro: e, evento: ev, fecha: f, motivo: motivo.trim() }),
+    });
+    const json = await res.json();
+    setEnviandoMotivo(false);
+    if (!json.ok) { setError(json.error); return; }
+    setPidiendo(false);
+    setMotivo("");
+    setError(null);
+    await cargarAutorizacion();
+  }
 
   async function setCampo(campo: string, valor: string | number) {
     setGuardando(true);
@@ -113,8 +152,14 @@ export default function EncuentroPage() {
         {encuentro} · {campus} · {fechaCL(fecha)}
       </p>
       {error && <p className="aviso">{error}</p>}
-      {estado?.finalizado && (
+      {estado?.finalizado && autorizado && (
+        <p className="ok">Tienes autorización vigente para modificar este encuentro.</p>
+      )}
+      {estado?.finalizado && !autorizado && !solicitudPendiente && (
         <p className="aviso">Este encuentro está finalizado. Pide autorización para modificarlo.</p>
+      )}
+      {estado?.finalizado && !autorizado && solicitudPendiente && (
+        <p className="aviso">Ya pediste autorización para modificar este encuentro — esperando que un Admin app la apruebe.</p>
       )}
 
       {estado && (
@@ -122,7 +167,7 @@ export default function EncuentroPage() {
           <Seccion titulo="Responsable">
             <select
               value={estado.sesion?.responsable ?? estado.responsable}
-              disabled={guardando || estado.finalizado}
+              disabled={guardando || (estado.finalizado && !autorizado)}
               onChange={(e) => setCampo("responsable", e.target.value)}
             >
               {equiposVigentes().map((eq) => <option key={eq} value={eq}>{eq}</option>)}
@@ -134,7 +179,7 @@ export default function EncuentroPage() {
               <label>Modalidad</label>
               <select
                 value={estado.sesion?.modalidad ?? MODALIDADES[0]}
-                disabled={guardando || estado.finalizado}
+                disabled={guardando || (estado.finalizado && !autorizado)}
                 onChange={(e) => setCampo("modalidad", e.target.value)}
               >
                 {MODALIDADES.map((m) => <option key={m} value={m}>{m}</option>)}
@@ -145,7 +190,7 @@ export default function EncuentroPage() {
               <input
                 defaultValue={estado.sesion?.predicador ?? ""}
                 placeholder="Nombre del predicador"
-                disabled={guardando || estado.finalizado}
+                disabled={guardando || (estado.finalizado && !autorizado)}
                 onBlur={(e) => setCampo("predicador", e.target.value)}
               />
             </div>
@@ -154,7 +199,7 @@ export default function EncuentroPage() {
               <input
                 defaultValue={estado.sesion?.mensaje ?? ""}
                 placeholder="Título del mensaje"
-                disabled={guardando || estado.finalizado}
+                disabled={guardando || (estado.finalizado && !autorizado)}
                 onBlur={(e) => setCampo("mensaje", e.target.value)}
               />
             </div>
@@ -164,7 +209,7 @@ export default function EncuentroPage() {
             <Stepper
               label="Aceptaron a Jesús"
               valor={estado.sesion?.aceptaron ?? 0}
-              disabled={guardando || estado.finalizado}
+              disabled={guardando || (estado.finalizado && !autorizado)}
               onChange={(v) => setCampo("aceptaron", v)}
             />
           </Seccion>
@@ -177,7 +222,7 @@ export default function EncuentroPage() {
                   key={id}
                   label={ASIS_LABELS[id] ?? id}
                   valor={fila?.cantidad ?? 0}
-                  disabled={guardando || estado.finalizado}
+                  disabled={guardando || (estado.finalizado && !autorizado)}
                   onChange={(v) => setCampo(`asis_${id}`, v)}
                 />
               );
@@ -192,7 +237,7 @@ export default function EncuentroPage() {
                   key={id}
                   label={VOL_LABELS[id] ?? id}
                   valor={fila?.cantidad ?? 0}
-                  disabled={guardando || estado.finalizado}
+                  disabled={guardando || (estado.finalizado && !autorizado)}
                   onChange={(v) => setCampo(`vol_${id}`, v)}
                 />
               );
@@ -203,13 +248,13 @@ export default function EncuentroPage() {
             <Stepper
               label="Aceptaron a Jesús"
               valor={estado.sesion?.on_acepto ?? 0}
-              disabled={guardando || estado.finalizado}
+              disabled={guardando || (estado.finalizado && !autorizado)}
               onChange={(v) => setCampo("onAcepto", v)}
             />
             <Stepper
               label="Espectadores a la vez"
               valor={estado.sesion?.on_espect ?? 0}
-              disabled={guardando || estado.finalizado}
+              disabled={guardando || (estado.finalizado && !autorizado)}
               onChange={(v) => setCampo("onEspect", v)}
             />
           </Seccion>
@@ -220,7 +265,7 @@ export default function EncuentroPage() {
               <input
                 defaultValue={estado.sesion?.lideres ?? ""}
                 placeholder="Nombres"
-                disabled={guardando || estado.finalizado}
+                disabled={guardando || (estado.finalizado && !autorizado)}
                 onBlur={(e) => setCampo("lideres", e.target.value)}
               />
             </div>
@@ -228,7 +273,7 @@ export default function EncuentroPage() {
               <label>Adm. de campus</label>
               <select
                 value={estado.sesion?.adm ?? ""}
-                disabled={guardando || estado.finalizado}
+                disabled={guardando || (estado.finalizado && !autorizado)}
                 onChange={(e) => setCampo("adm", e.target.value)}
               >
                 {equipos.map((eq) => <option key={eq || "ninguno"} value={eq}>{eq || "Sin asignar"}</option>)}
@@ -280,19 +325,49 @@ export default function EncuentroPage() {
             </button>
             <button
               type="button"
-              disabled={!estado.finalizado}
-              onClick={() => alert("Pide a un Admin app que autorice la edición de este encuentro ya finalizado.")}
+              disabled={!estado.finalizado || autorizado || solicitudPendiente}
+              onClick={() => setPidiendo(true)}
               style={{
                 flex: 1, borderRadius: 10, padding: "12px 6px", fontWeight: 600, fontSize: "0.85rem",
                 border: "1px solid var(--line)", background: "var(--surface-2)",
                 color: estado.finalizado ? "var(--ink)" : "var(--muted)",
-                cursor: estado.finalizado ? "pointer" : "default", opacity: estado.finalizado ? 1 : 0.5,
+                cursor: estado.finalizado && !autorizado && !solicitudPendiente ? "pointer" : "default",
+                opacity: estado.finalizado && !autorizado && !solicitudPendiente ? 1 : 0.5,
                 whiteSpace: "pre-line",
               }}
             >
               Modificar{"\n"}registro
             </button>
           </div>
+
+          {pidiendo && (
+            <div className="tarjeta">
+              <p style={{ margin: "0 0 8px", fontWeight: 600 }}>Pedir autorización para modificar</p>
+              <div className="campo" style={{ marginBottom: 10 }}>
+                <label>Motivo</label>
+                <textarea
+                  rows={3}
+                  value={motivo}
+                  maxLength={300}
+                  placeholder="¿Qué necesitas corregir y por qué?"
+                  onChange={(e) => setMotivo(e.target.value)}
+                />
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button type="button" className="boton" disabled={enviandoMotivo} onClick={pedirAutorizacion}>
+                  Enviar solicitud
+                </button>
+                <button
+                  type="button"
+                  style={{ padding: "12px 16px", background: "none", border: "1px solid var(--line)", borderRadius: 10, color: "var(--muted)" }}
+                  onClick={() => { setPidiendo(false); setMotivo(""); }}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
+
           <p className="sync-status">
             <span className="punto" />
             Sincronizado · {new Date(estado.sesion?.actualizado ?? Date.now()).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit", hour12: false })}
