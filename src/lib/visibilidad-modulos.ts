@@ -79,6 +79,30 @@ export function modulosVisibles(p: PerfilVisibilidad): Set<string> {
   return t;
 }
 
+/** Mismo orden de pintarBottomNav() del client.js viejo: de todo lo que
+ * esta persona tiene visible, los primeros 4 (según esta prioridad) van
+ * sueltos en la barra inferior junto a Inicio; el resto queda detrás de
+ * "Más". Antes la barra era fija (Inicio/Soporte/Bajas/Panorama/
+ * Cumpleaños para todos) sin importar el rol — acá cada persona ve una
+ * barra distinta, como en la app vieja. */
+const PRIORIDAD_NAV = [
+  "reporte", "aportes", "finanzas", "fondo", "informe", "asistencia", "equipo",
+  "soporte", "visitas", "solicitudes", "panorama", "equipostats", "cumples",
+  "reuniones", "miperfil",
+] as const;
+
+/** Las 4 claves (de la lista vieja) que van sueltas en la barra inferior,
+ * en orden de prioridad — el resto de lo visible queda detrás de "Más". */
+export function clavesPrincipalesNav(p: PerfilVisibilidad): string[] {
+  const visibles = [...modulosVisibles(p)].filter((k) => k !== "inicio");
+  visibles.sort((a, b) => {
+    const ia = PRIORIDAD_NAV.indexOf(a as (typeof PRIORIDAD_NAV)[number]);
+    const ib = PRIORIDAD_NAV.indexOf(b as (typeof PRIORIDAD_NAV)[number]);
+    return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+  });
+  return visibles.slice(0, 4);
+}
+
 /** De las claves de MODULOS_APP (la lista vieja) a las claves de nuestro
  * src/lib/modulos.ts (los tiles/rutas reales de esta migración). Una
  * clave vieja sin equivalente directo (p. ej. "administracion", que no es

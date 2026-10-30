@@ -4,10 +4,19 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { Database } from "@/lib/supabase/types";
-import { MODULOS } from "@/lib/modulos";
+import { MODULOS, type Modulo } from "@/lib/modulos";
 import { Icono } from "@/lib/iconos";
 import { CampusProvider, useCampus } from "@/lib/campus-context";
-import { modulosVisibles, CLAVE_A_MODULO_APP } from "@/lib/visibilidad-modulos";
+import { modulosVisibles, clavesPrincipalesNav, CLAVE_A_MODULO_APP } from "@/lib/visibilidad-modulos";
+
+/** Inverso de CLAVE_A_MODULO_APP: de una clave vieja (tabsPorRol) a
+ * nuestra clave de módulo real. Una clave vieja sin tile propio acá
+ * (p. ej. "administracion", que en la app vieja es un selector de campus
+ * + subnav, reemplazado en esta migración por el toggle de campus que ya
+ * trae cada pantalla) simplemente no aparece en la barra. */
+const MODULO_APP_A_CLAVE: Record<string, string> = Object.fromEntries(
+  Object.entries(CLAVE_A_MODULO_APP).map(([clave, claveVieja]) => [claveVieja, clave])
+);
 
 type Rol = Database["public"]["Enums"]["rol_t"];
 
@@ -47,11 +56,6 @@ type Perfil = {
   modulos_on: string[];
   modulos_off: string[];
 };
-
-/** Mismos 5 ítems directos en la barra inferior que la app vieja —
- * Inicio, Soporte, Bajas, Panorama, Cumpleaños — el resto vive detrás de
- * "Más" (Reuniones, Mi perfil, y la Administración de cada módulo). */
-const PRINCIPALES = ["inicio", "soporte", "bajas", "panorama", "cumpleanos"];
 
 type Impersonando = { target: { nombre: string; correo: string } } | null;
 
@@ -110,8 +114,19 @@ function Shell({ children, impersonando }: { children: React.ReactNode; imperson
     if (!claveVieja || !visibles) return true;
     return visibles.has(claveVieja);
   });
-  const principales = modulosDeEstaPersona.filter((m) => PRINCIPALES.includes(m.key));
-  const resto = modulosDeEstaPersona.filter((m) => !PRINCIPALES.includes(m.key));
+  // pintarBottomNav(): Inicio + las 4 claves de mayor prioridad que esta
+  // persona tiene visibles van sueltas en la barra; el resto (Reuniones,
+  // Mi perfil y lo que no entró en esas 4) queda detrás de "Más".
+  const clavesPrincipales = perfil
+    ? clavesPrincipalesNav({ roles: perfil.roles, areas: perfil.areas, sirve: perfil.sirve, modulos_on: perfil.modulos_on, modulos_off: perfil.modulos_off })
+        .map((cv) => MODULO_APP_A_CLAVE[cv])
+        .filter((k): k is string => !!k)
+    : [];
+  const principales = [
+    modulosDeEstaPersona.find((m) => m.key === "inicio"),
+    ...clavesPrincipales.map((k) => modulosDeEstaPersona.find((m) => m.key === k)).filter((m): m is Modulo => !!m),
+  ].filter((m): m is Modulo => !!m);
+  const resto = modulosDeEstaPersona.filter((m) => !principales.some((p) => p.key === m.key));
   const hayActivoEnResto = resto.some((m) => pathname?.startsWith(m.href));
 
   function ir(href: string) {
