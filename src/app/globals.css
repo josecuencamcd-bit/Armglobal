@@ -289,3 +289,18 @@ button {
   font-weight: 700;
   font-size: 0.82rem;
 }
+
+/* Hoja inferior (Más opciones / Administración): límite de alto con scroll
+   propio. max-height se declara dos veces a propósito — la primera (vh) es
+   el respaldo para navegadores/WebView viejos que no entienden dvh (si no,
+   max-height queda sin valor y la hoja crece sin límite ni scroll, "fija");
+   la segunda (dvh) la reemplaza en los que sí lo entienden, evitando el bug
+   de vh en móvil (se calcula sobre el viewport con la barra visible, no el
+   real, así el contenido "entra justo" y nunca activa el scroll). */
+.hoja-mas {
+  max-height: 80vh;
+  max-height: 80dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
