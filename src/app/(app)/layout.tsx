@@ -279,7 +279,7 @@ function Shell({ children, impersonando }: { children: React.ReactNode; imperson
               background: "var(--surface-2)", borderTop: "1px solid var(--hud-line)",
               borderRadius: "var(--r-lg) var(--r-lg) 0 0",
               padding: "18px 14px 28px",
-              maxHeight: "80vh", overflowY: "auto", WebkitOverflowScrolling: "touch",
+              maxHeight: "80dvh", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch",
             }}
           >
             <p style={{ fontWeight: 700, margin: "0 0 10px", fontSize: "0.9rem" }}>Administración · {campusActivo}</p>
@@ -315,7 +315,7 @@ function Shell({ children, impersonando }: { children: React.ReactNode; imperson
               background: "var(--surface-2)", borderTop: "1px solid var(--hud-line)",
               borderRadius: "var(--r-lg) var(--r-lg) 0 0",
               padding: "18px 14px 28px",
-              maxHeight: "80vh", overflowY: "auto", WebkitOverflowScrolling: "touch",
+              maxHeight: "80dvh", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch",
             }}
           >
             <p style={{ fontWeight: 700, margin: "0 0 10px", fontSize: "0.9rem" }}>Más opciones</p>
