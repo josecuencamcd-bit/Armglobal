@@ -18,6 +18,13 @@ const MODULO_APP_A_CLAVE: Record<string, string> = Object.fromEntries(
   Object.entries(CLAVE_A_MODULO_APP).map(([clave, claveVieja]) => [claveVieja, clave])
 );
 
+/** Ícono por clave de ADMIN_SUBNAV, igual que el mapa usado en /administracion. */
+const ICONO_POR_CLAVE_ADMIN: Record<string, string> = {
+  turnos: "turnos", fondos: "fondo", reportes: "finanzas", fechas: "turnos",
+  equipo: "equipo", asistencia: "asistencia", fondo: "fondo", visitas: "visitas",
+  solicitudes: "bajas", equipostats: "actividad", reporte: "finanzas", aportes: "aportes",
+};
+
 type Rol = Database["public"]["Enums"]["rol_t"];
 
 /** Mismo orden de jerarquía que la app vieja (client.js `rolPrincipal()`):
@@ -266,34 +273,19 @@ function Shell({ children, impersonando }: { children: React.ReactNode; imperson
       {menuAdminAbierto && (
         <div
           onClick={() => setMenuAdminAbierto(false)}
-          style={{
-            position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)",
-            display: "flex", alignItems: "flex-end", zIndex: 50,
-          }}
+          className="nav-sheet"
         >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="hoja-mas"
-            style={{
-              width: "100%", maxWidth: 480, margin: "0 auto",
-              background: "var(--surface-2)", borderTop: "1px solid var(--hud-line)",
-              borderRadius: "var(--r-lg) var(--r-lg) 0 0",
-              padding: "18px 14px 28px",
-            }}
-          >
-            <p style={{ fontWeight: 700, margin: "0 0 10px", fontSize: "0.9rem" }}>Administración · {campusActivo}</p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-              {itemsAdmin.map((it) => (
-                <button
-                  key={it.clave}
-                  onClick={() => ir(it.href)}
-                  className="tarjeta"
-                  style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", cursor: "pointer", textAlign: "left", margin: 0 }}
-                >
-                  <span style={{ fontWeight: 600 }}>{it.label}</span>
-                </button>
-              ))}
+          <div onClick={(e) => e.stopPropagation()} className="nav-sheet-card">
+            <div className="nav-sheet-head">
+              <b>Administración · {campusActivo}</b>
+              <button type="button" onClick={() => setMenuAdminAbierto(false)}>✕</button>
             </div>
+            {itemsAdmin.map((it) => (
+              <button key={it.clave} onClick={() => ir(it.href)} className="nav-sheet-item">
+                <span className="ic"><Icono id={ICONO_POR_CLAVE_ADMIN[it.clave] ?? "administracion"} size={20} /></span>
+                <b>{it.label}</b>
+              </button>
+            ))}
           </div>
         </div>
       )}
@@ -301,63 +293,30 @@ function Shell({ children, impersonando }: { children: React.ReactNode; imperson
       {masAbierto && (
         <div
           onClick={() => setMasAbierto(false)}
-          style={{
-            position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)",
-            display: "flex", alignItems: "flex-end", zIndex: 50,
-          }}
+          className="nav-sheet"
         >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="hoja-mas"
-            style={{
-              width: "100%", maxWidth: 480, margin: "0 auto",
-              background: "var(--surface-2)", borderTop: "1px solid var(--hud-line)",
-              borderRadius: "var(--r-lg) var(--r-lg) 0 0",
-              padding: "18px 14px 28px",
-            }}
-          >
-            <p style={{ fontWeight: 700, margin: "0 0 10px", fontSize: "0.9rem" }}>Más opciones</p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 14 }}>
-              {resto.filter((m) => m.key === "reuniones" || m.key === "perfil").map((m) => (
+          <div onClick={(e) => e.stopPropagation()} className="nav-sheet-card">
+            <div className="nav-sheet-head">
+              <b>Más opciones</b>
+              <button type="button" onClick={() => setMasAbierto(false)}>✕</button>
+            </div>
+            {resto.map((m) => {
+              const activo = pathname?.startsWith(m.href);
+              return (
                 <button
                   key={m.key}
-                  onClick={() => ir(m.href)}
-                  className="tarjeta"
-                  style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", cursor: "pointer", textAlign: "left", margin: 0 }}
+                  onClick={() => m.listo && ir(m.href)}
+                  disabled={!m.listo}
+                  className="nav-sheet-item"
+                  aria-current={activo ? "true" : "false"}
+                  style={{ opacity: m.listo ? 1 : 0.5 }}
                 >
-                  <Icono id={m.icon} size={20} />
-                  <span style={{ fontWeight: 600 }}>{m.label}</span>
+                  <span className="ic"><Icono id={m.icon} size={20} /></span>
+                  <b>{m.label}</b>
+                  {!m.listo && <span className="muted" style={{ fontSize: "0.68rem", marginLeft: "auto" }}>Pronto</span>}
                 </button>
-              ))}
-            </div>
-
-            <p className="muted" style={{ margin: "0 0 8px", fontSize: "0.78rem", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-              Administración · {campusActivo}
-            </p>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
-              {resto.filter((m) => m.key !== "reuniones" && m.key !== "perfil").map((m) => {
-                const activo = pathname?.startsWith(m.href);
-                return (
-                  <button
-                    key={m.key}
-                    onClick={() => m.listo && ir(m.href)}
-                    disabled={!m.listo}
-                    className="tarjeta"
-                    style={{
-                      display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
-                      padding: "14px 6px", cursor: m.listo ? "pointer" : "default",
-                      opacity: m.listo ? 1 : 0.5,
-                      border: activo ? "1px solid var(--accent)" : undefined,
-                      margin: 0,
-                    }}
-                  >
-                    <Icono id={m.icon} size={24} />
-                    <span style={{ fontSize: "0.78rem", textAlign: "center" }}>{m.label}</span>
-                    {!m.listo && <span style={{ fontSize: "0.6rem", opacity: 0.8 }}>Pronto</span>}
-                  </button>
-                );
-              })}
-            </div>
+              );
+            })}
           </div>
         </div>
       )}

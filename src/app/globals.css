@@ -290,17 +290,57 @@ button {
   font-size: 0.82rem;
 }
 
-/* Hoja inferior (Más opciones / Administración): límite de alto con scroll
-   propio. max-height se declara dos veces a propósito — la primera (vh) es
-   el respaldo para navegadores/WebView viejos que no entienden dvh (si no,
-   max-height queda sin valor y la hoja crece sin límite ni scroll, "fija");
-   la segunda (dvh) la reemplaza en los que sí lo entienden, evitando el bug
-   de vh en móvil (se calcula sobre el viewport con la barra visible, no el
-   real, así el contenido "entra justo" y nunca activa el scroll). */
-.hoja-mas {
-  max-height: 80vh;
-  max-height: 80dvh;
+/* Hoja "Más opciones"/Administración: puerto 1:1 de .nav-sheet/.nav-sheet-card
+   de la app vieja — lista vertical simple (no grid), con tirador, botón de
+   cerrar y scroll propio. max-height se declara dos veces a propósito — la
+   primera (vh) es el respaldo para navegadores/WebView viejos que no
+   entienden dvh (si no, max-height queda sin valor y la hoja crece sin
+   límite ni scroll, "fija"); la segunda (dvh) la reemplaza en los que sí lo
+   entienden, evitando el bug de vh en móvil (se calcula sobre el viewport
+   con la barra visible, no el real, así el contenido "entra justo" y nunca
+   activa el scroll). */
+.nav-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(0, 0, 0, 0.55);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.nav-sheet-card {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  max-height: 70vh;
+  max-height: 70dvh;
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
+  background: var(--surface-2);
+  border: 1px solid var(--hud-line, var(--line));
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  padding: 8px 10px calc(14px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
+.nav-sheet-card::before {
+  content: "";
+  display: block;
+  width: 36px;
+  height: 4px;
+  border-radius: 4px;
+  background: var(--line);
+  margin: 2px auto 6px;
+}
+.nav-sheet-head { display: flex; justify-content: space-between; align-items: center; padding: 8px 8px 12px; }
+.nav-sheet-head b { font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.nav-sheet-head button { border: 1px solid var(--line); background: var(--surface); color: var(--ink); width: 28px; height: 28px; border-radius: 50%; font-size: 0.8rem; cursor: pointer; flex: 0 0 auto; }
+.nav-sheet-item { display: flex; align-items: center; gap: 12px; padding: 10px 10px; border-radius: 12px; border: 0; background: none; color: var(--ink); font: inherit; font-size: 0.92rem; text-align: left; cursor: pointer; width: 100%; }
+.nav-sheet-item:active { background: var(--surface); }
+.nav-sheet-item[aria-current="true"] { background: rgba(245, 166, 35, 0.1); }
+.nav-sheet-item .ic { width: 32px; height: 32px; border-radius: var(--r-sm); background: rgba(245, 166, 35, 0.12); color: var(--accent); display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; border: 1px solid var(--line); }
+.nav-sheet-item b { font-weight: 600; }
