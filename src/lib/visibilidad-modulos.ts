@@ -92,9 +92,14 @@ const PRIORIDAD_NAV = [
 ] as const;
 
 /** Las 4 claves (de la lista vieja) que van sueltas en la barra inferior,
- * en orden de prioridad — el resto de lo visible queda detrás de "Más". */
+ * en orden de prioridad — el resto de lo visible queda detrás de "Más".
+ * Ministro/Administrador ven "reporte"/"aportes" (son esFin()) pero solo
+ * a través de Administración, separados por campus — no sueltos en la
+ * barra; ahí solo entran para Pastor/Pastor de campus/Pastor principal. */
 export function clavesPrincipalesNav(p: PerfilVisibilidad): string[] {
-  const visibles = [...modulosVisibles(p)].filter((k) => k !== "inicio");
+  const visibles = [...modulosVisibles(p)].filter(
+    (k) => k !== "inicio" && !((k === "aportes" || k === "reporte") && !esPastorC(p))
+  );
   visibles.sort((a, b) => {
     const ia = PRIORIDAD_NAV.indexOf(a as (typeof PRIORIDAD_NAV)[number]);
     const ib = PRIORIDAD_NAV.indexOf(b as (typeof PRIORIDAD_NAV)[number]);
