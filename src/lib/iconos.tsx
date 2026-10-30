@@ -18,6 +18,7 @@ export const ICONOS: Record<string, string> = {
   bajas: '<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M16 11h6"/>',
   perfil: '<circle cx="12" cy="8" r="4"/><path d="M4 20c0-4.4 3.6-8 8-8s8 3.6 8 8"/>',
   actividad: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/>',
+  administracion: '<rect x="4" y="3" width="7" height="7" rx="1.5"/><rect x="13" y="3" width="7" height="7" rx="1.5"/><rect x="4" y="14" width="7" height="7" rx="1.5"/><rect x="13" y="14" width="7" height="7" rx="1.5"/>',
 };
 
 export function Icono({ id, size = 22 }: { id: string; size?: number }) {

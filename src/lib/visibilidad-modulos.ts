@@ -25,13 +25,13 @@ export function esAlto(p: PerfilVisibilidad) {
 export function esFin(p: PerfilVisibilidad) {
   return esAlto(p) || tiene(p, "Administrador");
 }
-function esPanorama(p: PerfilVisibilidad) {
+export function esPanorama(p: PerfilVisibilidad) {
   return esPastorC(p) || tiene(p, "Admin app");
 }
 export function esLider(p: PerfilVisibilidad) {
   return tiene(p, "Líder");
 }
-function esConex(p: PerfilVisibilidad) {
+export function esConex(p: PerfilVisibilidad) {
   return p.areas.includes("Conexión") || p.sirve.includes("Conexión");
 }
 export function fondosMios(p: PerfilVisibilidad): Area[] {
@@ -109,9 +109,7 @@ export function clavesPrincipalesNav(p: PerfilVisibilidad): string[] {
 }
 
 /** De las claves de MODULOS_APP (la lista vieja) a las claves de nuestro
- * src/lib/modulos.ts (los tiles/rutas reales de esta migración). Una
- * clave vieja sin equivalente directo (p. ej. "administracion", que no es
- * una pantalla única) se omite: no filtra nada por ese lado. */
+ * src/lib/modulos.ts (los tiles/rutas reales de esta migración). */
 export const CLAVE_A_MODULO_APP: Record<string, string> = {
   panorama: "panorama",
   cumpleanos: "cumples",
@@ -126,4 +124,32 @@ export const CLAVE_A_MODULO_APP: Record<string, string> = {
   reuniones: "reuniones",
   perfil: "miperfil",
   estadisticas: "equipostats",
+  administracion: "administracion",
 };
+
+/**
+ * Puerto 1:1 de ADMIN_SUBNAV + adminSubnavPara() del client.js viejo:
+ * para Ministro/Administrador, "Administración" es la ÚNICA puerta a Mi
+ * equipo/Asistencia/Fondo de equipo/Conexión/Bajas/Estadísticas/Reporte/
+ * Aportes (esFin() los saca del menú normal). Para Pastor/Pastor de
+ * campus es la puerta a Turnos/Fondos/Reportes/Fechas de encuentro. El
+ * campus en esta migración ya es el `campusActivo` global (el selector
+ * del header), no uno propio de esta pantalla.
+ */
+export function adminSubnav(p: PerfilVisibilidad, campus: "Punta Arenas" | "Puerto Natales"): { clave: string; label: string; href: string }[] {
+  const items: { clave: string; label: string; href: string; ok: boolean }[] = [
+    { clave: "turnos", label: "Turnos", href: "/turnos", ok: esPastorC(p) },
+    { clave: "fondos", label: "Fondos", href: "/fondos", ok: esPastorC(p) },
+    { clave: "reportes", label: "Reportes", href: "/finanzas", ok: esPastorC(p) },
+    { clave: "fechas", label: "Fechas de encuentro", href: "/fechas-encuentro", ok: esPastorC(p) && campus === "Puerto Natales" },
+    { clave: "equipo", label: "Mi equipo", href: "/equipos", ok: esFin(p) && (esAlto(p) || esLider(p)) },
+    { clave: "asistencia", label: "Asistencia", href: "/encuentros", ok: esFin(p) && (esAlto(p) || esLider(p)) },
+    { clave: "fondo", label: "Fondo de equipo", href: "/fondos", ok: !esPastorC(p) && esFin(p) && fondosMios(p).length > 0 },
+    { clave: "visitas", label: "Conexión", href: "/visitas", ok: esFin(p) && (esAlto(p) || tiene(p, "Administrador") || esConex(p)) },
+    { clave: "solicitudes", label: "Bajas", href: "/bajas", ok: esFin(p) && !esAppAdmin(p) },
+    { clave: "equipostats", label: "Estadísticas", href: "/estadisticas", ok: esFin(p) && esLider(p) && !esPanorama(p) },
+    { clave: "reporte", label: "Reporte", href: "/finanzas", ok: !esPastorC(p) && esFin(p) },
+    { clave: "aportes", label: "Aportes", href: "/encuentros", ok: !esPastorC(p) && esFin(p) },
+  ];
+  return items.filter((x) => x.ok);
+}

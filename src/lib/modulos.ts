@@ -33,4 +33,9 @@ export const MODULOS: Modulo[] = [
   // informe de Finanzas — mismo encuentro que Asistencia, así que entra
   // por el mismo selector y de ahí a /encuentros/[key]/aportes.
   { key: "aportes", label: "Aportes", href: "/encuentros", icon: "aportes", listo: true },
+  // Única puerta para Ministro/Administrador a Mi equipo/Asistencia/Fondo
+  // de equipo/Conexión/Bajas/Estadísticas/Reporte/Aportes (esFin() los
+  // saca del menú normal) — y para Pastor/Pastor de campus, a Turnos/
+  // Fondos/Reportes/Fechas de encuentro.
+  { key: "administracion", label: "Administración", href: "/administracion", icon: "administracion", listo: true },
 ];
