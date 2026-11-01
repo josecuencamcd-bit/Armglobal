@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { METODOS_FONDO, CATEG_GASTO } from "@/lib/sesiones";
 import { useCampus } from "@/lib/campus-context";
+import { fotoAJpegDataUrl } from "@/lib/fotos-cliente";
 
 type Informe = {
   area: string;
@@ -67,6 +68,14 @@ export default function FondosPage() {
   const [mostrarForm, setMostrarForm] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [cerrando, setCerrando] = useState(false);
+  const [foto, setFoto] = useState<string | null>(null);
+  const [fotoError, setFotoError] = useState<string | null>(null);
+  const [anulando, setAnulando] = useState<number | null>(null);
+  const [motivoAnular, setMotivoAnular] = useState("");
+  const [pidiendoAut, setPidiendoAut] = useState(false);
+  const [motivoAut, setMotivoAut] = useState("");
+  const [enviandoAut, setEnviandoAut] = useState(false);
+  const [autPendiente, setAutPendiente] = useState(false);
 
   const cargar = useCallback(async (a: string | null, mes?: string) => {
     const qs = new URLSearchParams({ campus: campusActivo });
@@ -81,18 +90,72 @@ export default function FondosPage() {
     const rm = await fetch(`/api/fondos?campus=${encodeURIComponent(json.data.campus)}&area=${encodeURIComponent(json.data.area)}`);
     const jm = await rm.json();
     if (jm.ok) setMovs(jm.data.filter((m: Movimiento) => m.fecha.slice(0, 7) === json.data.mes).slice(0, 30));
+
+    if (json.data.cierre?.cerrado) {
+      const ra = await fetch("/api/fondos/autorizaciones");
+      const ja = await ra.json();
+      if (ja.ok) {
+        setAutPendiente(
+          (ja.data as { campus: string; area: string; mes: string; estado: string }[]).some(
+            (x) => x.campus === json.data.campus && x.area === json.data.area && x.mes === json.data.mes
+              && (x.estado === "Pendiente Pastor" || x.estado === "Pendiente Admin")
+          )
+        );
+      }
+    } else {
+      setAutPendiente(false);
+    }
   }, [campusActivo]);
 
   useEffect(() => {
     cargar(null);
   }, [cargar]);
 
-  async function anular(id: number) {
-    if (!confirm("¿Anular este movimiento?")) return;
-    const res = await fetch(`/api/fondos/${id}/anular`, { method: "POST" });
+  function abrirAnular(id: number) {
+    setAnulando(id);
+    setMotivoAnular("");
+  }
+
+  async function confirmarAnular(id: number) {
+    if (motivoAnular.trim().length < 5) { setError("Cuenta el motivo de la anulación (mínimo 5 caracteres)."); return; }
+    const res = await fetch(`/api/fondos/${id}/anular`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ motivo: motivoAnular.trim() }),
+    });
     const json = await res.json();
     if (!json.ok) { setError(json.error); return; }
+    setAnulando(null);
+    setMotivoAnular("");
     await cargar(area, informe?.mes);
+  }
+
+  async function manejarFoto(file: File | undefined) {
+    if (!file) { setFoto(null); return; }
+    setFotoError(null);
+    try {
+      setFoto(await fotoAJpegDataUrl(file));
+    } catch (e) {
+      setFotoError(e instanceof Error ? e.message : "No se pudo procesar la foto.");
+    }
+  }
+
+  async function pedirAutorizacion() {
+    if (!informe) return;
+    if (motivoAut.trim().length < 8) { setError("Cuenta con claridad qué necesitas corregir y por qué."); return; }
+    setEnviandoAut(true);
+    const res = await fetch("/api/fondos/autorizaciones", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ campus: informe.campus, area: informe.area, mes: informe.mes, motivo: motivoAut.trim() }),
+    });
+    const json = await res.json();
+    setEnviandoAut(false);
+    if (!json.ok) { setError(json.error); return; }
+    setPidiendoAut(false);
+    setMotivoAut("");
+    setAutPendiente(true);
+    setError(null);
   }
 
   async function registrar(fd: FormData) {
@@ -104,6 +167,8 @@ export default function FondosPage() {
       campus: informe.campus,
       area: informe.area,
       monto: Number(fd.get("monto")),
+      foto: foto || undefined,
+      motivo: (fd.get("motivo") as string)?.trim() || undefined,
     };
     if (tipo === "aporte") {
       body.nombre = fd.get("nombre");
@@ -124,6 +189,7 @@ export default function FondosPage() {
     setGuardando(false);
     if (!json.ok) { setError(json.error); return; }
     setMostrarForm(false);
+    setFoto(null);
     await cargar(area, informe.mes);
   }
 
@@ -179,9 +245,27 @@ export default function FondosPage() {
           </div>
 
           {informe.cierre.cerrado ? (
-            <p className="muted" style={{ fontSize: "0.82rem", marginTop: -4 }}>
-              Mes cerrado{informe.cierre.auto ? " automáticamente" : ` por ${informe.cierre.por}`}.
-            </p>
+            <div className="tarjeta" style={{ marginBottom: 12 }}>
+              <p className="muted" style={{ fontSize: "0.82rem", margin: "0 0 10px" }}>
+                Mes cerrado{informe.cierre.auto ? " automáticamente" : ` por ${informe.cierre.por}`}.
+              </p>
+              {autPendiente ? (
+                <p className="aviso" style={{ margin: 0 }}>Ya pediste autorización — esperando aprobación.</p>
+              ) : pidiendoAut ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <div className="campo" style={{ marginBottom: 0 }}>
+                    <label>Motivo</label>
+                    <textarea rows={3} value={motivoAut} maxLength={300} placeholder="¿Qué necesitas corregir y por qué?" onChange={(e) => setMotivoAut(e.target.value)} />
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button className="boton" disabled={enviandoAut} onClick={pedirAutorizacion}>Enviar solicitud</button>
+                    <button className="boton-secundario" onClick={() => { setPidiendoAut(false); setMotivoAut(""); }}>Cancelar</button>
+                  </div>
+                </div>
+              ) : (
+                <button className="boton-secundario" onClick={() => setPidiendoAut(true)}>Pedir autorización para modificar</button>
+              )}
+            </div>
           ) : informe.puedeEditar ? (
             <div className="tarjeta" style={{ marginBottom: 12 }}>
               <p style={{ margin: "0 0 2px", fontWeight: 600 }}>Cierre de {nombreMes(informe.mes)}</p>
@@ -261,6 +345,18 @@ export default function FondosPage() {
                     <label>Descripción</label>
                     <textarea name="descripcion" rows={2} required={tipo === "gasto"} />
                   </div>
+                  <div className="campo">
+                    <label>Foto del comprobante (opcional)</label>
+                    <input type="file" accept="image/*" onChange={(e) => manejarFoto(e.target.files?.[0])} />
+                    {fotoError && <p className="aviso" style={{ margin: "4px 0 0" }}>{fotoError}</p>}
+                    {foto && <p className="ok" style={{ margin: "4px 0 0", fontSize: "0.78rem" }}>Foto lista para enviar.</p>}
+                  </div>
+                  {informe.cierre.cerrado && (
+                    <div className="campo">
+                      <label>Motivo (mes cerrado)</label>
+                      <textarea name="motivo" rows={2} placeholder="Por qué corresponde registrar esto fuera de plazo" />
+                    </div>
+                  )}
                   <button className="boton" type="submit" disabled={guardando}>
                     {guardando ? "Guardando…" : "Registrar"}
                   </button>
@@ -272,21 +368,36 @@ export default function FondosPage() {
           <p className="muted" style={{ margin: "16px 0 8px" }}>Movimientos de {nombreMes(informe.mes)}</p>
           {movs?.length === 0 && <p className="muted">Sin movimientos registrados este mes.</p>}
           {movs?.map((m) => (
-            <div className="fila" key={m.id}>
-              <div>
-                <div>{m.tipo === "aporte" ? m.nombre : m.comercio}{m.anulado ? " (anulado)" : ""}</div>
-                <div className="muted" style={{ fontSize: "0.78rem" }}>{m.fecha} · {m.tipo}</div>
-              </div>
-              <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span className="num" style={{ color: m.tipo === "aporte" ? "var(--ok)" : "var(--danger)" }}>
-                  {m.tipo === "aporte" ? "+" : "-"}{fmt(m.monto)}
+            <div key={m.id} style={{ padding: "8px 0", borderBottom: "1px solid var(--line)" }}>
+              <div className="fila" style={{ border: 0, padding: 0 }}>
+                <div>
+                  <div>{m.tipo === "aporte" ? m.nombre : m.comercio}{m.anulado ? " (anulado)" : ""}</div>
+                  <div className="muted" style={{ fontSize: "0.78rem" }}>{m.fecha} · {m.tipo}</div>
+                </div>
+                <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span className="num" style={{ color: m.tipo === "aporte" ? "var(--ok)" : "var(--danger)" }}>
+                    {m.tipo === "aporte" ? "+" : "-"}{fmt(m.monto)}
+                  </span>
+                  {informe.puedeEditar && !m.anulado && anulando !== m.id && (
+                    <button className="boton-peligro" style={{ fontSize: "0.72rem", padding: "4px 8px" }} onClick={() => abrirAnular(m.id)}>
+                      Anular
+                    </button>
+                  )}
                 </span>
-                {informe.puedeEditar && !m.anulado && (
-                  <button className="boton-peligro" style={{ fontSize: "0.72rem", padding: "4px 8px" }} onClick={() => anular(m.id)}>
-                    Anular
-                  </button>
-                )}
-              </span>
+              </div>
+              {anulando === m.id && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
+                  <input
+                    placeholder="Motivo de la anulación (mínimo 5 caracteres)"
+                    value={motivoAnular}
+                    onChange={(e) => setMotivoAnular(e.target.value)}
+                  />
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button className="boton-peligro" style={{ fontSize: "0.78rem" }} onClick={() => confirmarAnular(m.id)}>Confirmar anulación</button>
+                    <button className="boton-secundario" style={{ fontSize: "0.78rem" }} onClick={() => setAnulando(null)}>Cancelar</button>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </>

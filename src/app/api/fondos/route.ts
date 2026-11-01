@@ -91,9 +91,47 @@ export async function POST(req: Request) {
     }
   }
 
-  const diasDesdeFecha = Math.floor(
-    (Date.now() - new Date(`${parsedBody.data.fecha}T00:00:00Z`).getTime()) / 86_400_000
-  );
+  // guardaMes_ de Code.gs: si el mes de este fondo/área está cerrado, el
+  // Pastor de campus edita libremente con motivo; cualquier otro necesita
+  // una autorización "Aprobada" vigente — la RLS ya lo exige a nivel de
+  // base (fondos_equipo_insert), esto solo da un mensaje más claro antes
+  // de intentar el insert, y decide si queda marcado `tardio`.
+  const mes = parsedBody.data.fecha.slice(0, 7);
+  const { data: cierre } = await supabase
+    .from("cierres_mes")
+    .select("id")
+    .eq("campus", parsedBody.data.campus)
+    .eq("area", parsedBody.data.area)
+    .eq("mes", mes)
+    .maybeSingle();
+
+  let tardio = false;
+  if (cierre) {
+    const roles = (perfil.roles as string[] | null) ?? [];
+    const esPastorCampus = roles.includes("Pastor de campus");
+    if (esPastorCampus) {
+      if (!parsedBody.data.motivo || parsedBody.data.motivo.trim().length < 5) {
+        return fail("Ese mes está cerrado. Cuenta el motivo de esta modificación.");
+      }
+      tardio = true;
+    } else {
+      const { data: permiso } = await supabase
+        .from("autorizaciones_fondos")
+        .select("id, motivo")
+        .eq("campus", parsedBody.data.campus)
+        .eq("area", parsedBody.data.area)
+        .eq("mes", mes)
+        .eq("correo", perfil.correo)
+        .eq("estado", "Aprobada")
+        .gt("vence", new Date().toISOString())
+        .order("vence", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (!permiso) return fail("Ese mes está cerrado. Pide autorización para modificarlo.", 403);
+      tardio = true;
+      if (!parsedBody.data.motivo) parsedBody.data.motivo = permiso.motivo ?? undefined;
+    }
+  }
 
   const { foto, ...resto } = parsedBody.data;
   let foto_url: string | null = null;
@@ -112,7 +150,7 @@ export async function POST(req: Request) {
       foto_url,
       estado: "Activo",
       por: perfil.correo,
-      tardio: diasDesdeFecha > 7,
+      tardio,
     })
     .select()
     .single();
