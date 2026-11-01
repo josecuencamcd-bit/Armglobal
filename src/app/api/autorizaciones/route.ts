@@ -53,13 +53,22 @@ export async function POST(req: Request) {
   }
 }
 
-/** Lista las solicitudes visibles para el usuario (RLS: su propio campus). */
-export async function GET() {
+/**
+ * Lista las solicitudes visibles para el usuario (RLS: su propio campus).
+ * `?sesion_key=` filtra por un encuentro puntual — antes lo hacía el
+ * cliente trayendo TODAS las autorizaciones del campus y filtrando en
+ * memoria (encuentros/[key]/page.tsx), igual que api_autEstado ya hacía
+ * server-side en Code.gs.
+ */
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const sesionKey = searchParams.get("sesion_key");
+
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("autorizaciones_encuentro")
-    .select("*")
-    .order("pedido", { ascending: false });
+  let query = supabase.from("autorizaciones_encuentro").select("*").order("pedido", { ascending: false });
+  if (sesionKey) query = query.eq("sesion_key", sesionKey);
+
+  const { data, error } = await query;
   if (error) return fromSupabaseError(error);
   return ok(data ?? []);
 }

@@ -116,11 +116,11 @@ export default function EncuentroPage() {
   }, [key]);
 
   const cargarAutorizacion = useCallback(async () => {
-    const [rp, ra] = await Promise.all([fetch("/api/perfil"), fetch("/api/autorizaciones")]);
+    const [rp, ra] = await Promise.all([fetch("/api/perfil"), fetch(`/api/autorizaciones?sesion_key=${encodeURIComponent(decodeURIComponent(key))}`)]);
     const [jp, ja] = await Promise.all([rp.json(), ra.json()]);
     if (!jp.ok || !ja.ok) return;
-    const mias = (ja.data as { sesion_key: string; correo: string; estado: string; vence: string | null }[])
-      .filter((a) => a.sesion_key === key && a.correo === jp.data.correo);
+    const mias = (ja.data as { correo: string; estado: string; vence: string | null }[])
+      .filter((a) => a.correo === jp.data.correo);
     setAutorizado(mias.some((a) => a.estado === "Autorizada" && a.vence && new Date(a.vence) > new Date()));
     setSolicitudPendiente(mias.some((a) => a.estado === "Pendiente"));
   }, [key]);

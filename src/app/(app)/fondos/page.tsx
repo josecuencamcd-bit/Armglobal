@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { METODOS_FONDO, CATEG_GASTO } from "@/lib/sesiones";
 import { useCampus } from "@/lib/campus-context";
 import { fotoAJpegDataUrl } from "@/lib/fotos-cliente";
+import { GraficoLinea } from "@/lib/grafico-linea";
 
 type Informe = {
   area: string;
@@ -256,6 +257,11 @@ function FondosContenido() {
             <p className="muted" style={{ margin: "6px 0 0", fontSize: "0.78rem" }}>
               {informe.comparacion.pct >= 0 ? "▲" : "▼"} {Math.abs(informe.comparacion.pct)}% vs. mes anterior ({fmt(informe.comparacion.anterior)}) · Histórico {fmt(informe.historico)}
             </p>
+            {informe.tendencia.length > 0 && (
+              <div style={{ marginTop: 10 }}>
+                <GraficoLinea datos={informe.tendencia} />
+              </div>
+            )}
           </div>
 
           {informe.cierre.cerrado ? (

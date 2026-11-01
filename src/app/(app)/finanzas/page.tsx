@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { GASTOS_ITEMS } from "@/lib/sesiones";
 import { useCampus } from "@/lib/campus-context";
+import { GraficoLinea } from "@/lib/grafico-linea";
 
 type Informe = {
   campus: string;
@@ -18,6 +19,7 @@ type Informe = {
   comparacion: { actual: number; anterior: number; pct: number };
   historico: number;
   fondos: { area: string; ingresos: number; egresos: number; anterior: number; saldo: number }[];
+  tendencia: { mes: string; monto: number }[];
 };
 
 function mesMover(mes: string, delta: number) {
@@ -181,6 +183,11 @@ export default function FinanzasPage() {
             <p className="muted" style={{ margin: "6px 0 0", fontSize: "0.78rem" }}>
               {informe.comparacion.pct >= 0 ? "▲" : "▼"} {Math.abs(informe.comparacion.pct)}% vs. mes anterior ({fmt(informe.comparacion.anterior)}) · Histórico {fmt(informe.historico)}
             </p>
+            {informe.tendencia.length > 0 && (
+              <div style={{ marginTop: 10 }}>
+                <GraficoLinea datos={informe.tendencia} />
+              </div>
+            )}
           </div>
 
           {informe.cierre.cerrado ? (
