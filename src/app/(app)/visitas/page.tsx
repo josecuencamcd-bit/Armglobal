@@ -66,13 +66,24 @@ export default function VisitasPage() {
     await cargar(campus);
   }
 
-  async function cambiarEstado(id: number, estado: string) {
+  const [seguimiento, setSeguimiento] = useState<Record<number, { estado: string; proximo: string; nota: string }>>({});
+  const [guardandoSeg, setGuardandoSeg] = useState<number | null>(null);
+
+  function campoSeg(id: number, estadoActual: string) {
+    return seguimiento[id] ?? { estado: estadoActual, proximo: "", nota: "" };
+  }
+
+  async function guardarSeguimiento(id: number) {
+    const seg = seguimiento[id];
+    if (!seg) return;
+    setGuardandoSeg(id);
     const res = await fetch(`/api/visitas/${id}/estado`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ estado }),
+      body: JSON.stringify({ estado: seg.estado, proximo: seg.proximo || undefined, nota: seg.nota || undefined }),
     });
     const json = await res.json();
+    setGuardandoSeg(null);
     if (!json.ok) { setError(json.error); return; }
     if (historial[id]) await cargarHistorial(id);
     await cargar(campus);
@@ -199,30 +210,42 @@ export default function VisitasPage() {
             {v.telefono || "Sin teléfono"}{v.nota ? ` · ${v.nota}` : ""}
           </p>
           <p className="muted" style={{ margin: "0 0 10px", fontSize: "0.78rem" }}>
-            Asignado a: {v.asignado_nombre || "nadie"}
+            Asignado a: {v.asignado_nombre || "nadie"}{v.proximo ? ` · Próximo contacto: ${v.proximo.split("-").reverse().join("/")}` : ""}
           </p>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
-            {ESTADOS.map((e) => {
-              const activo = v.estado === e;
-              return (
-                <button
-                  key={e}
-                  onClick={() => !activo && cambiarEstado(v.id, e)}
-                  style={{
-                    padding: "6px 10px",
-                    borderRadius: 999,
-                    fontSize: "0.75rem",
-                    border: `1px solid ${activo ? "var(--accent)" : "var(--line)"}`,
-                    background: activo ? "var(--accent)" : "transparent",
-                    color: activo ? "var(--accent-ink)" : "var(--muted)",
-                    cursor: activo ? "default" : "pointer",
-                  }}
-                >
-                  {e}
-                </button>
-              );
-            })}
+          <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+            <div className="campo" style={{ flex: 1, marginBottom: 0 }}>
+              <label>Estado</label>
+              <select
+                value={campoSeg(v.id, v.estado).estado}
+                onChange={(e) => setSeguimiento((s) => ({ ...s, [v.id]: { ...campoSeg(v.id, v.estado), estado: e.target.value } }))}
+              >
+                {ESTADOS.map((e) => <option key={e} value={e}>{e}</option>)}
+              </select>
+            </div>
+            <div className="campo" style={{ flex: 1, marginBottom: 0 }}>
+              <label>Próximo contacto</label>
+              <input
+                type="date"
+                value={campoSeg(v.id, v.estado).proximo || v.proximo || ""}
+                onChange={(e) => setSeguimiento((s) => ({ ...s, [v.id]: { ...campoSeg(v.id, v.estado), proximo: e.target.value } }))}
+              />
+            </div>
           </div>
+          <div className="campo">
+            <input
+              placeholder="Cómo te fue: me reuní, reagendé, quedamos en…"
+              value={campoSeg(v.id, v.estado).nota}
+              onChange={(e) => setSeguimiento((s) => ({ ...s, [v.id]: { ...campoSeg(v.id, v.estado), nota: e.target.value } }))}
+            />
+          </div>
+          <button
+            className="boton-secundario"
+            style={{ marginBottom: 10 }}
+            disabled={guardandoSeg === v.id}
+            onClick={() => guardarSeguimiento(v.id)}
+          >
+            {guardandoSeg === v.id ? "Guardando…" : "Guardar seguimiento"}
+          </button>
 
           <div style={{ display: "flex", gap: 8 }}>
             <button className="boton-secundario" style={{ fontSize: "0.78rem" }} onClick={() => abrirAsignar(v.id)}>

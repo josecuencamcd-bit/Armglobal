@@ -20,7 +20,7 @@ const TILES: { key: string; label: string; icon: string; href?: string }[] = [
   { key: "fondos", label: "Fondos", icon: "fondo", href: "/fondos" },
   { key: "cumpleanos", label: "Cumpleaños", icon: "cumples", href: "/cumpleanos" },
   { key: "turnos", label: "Turnos", icon: "turnos", href: "/turnos" },
-  { key: "nombres", label: "Nombres", icon: "perfiles", href: "/perfiles" },
+  { key: "nombres", label: "Nombres", icon: "perfiles", href: "/soporte/nombres" },
   { key: "actividad", label: "Actividad", icon: "actividad", href: "/actividad" },
 ];
 
