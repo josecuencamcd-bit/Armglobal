@@ -810,7 +810,7 @@ export type Database = {
           fecha: string
           hora: string | null
           id: number
-          invitados: string | null
+          invitados: Json | null
           lugar: string | null
           notas: string | null
           organizador: string | null
@@ -826,7 +826,7 @@ export type Database = {
           fecha: string
           hora?: string | null
           id?: never
-          invitados?: string | null
+          invitados?: Json | null
           lugar?: string | null
           notas?: string | null
           organizador?: string | null
@@ -842,7 +842,7 @@ export type Database = {
           fecha?: string
           hora?: string | null
           id?: never
-          invitados?: string | null
+          invitados?: Json | null
           lugar?: string | null
           notas?: string | null
           organizador?: string | null
@@ -1196,6 +1196,15 @@ export type Database = {
       auth_es_alto: { Args: never; Returns: boolean }
       auth_es_finanzas: { Args: never; Returns: boolean }
       auth_es_pastor: { Args: never; Returns: boolean }
+      auth_fondo_autorizado: {
+        Args: {
+          p_area: string
+          p_campus: Database["public"]["Enums"]["campus_t"]
+          p_mes: string
+        }
+        Returns: boolean
+      }
+      auth_id_efectivo: { Args: never; Returns: string }
       auth_sirve: {
         Args: never
         Returns: Database["public"]["Enums"]["area_t"][]
@@ -1209,6 +1218,15 @@ export type Database = {
         Returns: boolean
       }
       auth_ve_todo_campus: { Args: never; Returns: boolean }
+      fondo_mes_cerrado: {
+        Args: {
+          p_area: string
+          p_campus: Database["public"]["Enums"]["campus_t"]
+          p_mes: string
+        }
+        Returns: boolean
+      }
+      reunion_me_invitan: { Args: { p_invitados: Json }; Returns: boolean }
     }
     Enums: {
       area_t:
