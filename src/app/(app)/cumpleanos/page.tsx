@@ -124,21 +124,51 @@ export default function CumpleanosPage() {
 
       {datos?.lista.length === 0 && <p className="muted">Nadie cumple años {modo === "todo" ? "" : "en " + MESES_LARGO[mesSel - 1]}.</p>}
 
-      {modo === "todo"
-        ? grupos.map((g) => (
-            <div key={g.mes} style={{ marginBottom: 18 }}>
-              <p className="muted" style={{ margin: "0 0 8px", fontSize: "0.78rem", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                {MESES_LARGO[g.mes - 1]}{g.mes === datos?.mesHoy ? " · Este mes" : ""}
-              </p>
-              {g.items.map((i, idx) => <ItemCumple key={i.nombre + idx} i={i} />)}
-            </div>
-          ))
-        : datos?.lista.map((i, idx) => <ItemCumple key={i.nombre + idx} i={i} />)}
+      {modo === "todo" &&
+        grupos.map((g) => (
+          <div key={g.mes} style={{ marginBottom: 18 }}>
+            <p className="muted" style={{ margin: "0 0 8px", fontSize: "0.78rem", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+              {MESES_LARGO[g.mes - 1]}{g.mes === datos?.mesHoy ? " · Este mes" : ""}
+            </p>
+            {g.items.map((i, idx) => <ItemCumple key={i.nombre + idx} i={i} mostrarFaltan />)}
+          </div>
+        ))}
+
+      {modo === "mes" && datos && (datos.mes === datos.mesHoy ? <GruposMes datos={datos} /> : datos.lista.map((i, idx) => <ItemCumple key={i.nombre + idx} i={i} />))}
     </div>
   );
 }
 
-function ItemCumple({ i }: { i: Item }) {
+/** Solo cuando se mira el mes actual: Hoy / Esta semana / Más adelante este
+ * mes / Ya pasaron — igual que vCumples() de la app vieja (grupo() por
+ * faltan/paso). Otro mes es una lista plana, sin subgrupos. */
+function GruposMes({ datos }: { datos: Datos }) {
+  const hoy = datos.lista.filter((i) => i.hoy);
+  const estaSemana = datos.lista.filter((i) => !i.hoy && i.faltan != null && i.faltan > 0 && i.faltan <= 7);
+  const masAdelante = datos.lista.filter((i) => !i.hoy && i.faltan != null && i.faltan > 7);
+  const yaPasaron = datos.lista.filter((i) => !i.hoy && i.faltan != null && i.faltan < 0);
+
+  function Grupo({ titulo, items }: { titulo: string; items: Item[] }) {
+    if (!items.length) return null;
+    return (
+      <div style={{ marginBottom: 18 }}>
+        <p className="muted" style={{ margin: "0 0 8px", fontSize: "0.78rem", textTransform: "uppercase", letterSpacing: "0.04em" }}>{titulo}</p>
+        {items.map((i, idx) => <ItemCumple key={i.nombre + idx} i={i} />)}
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <Grupo titulo="Hoy" items={hoy} />
+      <Grupo titulo="Esta semana" items={estaSemana} />
+      <Grupo titulo="Más adelante este mes" items={masAdelante} />
+      <Grupo titulo="Ya pasaron" items={yaPasaron} />
+    </>
+  );
+}
+
+function ItemCumple({ i, mostrarFaltan }: { i: Item; mostrarFaltan?: boolean }) {
   return (
     <div className="tarjeta" style={{ display: "flex", alignItems: "center", gap: 12, padding: 12 }}>
       <div
@@ -157,7 +187,7 @@ function ItemCumple({ i }: { i: Item }) {
       <div style={{ flex: 1, minWidth: 0 }}>
         <p style={{ fontWeight: 600, margin: 0 }}>{i.nombre}</p>
         <p className="muted" style={{ margin: "2px 0 0", fontSize: "0.78rem" }}>
-          {i.area} · {i.campus}{i.faltan != null && !i.hoy ? ` · en ${i.faltan} días` : i.hoy ? " · Hoy" : ""}
+          {i.area} · {i.campus}{mostrarFaltan && i.faltan != null && !i.hoy ? ` · en ${i.faltan} días` : i.hoy ? " · Hoy" : ""}
         </p>
       </div>
       <span className="num" style={{ fontWeight: 700, fontSize: "1rem" }}>{i.edad}<span className="muted" style={{ fontSize: "0.7rem", fontWeight: 400 }}> años</span></span>
