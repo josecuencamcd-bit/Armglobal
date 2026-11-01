@@ -4,6 +4,9 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { ASIS_IDS, VOL_IDS, MODALIDADES, equiposVigentes } from "@/lib/sesiones";
+import { fotoAJpegDataUrl } from "@/lib/fotos-cliente";
+
+type Foto = { path: string; url: string };
 
 const ASIS_LABELS: Record<string, string> = {
   auditorio: "Auditorio", kids: "Kids", tweens: "Tweens",
@@ -60,6 +63,50 @@ export default function EncuentroPage() {
   const [motivo, setMotivo] = useState("");
   const [enviandoMotivo, setEnviandoMotivo] = useState(false);
 
+  // Fotos del cierre del POS (api_subirFoto / api_delFoto / api_getFoto):
+  // hasta 6 fotos del comprobante de cierre de caja de este encuentro.
+  const [fotos, setFotos] = useState<Foto[] | null>(null);
+  const [subiendoFoto, setSubiendoFoto] = useState(false);
+  const [errorFoto, setErrorFoto] = useState<string | null>(null);
+
+  const cargarFotos = useCallback(async () => {
+    const res = await fetch(`/api/sesiones/${key}/fotos`);
+    const json = await res.json();
+    if (json.ok) setFotos(json.data.fotos);
+  }, [key]);
+
+  async function subirFoto(file: File) {
+    setErrorFoto(null);
+    setSubiendoFoto(true);
+    try {
+      const dataUrl = await fotoAJpegDataUrl(file);
+      const res = await fetch(`/api/sesiones/${key}/fotos`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ foto: dataUrl }),
+      });
+      const json = await res.json();
+      if (!json.ok) { setErrorFoto(json.error); return; }
+      await cargarFotos();
+    } catch (e) {
+      setErrorFoto(e instanceof Error ? e.message : "No se pudo subir la foto.");
+    } finally {
+      setSubiendoFoto(false);
+    }
+  }
+
+  async function borrarFoto(path: string) {
+    if (!confirm("¿Borrar esta foto del cierre?")) return;
+    const res = await fetch(`/api/sesiones/${key}/fotos`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ path }),
+    });
+    const json = await res.json();
+    if (!json.ok) { setErrorFoto(json.error); return; }
+    await cargarFotos();
+  }
+
   const cargar = useCallback(async () => {
     const res = await fetch(`/api/sesiones/${key}`);
     const json = await res.json();
@@ -81,7 +128,8 @@ export default function EncuentroPage() {
   useEffect(() => {
     cargar();
     cargarAutorizacion();
-  }, [cargar, cargarAutorizacion]);
+    cargarFotos();
+  }, [cargar, cargarAutorizacion, cargarFotos]);
 
   async function pedirAutorizacion() {
     if (!motivo.trim()) { setError("Cuéntanos el motivo para pedir autorización."); return; }
@@ -122,22 +170,51 @@ export default function EncuentroPage() {
     setEstado(json.data);
   }
 
-  async function compartir() {
+  /** buildReport() de app.html: el resumen que se compartía por WhatsApp —
+   * fecha, modalidad, predicador/mensaje, aceptaron a Jesús, desglose por
+   * área de asistencia y de voluntarios, online, líderes y adm. de turno.
+   * Antes solo se compartía asistencia/voluntarios/total. */
+  function compartir() {
     if (!estado) return;
-    const totAsis = estado.asistencia.reduce((s, a) => s + a.cantidad, 0);
-    const totVol = estado.voluntarios.reduce((s, v) => s + v.cantidad, 0);
-    const texto = `${encuentro} · ${campus}\n${fechaCL(fecha)}\nAsistencia: ${totAsis}\nVoluntarios: ${totVol}\nTotal: ${totAsis + totVol}`;
+    const s = estado.sesion;
+    const asis = (id: string) => estado.asistencia.find((a) => a.area === id)?.cantidad ?? 0;
+    const bebes = asis("bebes") + asis("papas");
+    const nombreEnc = encuentro === "Evento Especial" && evento ? evento : encuentro;
+
+    const L: string[] = [];
+    L.push(`Reporte Encuentro Campus ${campus}`, "");
+    L.push(`*Fecha:* ${fechaCL(fecha)}`);
+    L.push(`*Encuentro* ${nombreEnc}`);
+    L.push(`*Modalidad:* ${(s?.modalidad ?? "").trim()}`);
+    L.push(`*Campus:* ${campus}`, "");
+    L.push(`*Predicador:* ${(s?.predicador ?? "").trim()}`);
+    L.push(`*Nombre:* ${(s?.mensaje ?? "").trim()}`, "");
+    L.push("*Presencial*", `Aceptaron a Jesús: ${s?.aceptaron ?? 0}`, `Total general: ${totAsis + totVol}`, "");
+    L.push("*Asistencia*");
+    L.push(`- Auditorio: ${asis("auditorio")}`, `- Kids: ${asis("kids")}`, `- Tweens: ${asis("tweens")}`);
+    L.push(`- Sala bebe: ${bebes}`);
+    L.push(`- Sala sensorial: ${asis("sensorial")}`, "");
+    L.push("*Voluntarios*");
+    VOL_IDS.forEach((id) => {
+      const cantidad = estado.voluntarios.find((v) => v.area === id)?.cantidad ?? 0;
+      L.push(`- ${VOL_LABELS[id] ?? id}: ${cantidad}`);
+    });
+    L.push("", "_*Online*_", `Aceptaron a Jesús: ${s?.on_acepto ?? 0}`, `Espectadores a la vez: ${s?.on_espect ?? 0}`, "");
+    L.push(`*Líderes de voluntarios*: ${(s?.lideres ?? "").trim()}`, "");
+    L.push(`*Adm. de Campus*: ${(s?.adm ?? "").trim()}`);
+    const texto = L.join("\n");
+
     if (navigator.share) {
       navigator.share({ title: "Reporte", text: texto }).catch(() => {});
     } else {
-      await navigator.clipboard.writeText(texto);
+      navigator.clipboard.writeText(texto);
       alert("Resumen copiado al portapapeles.");
     }
   }
 
   if (!estado && !error) return <div className="contenedor">Cargando…</div>;
 
-  const [campus, encuentro, , fecha] = decodeURIComponent(key).split("|");
+  const [campus, encuentro, evento, fecha] = decodeURIComponent(key).split("|");
   const equipos = ["", ...equiposVigentes()];
   const totAsis = estado?.asistencia.reduce((s, a) => s + a.cantidad, 0) ?? 0;
   const totVol = estado?.voluntarios.reduce((s, v) => s + v.cantidad, 0) ?? 0;
@@ -290,6 +367,48 @@ export default function EncuentroPage() {
             </div>
             <span className="muted">›</span>
           </Link>
+
+          <div className="tarjeta">
+            <p style={{ margin: "0 0 10px", fontWeight: 600 }}>Foto del cierre del POS</p>
+            {errorFoto && <p className="aviso">{errorFoto}</p>}
+            {fotos && fotos.length > 0 && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
+                {fotos.map((f) => (
+                  <div key={f.path} style={{ position: "relative" }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={f.url} alt="Cierre" style={{ width: 84, height: 84, objectFit: "cover", borderRadius: 8, border: "1px solid var(--line)" }} />
+                    {!(estado.finalizado && !autorizado) && (
+                      <button
+                        type="button"
+                        onClick={() => borrarFoto(f.path)}
+                        style={{
+                          position: "absolute", top: -6, right: -6, width: 22, height: 22, borderRadius: "50%",
+                          border: "none", background: "var(--danger)", color: "#fff", fontSize: "0.7rem", cursor: "pointer",
+                        }}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+            {!fotos && <p className="muted" style={{ fontSize: "0.8rem" }}>Cargando fotos…</p>}
+            {fotos && fotos.length >= 6 && <p className="muted" style={{ fontSize: "0.78rem" }}>Ya hay 6 fotos (máximo).</p>}
+            {fotos && fotos.length < 6 && !(estado.finalizado && !autorizado) && (
+              <label className="boton-secundario" style={{ display: "inline-block", fontSize: "0.8rem", cursor: "pointer" }}>
+                {subiendoFoto ? "Subiendo…" : "+ Agregar foto"}
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  disabled={subiendoFoto}
+                  style={{ display: "none" }}
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) subirFoto(f); e.target.value = ""; }}
+                />
+              </label>
+            )}
+          </div>
 
           <div className="tarjeta">
             <div className="fila"><span className="muted">Asistencia</span><span className="num">{totAsis}</span></div>
