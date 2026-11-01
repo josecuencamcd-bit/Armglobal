@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { METODOS_FONDO, CATEG_GASTO } from "@/lib/sesiones";
 import { useCampus } from "@/lib/campus-context";
 import { fotoAJpegDataUrl } from "@/lib/fotos-cliente";
@@ -59,7 +60,19 @@ const fmt = (n: number) => `$${n.toLocaleString("es-CL")}`;
  * /api/fondos/informe y /api/fondos, ya existentes. Se deja fuera por ahora
  * el cierre de mes y las autorizaciones (siguiente vuelta). */
 export default function FondosPage() {
+  return (
+    <Suspense fallback={<div className="contenedor">Cargando…</div>}>
+      <FondosContenido />
+    </Suspense>
+  );
+}
+
+/** Desde Finanzas se llega acá con ?area=X ("Ver detalle" de un fondo de
+ * equipo) — igual que vFinInforme() de la app vieja, donde cada fila de
+ * `fondos` abre directo el fondo de esa área. */
+function FondosContenido() {
   const { campusActivo } = useCampus();
+  const areaInicial = useSearchParams().get("area");
   const [informe, setInforme] = useState<Informe | null>(null);
   const [area, setArea] = useState<string | null>(null);
   const [movs, setMovs] = useState<Movimiento[] | null>(null);
@@ -108,7 +121,8 @@ export default function FondosPage() {
   }, [campusActivo]);
 
   useEffect(() => {
-    cargar(null);
+    cargar(areaInicial);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cargar]);
 
   function abrirAnular(id: number) {

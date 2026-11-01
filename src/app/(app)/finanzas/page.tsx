@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
 import { GASTOS_ITEMS } from "@/lib/sesiones";
 import { useCampus } from "@/lib/campus-context";
 
@@ -16,6 +17,7 @@ type Informe = {
   cierre: { cerrado: boolean; por: string; cuando: string; auto: boolean };
   comparacion: { actual: number; anterior: number; pct: number };
   historico: number;
+  fondos: { area: string; ingresos: number; egresos: number; anterior: number; saldo: number }[];
 };
 
 function mesMover(mes: string, delta: number) {
@@ -194,6 +196,26 @@ export default function FinanzasPage() {
               <button className="boton-secundario" disabled={cerrando} onClick={cerrarMes}>
                 {cerrando ? "Cerrando…" : "Cerrar mes"}
               </button>
+            </div>
+          )}
+
+          {informe.fondos.length > 0 && (
+            <div className="tarjeta">
+              <p style={{ fontWeight: 600, margin: "0 0 8px" }}>Fondos de equipo, aparte</p>
+              <p className="muted" style={{ margin: "0 0 8px", fontSize: "0.78rem" }}>
+                Cada equipo lleva su propio fondo — no está incluido en el saldo de arriba.
+              </p>
+              {informe.fondos.map((f) => (
+                <div className="fila" key={f.area}>
+                  <span>{f.area}</span>
+                  <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span className="num">{fmt(f.saldo)}</span>
+                    <Link href={`/fondos?area=${encodeURIComponent(f.area)}`} className="boton-secundario" style={{ fontSize: "0.72rem", padding: "4px 8px" }}>
+                      Ver detalle
+                    </Link>
+                  </span>
+                </div>
+              ))}
             </div>
           )}
 
