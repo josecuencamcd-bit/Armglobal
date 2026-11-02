@@ -2,7 +2,13 @@
 
 import { useEffect, useState, useCallback } from "react";
 
-type Baja = { id: number; nombre: string | null; campus: string; area: string; motivo: string; estado: string };
+type Baja = { id: number; nombre: string | null; campus: string; area: string; motivo: string; estado: string; solicitante: string | null; fecha: string };
+
+function fechaCorta(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric" });
+}
 
 /** Bajas: solicitudes de dar de baja a un integrante, pendientes de
  * aprobación — mismo nav top-level que la app vieja ("Bajas"), contra
@@ -50,7 +56,10 @@ export default function BajasPage() {
       {pendientes.map((b) => (
         <div className="tarjeta" key={b.id}>
           <p style={{ fontWeight: 600, margin: 0 }}>{b.nombre ?? `Integrante #${b.id}`}</p>
-          <p className="muted" style={{ margin: "2px 0 10px", fontSize: "0.8rem" }}>{b.campus} · {b.area} · {b.motivo}</p>
+          <p className="muted" style={{ margin: "2px 0 0", fontSize: "0.8rem" }}>
+            {b.area} · {b.campus} · pidió {b.solicitante ?? "—"} el {fechaCorta(b.fecha)}
+          </p>
+          <p className="muted" style={{ margin: "2px 0 10px", fontSize: "0.8rem" }}>Motivo: {b.motivo}</p>
           <div style={{ display: "flex", gap: 8 }}>
             <button className="boton" style={{ flex: 1 }} disabled={ocupado === b.id} onClick={() => resolver(b.id, true)}>
               {ocupado === b.id ? "…" : "Aprobar"}
