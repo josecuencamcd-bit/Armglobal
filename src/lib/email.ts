@@ -21,8 +21,9 @@ function layout(opts: {
   titulo: string;
   parrafos: string[];
   datos?: [string, string][];
-  botonTexto: string;
-  botonUrl: string;
+  codigoGrande?: string;
+  botonTexto?: string;
+  botonUrl?: string;
 }) {
   const esc = (t: string) =>
     String(t ?? "")
@@ -51,30 +52,42 @@ function layout(opts: {
       <div style="font-size:20px;font-weight:bold;color:#111;margin:6px 0 14px">${esc(opts.titulo)}</div>
       ${opts.parrafos.map((p) => `<p style="font-size:14px;color:#222;margin:0 0 12px">${esc(p)}</p>`).join("")}
       ${filas ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:14px;color:#222;margin-top:6px">${filas}</table>` : ""}
+      ${
+        opts.codigoGrande
+          ? `<div style="text-align:center;margin:18px 0 4px"><span style="display:inline-block;background:#f4f4f4;border-radius:10px;padding:14px 22px;font-size:30px;font-weight:bold;letter-spacing:6px;color:#111">${esc(
+              opts.codigoGrande
+            )}</span></div>`
+          : ""
+      }
     </div>
-    <div style="padding:16px 22px 24px">
+    ${
+      opts.botonTexto && opts.botonUrl
+        ? `<div style="padding:16px 22px 24px">
       <a href="${opts.botonUrl}" style="display:inline-block;background:#ffd23f;color:#111;font-weight:bold;text-decoration:none;border-radius:10px;padding:12px 22px;font-size:15px">${esc(
-        opts.botonTexto
-      )}</a>
-    </div>
+          opts.botonTexto
+        )}</a>
+    </div>`
+        : `<div style="padding:0 22px 24px"></div>`
+    }
   </div>
 </div>`;
 }
 
-export async function enviarCorreoRecuperarClave(correo: string, link: string) {
+/** Reemplaza api_olvide/api_restablecer de Code.gs: un código de 6 dígitos
+ * que la persona escribe en la misma pantalla de login, no un link. */
+export async function enviarCodigoRecuperarClave(correo: string, codigo: string) {
   return resend.emails.send({
     from: FROM,
     to: correo,
-    subject: "Recuperar tu clave — armglobal",
+    subject: "Tu código para recuperar la clave — armglobal",
     html: layout({
       etiqueta: "RECUPERAR CLAVE",
-      titulo: "Definir tu clave de armglobal",
+      titulo: "Tu código de verificación",
       parrafos: [
-        "Pediste recuperar el acceso a tu cuenta. Click en el botón para definir tu clave nueva.",
-        "Si no fuiste tú, ignora este correo — tu cuenta sigue segura.",
+        "Pediste recuperar el acceso a tu cuenta. Escribe este código en la app para definir tu clave nueva.",
+        "Vence en 15 minutos. Si no fuiste tú, ignora este correo — tu cuenta sigue segura.",
       ],
-      botonTexto: "Definir mi clave",
-      botonUrl: link,
+      codigoGrande: codigo,
     }),
   });
 }

@@ -3,30 +3,14 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { MODULOS, type Modulo } from "@/lib/modulos";
-import { Icono } from "@/lib/iconos";
 import { useCampus } from "@/lib/campus-context";
-import {
-  modulosVisibles,
-  CLAVE_A_MODULO_APP,
-  esFin,
-  puedeSoporte,
-  puedeVerEquipo,
-  type PerfilVisibilidad,
-} from "@/lib/visibilidad-modulos";
+import { esFin, puedeSoporte, puedeVerEquipo, type PerfilVisibilidad } from "@/lib/visibilidad-modulos";
 import { GraficoLinea, peso } from "@/lib/grafico-linea";
 
-/** Grupos del dashboard — mismas funciones, pero organizadas por tema en
- * vez de un muro de 10 cuadros iguales (pedido: "que sea ordenado, sin
- * tener que estar scrolleando para buscar todo"). */
-const GRUPOS: { titulo: string; claves: string[] }[] = [
-  { titulo: "Hoy", claves: ["asistencia", "panorama"] },
-  { titulo: "Dinero", claves: ["fondos", "finanzas"] },
-  { titulo: "Equipo", claves: ["equipos", "turnos", "visitas"] },
-  { titulo: "Administración", claves: ["soporte", "bajas", "perfiles"] },
-  { titulo: "Personas", claves: ["cumpleanos", "reuniones", "perfil"] },
-];
-
+/** Reemplaza vInicio() de Code.gs: solo el panel (tarjetas de ingresos,
+ * fondo, tu equipo, pendientes, turno, cumpleaños) — la app vieja no tenía
+ * una grilla de botones acá, la navegación es por la barra inferior
+ * (Inicio + hasta 4 accesos según rol + "Más"). */
 const TIPOS_AYUDA = ["Algo no funciona", "No entiendo cómo usarlo", "Falta un dato", "Otro"];
 
 /** Lunes ISO de la semana que contiene `fecha` (mismo criterio que
@@ -75,7 +59,6 @@ export default function InicioPage() {
   const [resumenLider, setResumenLider] = useState<ResumenLider | null>(null);
   const [equipo, setEquipo] = useState<EquipoStats | null>(null);
   const [cumplesHoy, setCumplesHoy] = useState<Cumple[]>([]);
-  const [visibles, setVisibles] = useState<Set<string> | null>(null);
   const [ayudaAbierta, setAyudaAbierta] = useState(false);
   const [ayudaTipo, setAyudaTipo] = useState(TIPOS_AYUDA[0]);
   const [ayudaMensaje, setAyudaMensaje] = useState("");
@@ -97,7 +80,6 @@ export default function InicioPage() {
       if (cancelado || !data) return;
       setNombre(data.nombre.split(" ")[0]);
       setPerfil(data as unknown as PerfilVisibilidad);
-      setVisibles(modulosVisibles(data as unknown as PerfilVisibilidad));
     })();
     return () => {
       cancelado = true;
@@ -149,16 +131,6 @@ export default function InicioPage() {
       setAyudaEnviando(false);
     }
   }
-
-  // Mismo filtro que el menú inferior (ver layout): un tile mapeado a un
-  // módulo de la lista vieja solo se muestra si esta persona lo tiene
-  // visible por rol o por lo que el Admin app haya ajustado en /perfiles.
-  const modulosVisiblesAqui = MODULOS.filter((m) => {
-    const claveVieja = CLAVE_A_MODULO_APP[m.key];
-    if (!claveVieja || !visibles) return true;
-    return visibles.has(claveVieja);
-  });
-  const porClave = new Map(modulosVisiblesAqui.map((m) => [m.key, m]));
 
   const mostrarCampus = perfil ? !esFin(perfil) : false;
   const mostrarSoporte = perfil ? puedeSoporte(perfil) : false;
@@ -359,43 +331,6 @@ export default function InicioPage() {
         </div>
       )}
 
-      {GRUPOS.map((g) => {
-        const tiles = g.claves.map((k) => porClave.get(k)).filter((m): m is Modulo => !!m);
-        if (tiles.length === 0) return null;
-        return (
-          <div key={g.titulo} style={{ marginBottom: 20 }}>
-            <p className="muted" style={{ margin: "0 0 8px", fontSize: "0.78rem", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-              {g.titulo}
-            </p>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10 }}>
-              {tiles.map((m) => (
-                <button
-                  key={m.key}
-                  onClick={() => m.listo && router.push(m.href)}
-                  disabled={!m.listo}
-                  className="tarjeta"
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "flex-start",
-                    gap: 6,
-                    cursor: m.listo ? "pointer" : "default",
-                    opacity: m.listo ? 1 : 0.5,
-                    textAlign: "left",
-                    margin: 0,
-                  }}
-                >
-                  <span style={{ color: "var(--accent)" }}>
-                    <Icono id={m.icon} size={24} />
-                  </span>
-                  <span style={{ fontWeight: 600 }}>{m.label}</span>
-                  {!m.listo && <span className="muted">Pronto</span>}
-                </button>
-              ))}
-            </div>
-          </div>
-        );
-      })}
     </div>
   );
 }

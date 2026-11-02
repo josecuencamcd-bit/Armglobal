@@ -45,20 +45,58 @@ function diasQuedan(mes: string) {
   return q > 0 ? `Quedan ${q} día${q === 1 ? "" : "s"} para que termine el mes.` : "Último día del mes.";
 }
 
-/** Módulo Finanzas (informe de campus) — equivalente a Soporte → Finanzas/
- * Informe de la app vieja: ingresos (encuentros + extraordinarios), gastos
- * de campus por ítem, saldo. Contra /api/gastos-campus/informe (lectura) y
- * /api/gastos-campus (registrar gasto), ya existentes. */
+/** Texto del informe mensual para compartir — mismo contenido que
+ * docFinanzas() de la app vieja (saldo, ingresos por encuentros/
+ * extraordinarios, gastos por ítem, comparación e histórico). */
+function textoInforme(inf: Informe): string {
+  const lineas = [
+    `Finanzas · ${inf.campus}`,
+    nombreMes(inf.mes),
+    "",
+    `Saldo: ${fmt(inf.saldo)}`,
+    `Ingresos: ${fmt(inf.ingresos.total)} (encuentros ${fmt(inf.ingresos.encuentros)} + extraordinarios ${fmt(inf.ingresos.extraordinarios)})`,
+    `Gastos: ${fmt(inf.egresos)}`,
+  ];
+  const items = Object.entries(inf.porItem);
+  if (items.length) {
+    lineas.push("", "Gastos por ítem:");
+    for (const [item, monto] of items) lineas.push(`· ${item}: ${fmt(monto)}`);
+  }
+  lineas.push(
+    "",
+    `${inf.comparacion.pct >= 0 ? "▲" : "▼"} ${Math.abs(inf.comparacion.pct)}% vs. mes anterior (${fmt(inf.comparacion.anterior)})`,
+    `Histórico acumulado: ${fmt(inf.historico)}`
+  );
+  if (inf.cierre.cerrado) {
+    lineas.push("", `Mes cerrado${inf.cierre.auto ? " automáticamente" : ` por ${inf.cierre.por}`}.`);
+  }
+  return lineas.join("\n");
+}
+
+type Tab = "panel" | "aportes" | "gastos" | "informe";
+const TABS: { key: Tab; label: string }[] = [
+  { key: "panel", label: "Panel" },
+  { key: "aportes", label: "Aportes" },
+  { key: "gastos", label: "Gastos" },
+  { key: "informe", label: "Informe" },
+];
+
+/** Módulo Finanzas (informe de campus) — equivalente a Soporte → Finanzas
+ * de la app vieja: 4 pestañas (Panel/Aportes/Gastos/Informe), igual que
+ * vFinanzas() en Code.gs. Contra /api/gastos-campus/informe (lectura) y
+ * /api/gastos-campus + /api/fondos (registrar), ya existentes. */
 export default function FinanzasPage() {
   const { campusActivo } = useCampus();
   const [informe, setInforme] = useState<Informe | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [tab, setTab] = useState<Tab>("panel");
   const [mostrarForm, setMostrarForm] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [cerrando, setCerrando] = useState(false);
   const [mostrarFormAporte, setMostrarFormAporte] = useState(false);
   const [guardandoAporte, setGuardandoAporte] = useState(false);
   const [esPastor, setEsPastor] = useState(false);
+  const [copiado, setCopiado] = useState(false);
 
   const cargar = useCallback(async (mes?: string) => {
     const qs = new URLSearchParams({ campus: campusActivo });
@@ -159,6 +197,17 @@ export default function FinanzasPage() {
     await cargar(informe.mes);
   }
 
+  async function compartirInforme() {
+    if (!informe) return;
+    const texto = textoInforme(informe);
+    if (navigator.share) {
+      try { await navigator.share({ text: texto }); return; } catch { /* el usuario canceló */ }
+    }
+    await navigator.clipboard.writeText(texto);
+    setCopiado(true);
+    setTimeout(() => setCopiado(false), 1800);
+  }
+
   if (!informe && !error) return <div className="contenedor">Cargando…</div>;
 
   return (
@@ -174,180 +223,220 @@ export default function FinanzasPage() {
             <button className="boton-secundario" onClick={() => cargar(mesMover(informe.mes, 1))}>›</button>
           </div>
 
-          <div className="tarjeta">
-            <p className="muted" style={{ margin: 0, fontSize: "0.75rem" }}>SALDO · {informe.campus} · {informe.mes}</p>
-            <p className="num" style={{ fontSize: "1.8rem", fontWeight: 700, margin: "4px 0" }}>{fmt(informe.saldo)}</p>
-            <p className="muted" style={{ margin: 0, fontSize: "0.8rem" }}>
-              Ingresos {fmt(informe.ingresos.total)} (encuentros {fmt(informe.ingresos.encuentros)} + extraordinarios {fmt(informe.ingresos.extraordinarios)}) · Gastos {fmt(informe.egresos)}
-            </p>
-            <p className="muted" style={{ margin: "6px 0 0", fontSize: "0.78rem" }}>
-              {informe.comparacion.pct >= 0 ? "▲" : "▼"} {Math.abs(informe.comparacion.pct)}% vs. mes anterior ({fmt(informe.comparacion.anterior)}) · Histórico {fmt(informe.historico)}
-            </p>
-            {informe.tendencia.length > 0 && (
-              <div style={{ marginTop: 10 }}>
-                <GraficoLinea datos={informe.tendencia} />
-              </div>
-            )}
+          <div className="seg" style={{ display: "flex", border: "1px solid var(--line)", borderRadius: 10, overflow: "hidden", marginBottom: 16 }}>
+            {TABS.map((t) => (
+              <button
+                key={t.key}
+                onClick={() => { setTab(t.key); setMostrarForm(false); setMostrarFormAporte(false); }}
+                style={{
+                  flex: 1, padding: "10px 4px", border: 0, cursor: "pointer", fontSize: "0.85rem",
+                  background: tab === t.key ? "var(--accent)" : "transparent",
+                  color: tab === t.key ? "var(--accent-ink)" : "var(--muted)", fontWeight: 600,
+                }}
+              >
+                {t.label}
+              </button>
+            ))}
           </div>
 
-          {informe.cierre.cerrado ? (
-            <p className="muted" style={{ fontSize: "0.82rem", marginTop: -4 }}>
-              Mes cerrado{informe.cierre.auto ? " automáticamente" : ` por ${informe.cierre.por}`}.
-            </p>
-          ) : (
-            <div className="tarjeta" style={{ marginBottom: 12 }}>
-              <p style={{ margin: "0 0 2px", fontWeight: 600 }}>Cierre de {nombreMes(informe.mes)}</p>
-              <p className="muted" style={{ margin: "0 0 10px", fontSize: "0.82rem" }}>
-                {diasQuedan(informe.mes)} Si no cierras, se cierra solo el día 5.
-              </p>
-              <button className="boton-secundario" disabled={cerrando} onClick={cerrarMes}>
-                {cerrando ? "Cerrando…" : "Cerrar mes"}
-              </button>
-            </div>
+          {tab === "panel" && (
+            <>
+              <div className="tarjeta">
+                <p className="muted" style={{ margin: 0, fontSize: "0.75rem" }}>SALDO · {informe.campus} · {informe.mes}</p>
+                <p className="num" style={{ fontSize: "1.8rem", fontWeight: 700, margin: "4px 0" }}>{fmt(informe.saldo)}</p>
+                <p className="muted" style={{ margin: 0, fontSize: "0.8rem" }}>
+                  Ingresos {fmt(informe.ingresos.total)} (encuentros {fmt(informe.ingresos.encuentros)} + extraordinarios {fmt(informe.ingresos.extraordinarios)}) · Gastos {fmt(informe.egresos)}
+                </p>
+                <p className="muted" style={{ margin: "6px 0 0", fontSize: "0.78rem" }}>
+                  {informe.comparacion.pct >= 0 ? "▲" : "▼"} {Math.abs(informe.comparacion.pct)}% vs. mes anterior ({fmt(informe.comparacion.anterior)}) · Histórico {fmt(informe.historico)}
+                </p>
+                {informe.tendencia.length > 0 && (
+                  <div style={{ marginTop: 10 }}>
+                    <GraficoLinea datos={informe.tendencia} />
+                  </div>
+                )}
+              </div>
+
+              {informe.cierre.cerrado ? (
+                <p className="muted" style={{ fontSize: "0.82rem", marginTop: 10 }}>
+                  Mes cerrado{informe.cierre.auto ? " automáticamente" : ` por ${informe.cierre.por}`}.
+                </p>
+              ) : (
+                <div className="tarjeta" style={{ marginTop: 12 }}>
+                  <p style={{ margin: "0 0 2px", fontWeight: 600 }}>Cierre de {nombreMes(informe.mes)}</p>
+                  <p className="muted" style={{ margin: "0 0 10px", fontSize: "0.82rem" }}>
+                    {diasQuedan(informe.mes)} Si no cierras, se cierra solo el día 5.
+                  </p>
+                  <button className="boton-secundario" disabled={cerrando} onClick={cerrarMes}>
+                    {cerrando ? "Cerrando…" : "Cerrar mes"}
+                  </button>
+                </div>
+              )}
+
+              {informe.fondos.length > 0 && (
+                <div className="tarjeta" style={{ marginTop: 12 }}>
+                  <p style={{ fontWeight: 600, margin: "0 0 8px" }}>Fondos de equipo, aparte</p>
+                  <p className="muted" style={{ margin: "0 0 8px", fontSize: "0.78rem" }}>
+                    Cada equipo lleva su propio fondo — no está incluido en el saldo de arriba.
+                  </p>
+                  {informe.fondos.map((f) => (
+                    <div className="fila" key={f.area}>
+                      <span>{f.area}</span>
+                      <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span className="num">{fmt(f.saldo)}</span>
+                        <Link href={`/fondos?area=${encodeURIComponent(f.area)}`} className="boton-secundario" style={{ fontSize: "0.72rem", padding: "4px 8px" }}>
+                          Ver detalle
+                        </Link>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {Object.keys(informe.porItem).length > 0 && (
+                <div className="tarjeta" style={{ marginTop: 12 }}>
+                  <p style={{ fontWeight: 600, margin: "0 0 8px" }}>Gastos por ítem</p>
+                  {Object.entries(informe.porItem).map(([item, monto]) => (
+                    <div className="fila" key={item}>
+                      <span>{item}</span>
+                      <span className="num">{fmt(monto)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
           )}
 
-          {informe.fondos.length > 0 && (
-            <div className="tarjeta">
-              <p style={{ fontWeight: 600, margin: "0 0 8px" }}>Fondos de equipo, aparte</p>
-              <p className="muted" style={{ margin: "0 0 8px", fontSize: "0.78rem" }}>
-                Cada equipo lleva su propio fondo — no está incluido en el saldo de arriba.
-              </p>
-              {informe.fondos.map((f) => (
-                <div className="fila" key={f.area}>
-                  <span>{f.area}</span>
+          {tab === "aportes" && (
+            <>
+              {esPastor && (
+                <button className="boton" style={{ marginBottom: 12 }} onClick={() => setMostrarFormAporte((v) => !v)}>
+                  {mostrarFormAporte ? "Cerrar" : "Registrar aporte extraordinario"}
+                </button>
+              )}
+              {mostrarFormAporte && (
+                <form className="tarjeta" action={(fd) => registrarAporte(fd)} style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 12 }}>
+                  <div className="campo">
+                    <label>Fecha</label>
+                    <input name="fecha" type="date" defaultValue={new Date().toISOString().slice(0, 10)} required />
+                  </div>
+                  <div className="campo">
+                    <label>Quién aporta</label>
+                    <input name="nombre" required minLength={3} />
+                  </div>
+                  <div className="campo">
+                    <label>Monto</label>
+                    <input name="monto" type="number" required />
+                  </div>
+                  <div className="campo">
+                    <label>¿Cómo aportó?</label>
+                    <select name="metodo">
+                      <option value="Efectivo">Efectivo</option>
+                      <option value="Transferencia">Transferencia</option>
+                    </select>
+                  </div>
+                  <div className="campo">
+                    <label>Nota (opcional)</label>
+                    <textarea name="descripcion" rows={2} />
+                  </div>
+                  <button className="boton" type="submit" disabled={guardandoAporte}>
+                    {guardandoAporte ? "Guardando…" : "Registrar"}
+                  </button>
+                </form>
+              )}
+              <p className="muted" style={{ margin: "16px 0 8px" }}>Aportes extraordinarios de {nombreMes(informe.mes)}</p>
+              {informe.extras.length === 0 && <p className="muted">No hay aportes extraordinarios este mes.</p>}
+              {informe.extras.map((x) => (
+                <div className="fila" key={x.id}>
+                  <div>
+                    <div>{x.nombre}{x.anulado ? " (anulado)" : ""}</div>
+                    <div className="muted" style={{ fontSize: "0.78rem" }}>{x.fecha} · {x.metodo}{x.descripcion ? ` · ${x.descripcion}` : ""}</div>
+                  </div>
                   <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span className="num">{fmt(f.saldo)}</span>
-                    <Link href={`/fondos?area=${encodeURIComponent(f.area)}`} className="boton-secundario" style={{ fontSize: "0.72rem", padding: "4px 8px" }}>
-                      Ver detalle
-                    </Link>
+                    <span className="num" style={{ color: "var(--ok)" }}>+{fmt(x.monto)}</span>
+                    {esPastor && !x.anulado && (
+                      <button className="boton-peligro" style={{ fontSize: "0.72rem", padding: "4px 8px" }} onClick={() => anularAporte(x.id)}>
+                        Anular
+                      </button>
+                    )}
                   </span>
                 </div>
               ))}
-            </div>
+            </>
           )}
 
-          {Object.keys(informe.porItem).length > 0 && (
-            <div className="tarjeta">
-              <p style={{ fontWeight: 600, margin: "0 0 8px" }}>Gastos por ítem</p>
-              {Object.entries(informe.porItem).map(([item, monto]) => (
-                <div className="fila" key={item}>
-                  <span>{item}</span>
-                  <span className="num">{fmt(monto)}</span>
+          {tab === "gastos" && (
+            <>
+              <button className="boton" style={{ marginBottom: 16 }} onClick={() => setMostrarForm((v) => !v)}>
+                {mostrarForm ? "Cerrar" : "Registrar gasto"}
+              </button>
+
+              {mostrarForm && (
+                <form className="tarjeta" action={(fd) => registrar(fd)} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  <div className="campo">
+                    <label>Fecha</label>
+                    <input name="fecha" type="date" defaultValue={new Date().toISOString().slice(0, 10)} required />
+                  </div>
+                  <div className="campo">
+                    <label>Ítem</label>
+                    <select name="item">
+                      {GASTOS_ITEMS.map((i) => <option key={i} value={i}>{i}</option>)}
+                    </select>
+                  </div>
+                  <div className="campo">
+                    <label>Monto</label>
+                    <input name="monto" type="number" required />
+                  </div>
+                  <div className="campo">
+                    <label>Comercio</label>
+                    <input name="comercio" />
+                  </div>
+                  <div className="campo">
+                    <label>N° de boleta</label>
+                    <input name="boleta" />
+                  </div>
+                  <div className="campo">
+                    <label>Descripción</label>
+                    <textarea name="descripcion" rows={2} required />
+                  </div>
+                  <button className="boton" type="submit" disabled={guardando}>
+                    {guardando ? "Guardando…" : "Registrar"}
+                  </button>
+                </form>
+              )}
+
+              <p className="muted" style={{ margin: "16px 0 8px" }}>Gastos de {nombreMes(informe.mes)}</p>
+              {informe.gastos.length === 0 && <p className="muted">Sin gastos este mes.</p>}
+              {informe.gastos.map((g) => (
+                <div className="fila" key={g.id}>
+                  <div>
+                    <div>{g.item}{g.comercio ? ` · ${g.comercio}` : ""}{g.anulado ? " (anulado)" : ""}</div>
+                    <div className="muted" style={{ fontSize: "0.78rem" }}>{g.fecha} · {g.descripcion}</div>
+                  </div>
+                  <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span className="num" style={{ color: "var(--danger)" }}>-{fmt(g.monto)}</span>
+                    {!g.anulado && (
+                      <button className="boton-peligro" style={{ fontSize: "0.72rem", padding: "4px 8px" }} onClick={() => anularGasto(g.id)}>
+                        Anular
+                      </button>
+                    )}
+                  </span>
                 </div>
               ))}
-            </div>
+            </>
           )}
 
-          <p className="muted" style={{ margin: "16px 0 8px" }}>Aportes extraordinarios del mes</p>
-          {esPastor && (
-            <button className="boton-secundario" style={{ marginBottom: 12 }} onClick={() => setMostrarFormAporte((v) => !v)}>
-              {mostrarFormAporte ? "Cerrar" : "+ Registrar aporte extraordinario"}
-            </button>
-          )}
-          {mostrarFormAporte && (
-            <form className="tarjeta" action={(fd) => registrarAporte(fd)} style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 12 }}>
-              <div className="campo">
-                <label>Fecha</label>
-                <input name="fecha" type="date" defaultValue={new Date().toISOString().slice(0, 10)} required />
-              </div>
-              <div className="campo">
-                <label>Quién aporta</label>
-                <input name="nombre" required minLength={3} />
-              </div>
-              <div className="campo">
-                <label>Monto</label>
-                <input name="monto" type="number" required />
-              </div>
-              <div className="campo">
-                <label>¿Cómo aportó?</label>
-                <select name="metodo">
-                  <option value="Efectivo">Efectivo</option>
-                  <option value="Transferencia">Transferencia</option>
-                </select>
-              </div>
-              <div className="campo">
-                <label>Nota (opcional)</label>
-                <textarea name="descripcion" rows={2} />
-              </div>
-              <button className="boton" type="submit" disabled={guardandoAporte}>
-                {guardandoAporte ? "Guardando…" : "Registrar"}
+          {tab === "informe" && (
+            <div className="tarjeta">
+              <p className="muted" style={{ margin: "0 0 8px", fontSize: "0.75rem" }}>INFORME · LISTO PARA COMPARTIR</p>
+              <pre style={{ whiteSpace: "pre-wrap", fontFamily: "inherit", fontSize: "0.88rem", margin: "0 0 14px" }}>
+                {textoInforme(informe)}
+              </pre>
+              <button className="boton" onClick={compartirInforme}>
+                {copiado ? "Copiado ✓" : "Compartir / copiar"}
               </button>
-            </form>
-          )}
-          {informe.extras.length === 0 && <p className="muted">No hay aportes extraordinarios este mes.</p>}
-          {informe.extras.map((x) => (
-            <div className="fila" key={x.id}>
-              <div>
-                <div>{x.nombre}{x.anulado ? " (anulado)" : ""}</div>
-                <div className="muted" style={{ fontSize: "0.78rem" }}>{x.fecha} · {x.metodo}{x.descripcion ? ` · ${x.descripcion}` : ""}</div>
-              </div>
-              <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span className="num" style={{ color: "var(--ok)" }}>+{fmt(x.monto)}</span>
-                {esPastor && !x.anulado && (
-                  <button className="boton-peligro" style={{ fontSize: "0.72rem", padding: "4px 8px" }} onClick={() => anularAporte(x.id)}>
-                    Anular
-                  </button>
-                )}
-              </span>
             </div>
-          ))}
-
-          <button className="boton" style={{ marginBottom: 16, marginTop: 20 }} onClick={() => setMostrarForm((v) => !v)}>
-            {mostrarForm ? "Cerrar" : "Registrar gasto"}
-          </button>
-
-          {mostrarForm && (
-            <form className="tarjeta" action={(fd) => registrar(fd)} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <div className="campo">
-                <label>Fecha</label>
-                <input name="fecha" type="date" defaultValue={new Date().toISOString().slice(0, 10)} required />
-              </div>
-              <div className="campo">
-                <label>Ítem</label>
-                <select name="item">
-                  {GASTOS_ITEMS.map((i) => <option key={i} value={i}>{i}</option>)}
-                </select>
-              </div>
-              <div className="campo">
-                <label>Monto</label>
-                <input name="monto" type="number" required />
-              </div>
-              <div className="campo">
-                <label>Comercio</label>
-                <input name="comercio" />
-              </div>
-              <div className="campo">
-                <label>N° de boleta</label>
-                <input name="boleta" />
-              </div>
-              <div className="campo">
-                <label>Descripción</label>
-                <textarea name="descripcion" rows={2} required />
-              </div>
-              <button className="boton" type="submit" disabled={guardando}>
-                {guardando ? "Guardando…" : "Registrar"}
-              </button>
-            </form>
           )}
-
-          <p className="muted" style={{ margin: "16px 0 8px" }}>Gastos del mes</p>
-          {informe.gastos.length === 0 && <p className="muted">Sin gastos este mes.</p>}
-          {informe.gastos.map((g) => (
-            <div className="fila" key={g.id}>
-              <div>
-                <div>{g.item}{g.comercio ? ` · ${g.comercio}` : ""}{g.anulado ? " (anulado)" : ""}</div>
-                <div className="muted" style={{ fontSize: "0.78rem" }}>{g.fecha} · {g.descripcion}</div>
-              </div>
-              <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span className="num" style={{ color: "var(--danger)" }}>-{fmt(g.monto)}</span>
-                {!g.anulado && (
-                  <button className="boton-peligro" style={{ fontSize: "0.72rem", padding: "4px 8px" }} onClick={() => anularGasto(g.id)}>
-                    Anular
-                  </button>
-                )}
-              </span>
-            </div>
-          ))}
         </>
       )}
     </div>

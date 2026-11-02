@@ -300,6 +300,30 @@ export type Database = {
         }
         Relationships: []
       }
+      codigos_recuperacion: {
+        Row: {
+          codigo_hash: string
+          correo: string
+          creado_en: string
+          expira_en: string
+          intentos: number
+        }
+        Insert: {
+          codigo_hash: string
+          correo: string
+          creado_en?: string
+          expira_en: string
+          intentos?: number
+        }
+        Update: {
+          codigo_hash?: string
+          correo?: string
+          creado_en?: string
+          expira_en?: string
+          intentos?: number
+        }
+        Relationships: []
+      }
       cumple_propuestas: {
         Row: {
           abrazo: string | null

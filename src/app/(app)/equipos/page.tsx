@@ -12,7 +12,31 @@ type Integrante = {
   telefono: string | null;
   correo: string | null;
   estado: string;
+  nacimiento: string | null;
+  anos_iglesia: number | null;
+  anos_servicio: number | null;
+  rol_servicio: string | null;
+  profesion: string | null;
 };
+
+/** Días que faltan para el próximo cumpleaños (0 = hoy), igual criterio
+ * que /api/cumpleanos pero acotado a la lista ya cargada de esta área. */
+function diasHastaCumple(nacimiento: string): number | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(nacimiento);
+  if (!m) return null;
+  const [, , mesStr, diaStr] = m;
+  const hoy = new Date();
+  const base = Date.UTC(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+  let d = Date.UTC(hoy.getFullYear(), +mesStr - 1, +diaStr);
+  if (d < base) d = Date.UTC(hoy.getFullYear() + 1, +mesStr - 1, +diaStr);
+  return Math.round((d - base) / 86_400_000);
+}
+
+function promedio(valores: (number | null)[]): number | null {
+  const nums = valores.filter((v): v is number => v != null);
+  if (!nums.length) return null;
+  return Math.round((nums.reduce((a, b) => a + b, 0) / nums.length) * 10) / 10;
+}
 
 type Ficha = {
   id: number;
@@ -120,6 +144,10 @@ export default function EquiposPage() {
         nombre: fd.get("nombre"),
         telefono: fd.get("telefono") || undefined,
         correo: fd.get("correo") || undefined,
+        nacimiento: fd.get("nacimiento") || undefined,
+        anos_iglesia: fd.get("anos_iglesia") ? Number(fd.get("anos_iglesia")) : undefined,
+        anos_servicio: fd.get("anos_servicio") ? Number(fd.get("anos_servicio")) : undefined,
+        rol_servicio: fd.get("rol_servicio") || undefined,
       }),
     });
     const json = await res.json();
@@ -140,6 +168,10 @@ export default function EquiposPage() {
         telefono: fd.get("telefono") || undefined,
         correo: fd.get("correo") || undefined,
         area: fd.get("area"),
+        nacimiento: fd.get("nacimiento") || undefined,
+        anos_iglesia: fd.get("anos_iglesia") ? Number(fd.get("anos_iglesia")) : undefined,
+        anos_servicio: fd.get("anos_servicio") ? Number(fd.get("anos_servicio")) : undefined,
+        rol_servicio: fd.get("rol_servicio") || undefined,
       }),
     });
     const json = await res.json();
@@ -158,6 +190,20 @@ export default function EquiposPage() {
   }
 
   if (!lista && !error) return <div className="contenedor">Cargando…</div>;
+
+  const activos = lista?.filter((i) => i.estado === "Activo") ?? [];
+  const promIglesia = promedio(activos.map((i) => i.anos_iglesia));
+  const promServicio = promedio(activos.map((i) => i.anos_servicio));
+  const proximosCumples = activos
+    .map((i) => ({ i, dias: i.nacimiento ? diasHastaCumple(i.nacimiento) : null }))
+    .filter((x): x is { i: Integrante; dias: number } => x.dias != null)
+    .sort((a, b) => a.dias - b.dias)
+    .slice(0, 5);
+  const porRol = new Map<string, Integrante[]>();
+  for (const i of activos) {
+    const rol = i.rol_servicio?.trim() || "Sin asignar";
+    porRol.set(rol, [...(porRol.get(rol) ?? []), i]);
+  }
 
   return (
     <div className="contenedor" style={{ paddingTop: 24 }}>
@@ -183,6 +229,52 @@ export default function EquiposPage() {
         </select>
       </div>
 
+      <div className="tarjeta" style={{ display: "flex", gap: 10, marginBottom: 16 }}>
+        <div style={{ flex: 1 }}>
+          <p className="num" style={{ margin: 0, fontSize: "1.3rem", fontWeight: 700 }}>{activos.length}</p>
+          <p className="muted" style={{ margin: 0, fontSize: "0.72rem" }}>Integrantes</p>
+        </div>
+        <div style={{ flex: 1 }}>
+          <p className="num" style={{ margin: 0, fontSize: "1.3rem", fontWeight: 700 }}>{promIglesia ?? "—"}</p>
+          <p className="muted" style={{ margin: 0, fontSize: "0.72rem" }}>Años en la iglesia (prom.)</p>
+        </div>
+        <div style={{ flex: 1 }}>
+          <p className="num" style={{ margin: 0, fontSize: "1.3rem", fontWeight: 700 }}>{promServicio ?? "—"}</p>
+          <p className="muted" style={{ margin: 0, fontSize: "0.72rem" }}>Años sirviendo (prom.)</p>
+        </div>
+      </div>
+
+      {proximosCumples.length > 0 && (
+        <div className="tarjeta" style={{ marginBottom: 16 }}>
+          <p className="muted" style={{ margin: "0 0 8px", fontSize: "0.75rem" }}>CUMPLEAÑOS PRÓXIMOS</p>
+          {proximosCumples.map(({ i, dias }) => (
+            <p key={i.id} style={{ margin: "4px 0", fontSize: "0.85rem" }}>
+              {i.nombre} <span className="muted">· {dias === 0 ? "hoy" : dias === 1 ? "mañana" : `en ${dias} días`}</span>
+            </p>
+          ))}
+        </div>
+      )}
+
+      {porRol.size > 0 && (
+        <div className="tarjeta" style={{ marginBottom: 16 }}>
+          <p className="muted" style={{ margin: "0 0 8px", fontSize: "0.75rem" }}>QUÉ HACE CADA UNO</p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {[...porRol.entries()].map(([rol, personas]) => (
+              <span
+                key={rol}
+                title={personas.map((p) => p.nombre).join(", ")}
+                style={{
+                  background: "var(--glass-2)", border: "1px solid var(--hud-line)", borderRadius: 999,
+                  fontSize: "0.78rem", padding: "5px 10px", fontWeight: 600,
+                }}
+              >
+                {rol} · {personas.length}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
       <button className="boton" style={{ marginBottom: 16 }} onClick={() => setMostrarForm((v) => !v)}>
         {mostrarForm ? "Cerrar" : "Agregar integrante"}
       </button>
@@ -200,6 +292,24 @@ export default function EquiposPage() {
           <div className="campo">
             <label>Correo</label>
             <input name="correo" type="email" />
+          </div>
+          <div className="campo">
+            <label>Fecha de nacimiento (opcional)</label>
+            <input name="nacimiento" type="date" />
+          </div>
+          <div style={{ display: "flex", gap: 10 }}>
+            <div className="campo" style={{ flex: 1 }}>
+              <label>Años en la iglesia</label>
+              <input name="anos_iglesia" type="number" min={0} max={120} />
+            </div>
+            <div className="campo" style={{ flex: 1 }}>
+              <label>Años sirviendo</label>
+              <input name="anos_servicio" type="number" min={0} max={120} />
+            </div>
+          </div>
+          <div className="campo">
+            <label>Qué hace / rol de servicio (opcional)</label>
+            <input name="rol_servicio" placeholder="Ej: Sonido, Cámaras, Bienvenida…" />
           </div>
           <button className="boton" type="submit" disabled={guardando}>
             {guardando ? "Guardando…" : "Agregar"}
@@ -245,6 +355,24 @@ export default function EquiposPage() {
                 <select name="area" defaultValue={i.area}>
                   {AREAS.map((a) => <option key={a} value={a}>{a}</option>)}
                 </select>
+              </div>
+              <div className="campo">
+                <label>Fecha de nacimiento (opcional)</label>
+                <input name="nacimiento" type="date" defaultValue={i.nacimiento ?? ""} />
+              </div>
+              <div style={{ display: "flex", gap: 10 }}>
+                <div className="campo" style={{ flex: 1 }}>
+                  <label>Años en la iglesia</label>
+                  <input name="anos_iglesia" type="number" min={0} max={120} defaultValue={i.anos_iglesia ?? ""} />
+                </div>
+                <div className="campo" style={{ flex: 1 }}>
+                  <label>Años sirviendo</label>
+                  <input name="anos_servicio" type="number" min={0} max={120} defaultValue={i.anos_servicio ?? ""} />
+                </div>
+              </div>
+              <div className="campo">
+                <label>Qué hace / rol de servicio (opcional)</label>
+                <input name="rol_servicio" defaultValue={i.rol_servicio ?? ""} placeholder="Ej: Sonido, Cámaras, Bienvenida…" />
               </div>
               <button className="boton" type="submit" disabled={guardandoEdit}>
                 {guardandoEdit ? "Guardando…" : "Guardar cambios"}

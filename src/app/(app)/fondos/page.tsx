@@ -56,10 +56,41 @@ type Movimiento = {
 
 const fmt = (n: number) => `$${n.toLocaleString("es-CL")}`;
 
+/** Texto del informe mensual, para compartir por WhatsApp/correo — mismo
+ * contenido que docFondo() de la app vieja (saldo, ingresos/egresos,
+ * comparación con el mes anterior e histórico), armado del lado del
+ * cliente a partir de lo que ya se cargó (sin pegarle a un endpoint nuevo). */
+function textoInforme(inf: Informe, movs: Movimiento[] | null): string {
+  const aportes = movs?.filter((m) => m.tipo === "aporte" && !m.anulado) ?? [];
+  const gastos = movs?.filter((m) => m.tipo === "gasto" && !m.anulado) ?? [];
+  const lineas = [
+    `Fondo de ${inf.area} · ${inf.campus}`,
+    nombreMes(inf.mes),
+    "",
+    `Saldo: ${fmt(inf.saldo)}`,
+    `Ingresos: ${fmt(inf.ingresos)} (${aportes.length} aporte${aportes.length === 1 ? "" : "s"})`,
+    `Gastos: ${fmt(inf.egresos)} (${gastos.length} gasto${gastos.length === 1 ? "" : "s"})`,
+    "",
+    `${inf.comparacion.pct >= 0 ? "▲" : "▼"} ${Math.abs(inf.comparacion.pct)}% vs. mes anterior (${fmt(inf.comparacion.anterior)})`,
+    `Histórico acumulado: ${fmt(inf.historico)}`,
+  ];
+  if (inf.cierre.cerrado) {
+    lineas.push("", `Mes cerrado${inf.cierre.auto ? " automáticamente" : ` por ${inf.cierre.por}`}.`);
+  }
+  return lineas.join("\n");
+}
+
+type Tab = "panel" | "aportes" | "gastos" | "informe";
+const TABS: { key: Tab; label: string }[] = [
+  { key: "panel", label: "Panel" },
+  { key: "aportes", label: "Aportes" },
+  { key: "gastos", label: "Gastos" },
+  { key: "informe", label: "Informe" },
+];
+
 /** Módulo Fondos (fondo de equipo) — equivalente a Soporte → Fondo de la
- * app vieja: saldo del mes, registrar aporte/gasto, movimientos. Contra
- * /api/fondos/informe y /api/fondos, ya existentes. Se deja fuera por ahora
- * el cierre de mes y las autorizaciones (siguiente vuelta). */
+ * app vieja: 4 pestañas (Panel/Aportes/Gastos/Informe), igual que
+ * vFondo() en Code.gs. Contra /api/fondos/informe y /api/fondos. */
 export default function FondosPage() {
   return (
     <Suspense fallback={<div className="contenedor">Cargando…</div>}>
@@ -78,7 +109,7 @@ function FondosContenido() {
   const [area, setArea] = useState<string | null>(null);
   const [movs, setMovs] = useState<Movimiento[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [tipo, setTipo] = useState<"aporte" | "gasto">("aporte");
+  const [tab, setTab] = useState<Tab>("panel");
   const [mostrarForm, setMostrarForm] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [cerrando, setCerrando] = useState(false);
@@ -90,6 +121,7 @@ function FondosContenido() {
   const [motivoAut, setMotivoAut] = useState("");
   const [enviandoAut, setEnviandoAut] = useState(false);
   const [autPendiente, setAutPendiente] = useState(false);
+  const [copiado, setCopiado] = useState(false);
 
   const cargar = useCallback(async (a: string | null, mes?: string) => {
     const qs = new URLSearchParams({ campus: campusActivo });
@@ -173,7 +205,7 @@ function FondosContenido() {
     setError(null);
   }
 
-  async function registrar(fd: FormData) {
+  async function registrar(fd: FormData, tipo: "aporte" | "gasto") {
     if (!informe) return;
     setGuardando(true);
     const body: Record<string, unknown> = {
@@ -222,7 +254,131 @@ function FondosContenido() {
     await cargar(area, informe.mes);
   }
 
+  async function compartirInforme() {
+    if (!informe) return;
+    const texto = textoInforme(informe, movs);
+    if (navigator.share) {
+      try { await navigator.share({ text: texto }); return; } catch { /* el usuario canceló */ }
+    }
+    await navigator.clipboard.writeText(texto);
+    setCopiado(true);
+    setTimeout(() => setCopiado(false), 1800);
+  }
+
   if (!informe && !error) return <div className="contenedor">Cargando…</div>;
+
+  const aportesDelMes = movs?.filter((m) => m.tipo === "aporte") ?? [];
+  const gastosDelMes = movs?.filter((m) => m.tipo === "gasto") ?? [];
+
+  function listaMovs(lista: Movimiento[]) {
+    if (lista.length === 0) return <p className="muted">Sin movimientos registrados este mes.</p>;
+    return lista.map((m) => (
+      <div key={m.id} style={{ padding: "8px 0", borderBottom: "1px solid var(--line)" }}>
+        <div className="fila" style={{ border: 0, padding: 0 }}>
+          <div>
+            <div>{m.tipo === "aporte" ? m.nombre : m.comercio}{m.anulado ? " (anulado)" : ""}</div>
+            <div className="muted" style={{ fontSize: "0.78rem" }}>{m.fecha} · {m.descripcion ?? ""}</div>
+          </div>
+          <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span className="num" style={{ color: m.tipo === "aporte" ? "var(--ok)" : "var(--danger)" }}>
+              {m.tipo === "aporte" ? "+" : "-"}{fmt(m.monto)}
+            </span>
+            {informe?.puedeEditar && !m.anulado && anulando !== m.id && (
+              <button className="boton-peligro" style={{ fontSize: "0.72rem", padding: "4px 8px" }} onClick={() => abrirAnular(m.id)}>
+                Anular
+              </button>
+            )}
+          </span>
+        </div>
+        {anulando === m.id && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
+            <input
+              placeholder="Motivo de la anulación (mínimo 5 caracteres)"
+              value={motivoAnular}
+              onChange={(e) => setMotivoAnular(e.target.value)}
+            />
+            <div style={{ display: "flex", gap: 8 }}>
+              <button className="boton-peligro" style={{ fontSize: "0.78rem" }} onClick={() => confirmarAnular(m.id)}>Confirmar anulación</button>
+              <button className="boton-secundario" style={{ fontSize: "0.78rem" }} onClick={() => setAnulando(null)}>Cancelar</button>
+            </div>
+          </div>
+        )}
+      </div>
+    ));
+  }
+
+  function formularioRegistro(tipoForm: "aporte" | "gasto") {
+    if (!informe?.puedeEditar) return null;
+    return (
+      <>
+        <button className="boton" style={{ marginBottom: 16 }} onClick={() => setMostrarForm((v) => !v)}>
+          {mostrarForm ? "Cerrar" : `Registrar ${tipoForm}`}
+        </button>
+        {mostrarForm && (
+          <form className="tarjeta" action={(fd) => registrar(fd, tipoForm)} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div className="campo">
+              <label>Fecha</label>
+              <input name="fecha" type="date" defaultValue={new Date().toISOString().slice(0, 10)} required />
+            </div>
+            <div className="campo">
+              <label>Monto</label>
+              <input name="monto" type="number" required />
+            </div>
+            {tipoForm === "aporte" ? (
+              <>
+                <div className="campo">
+                  <label>Quién aporta</label>
+                  <input name="nombre" required />
+                </div>
+                <div className="campo">
+                  <label>Método</label>
+                  <select name="metodo">
+                    {METODOS_FONDO.map((m) => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="campo">
+                  <label>Comercio</label>
+                  <input name="comercio" required />
+                </div>
+                <div className="campo">
+                  <label>N° de boleta</label>
+                  <input name="boleta" placeholder="o S/B si no tiene" required />
+                </div>
+                <div className="campo">
+                  <label>Categoría</label>
+                  <select name="categoria">
+                    {CATEG_GASTO.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+              </>
+            )}
+            <div className="campo">
+              <label>Descripción</label>
+              <textarea name="descripcion" rows={2} required={tipoForm === "gasto"} />
+            </div>
+            <div className="campo">
+              <label>Foto del comprobante (opcional)</label>
+              <input type="file" accept="image/*" onChange={(e) => manejarFoto(e.target.files?.[0])} />
+              {fotoError && <p className="aviso" style={{ margin: "4px 0 0" }}>{fotoError}</p>}
+              {foto && <p className="ok" style={{ margin: "4px 0 0", fontSize: "0.78rem" }}>Foto lista para enviar.</p>}
+            </div>
+            {informe.cierre.cerrado && (
+              <div className="campo">
+                <label>Motivo (mes cerrado)</label>
+                <textarea name="motivo" rows={2} placeholder="Por qué corresponde registrar esto fuera de plazo" />
+              </div>
+            )}
+            <button className="boton" type="submit" disabled={guardando}>
+              {guardando ? "Guardando…" : "Registrar"}
+            </button>
+          </form>
+        )}
+      </>
+    );
+  }
 
   return (
     <div className="contenedor" style={{ paddingTop: 24 }}>
@@ -248,178 +404,103 @@ function FondosContenido() {
             <button className="boton-secundario" onClick={() => cargar(area, mesMover(informe.mes, 1))}>›</button>
           </div>
 
-          <div className="tarjeta">
-            <p className="muted" style={{ margin: 0, fontSize: "0.75rem" }}>SALDO · {informe.area} · {informe.campus}</p>
-            <p className="num" style={{ fontSize: "1.8rem", fontWeight: 700, margin: "4px 0" }}>{fmt(informe.saldo)}</p>
-            <p className="muted" style={{ margin: 0, fontSize: "0.8rem" }}>
-              Ingresos {fmt(informe.ingresos)} · Gastos {fmt(informe.egresos)}
-            </p>
-            <p className="muted" style={{ margin: "6px 0 0", fontSize: "0.78rem" }}>
-              {informe.comparacion.pct >= 0 ? "▲" : "▼"} {Math.abs(informe.comparacion.pct)}% vs. mes anterior ({fmt(informe.comparacion.anterior)}) · Histórico {fmt(informe.historico)}
-            </p>
-            {informe.tendencia.length > 0 && (
-              <div style={{ marginTop: 10 }}>
-                <GraficoLinea datos={informe.tendencia} />
-              </div>
-            )}
+          <div className="seg" style={{ display: "flex", border: "1px solid var(--line)", borderRadius: 10, overflow: "hidden", marginBottom: 16 }}>
+            {TABS.map((t) => (
+              <button
+                key={t.key}
+                onClick={() => { setTab(t.key); setMostrarForm(false); }}
+                style={{
+                  flex: 1, padding: "10px 4px", border: 0, cursor: "pointer", fontSize: "0.85rem",
+                  background: tab === t.key ? "var(--accent)" : "transparent",
+                  color: tab === t.key ? "var(--accent-ink)" : "var(--muted)", fontWeight: 600,
+                }}
+              >
+                {t.label}
+              </button>
+            ))}
           </div>
 
-          {informe.cierre.cerrado ? (
-            <div className="tarjeta" style={{ marginBottom: 12 }}>
-              <p className="muted" style={{ fontSize: "0.82rem", margin: "0 0 10px" }}>
-                Mes cerrado{informe.cierre.auto ? " automáticamente" : ` por ${informe.cierre.por}`}.
-              </p>
-              {autPendiente ? (
-                <p className="aviso" style={{ margin: 0 }}>Ya pediste autorización — esperando aprobación.</p>
-              ) : pidiendoAut ? (
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  <div className="campo" style={{ marginBottom: 0 }}>
-                    <label>Motivo</label>
-                    <textarea rows={3} value={motivoAut} maxLength={300} placeholder="¿Qué necesitas corregir y por qué?" onChange={(e) => setMotivoAut(e.target.value)} />
-                  </div>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <button className="boton" disabled={enviandoAut} onClick={pedirAutorizacion}>Enviar solicitud</button>
-                    <button className="boton-secundario" onClick={() => { setPidiendoAut(false); setMotivoAut(""); }}>Cancelar</button>
-                  </div>
-                </div>
-              ) : (
-                <button className="boton-secundario" onClick={() => setPidiendoAut(true)}>Pedir autorización para modificar</button>
-              )}
-            </div>
-          ) : informe.puedeEditar ? (
-            <div className="tarjeta" style={{ marginBottom: 12 }}>
-              <p style={{ margin: "0 0 2px", fontWeight: 600 }}>Cierre de {nombreMes(informe.mes)}</p>
-              <p className="muted" style={{ margin: "0 0 10px", fontSize: "0.82rem" }}>
-                {diasQuedan(informe.mes)} Si no cierras, se cierra solo el día 5.
-              </p>
-              <button className="boton-secundario" disabled={cerrando} onClick={cerrarMes}>
-                {cerrando ? "Cerrando…" : "Cerrar mes"}
-              </button>
-            </div>
-          ) : null}
-
-          {informe.puedeEditar && (
+          {tab === "panel" && (
             <>
-              <div className="seg" style={{ display: "flex", border: "1px solid var(--line)", borderRadius: 10, overflow: "hidden", marginBottom: 12 }}>
-                {(["aporte", "gasto"] as const).map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => setTipo(t)}
-                    style={{
-                      flex: 1, padding: "10px", border: 0, cursor: "pointer",
-                      background: tipo === t ? "var(--accent)" : "transparent",
-                      color: tipo === t ? "var(--accent-ink)" : "var(--muted)", fontWeight: 600,
-                    }}
-                  >
-                    {t === "aporte" ? "Aporte" : "Gasto"}
-                  </button>
-                ))}
+              <div className="tarjeta">
+                <p className="muted" style={{ margin: 0, fontSize: "0.75rem" }}>SALDO · {informe.area} · {informe.campus}</p>
+                <p className="num" style={{ fontSize: "1.8rem", fontWeight: 700, margin: "4px 0" }}>{fmt(informe.saldo)}</p>
+                <p className="muted" style={{ margin: 0, fontSize: "0.8rem" }}>
+                  Ingresos {fmt(informe.ingresos)} · Gastos {fmt(informe.egresos)}
+                </p>
+                <p className="muted" style={{ margin: "6px 0 0", fontSize: "0.78rem" }}>
+                  {informe.comparacion.pct >= 0 ? "▲" : "▼"} {Math.abs(informe.comparacion.pct)}% vs. mes anterior ({fmt(informe.comparacion.anterior)}) · Histórico {fmt(informe.historico)}
+                </p>
+                {informe.tendencia.length > 0 && (
+                  <div style={{ marginTop: 10 }}>
+                    <GraficoLinea datos={informe.tendencia} />
+                  </div>
+                )}
               </div>
 
-              <button className="boton" style={{ marginBottom: 16 }} onClick={() => setMostrarForm((v) => !v)}>
-                {mostrarForm ? "Cerrar" : `Registrar ${tipo}`}
-              </button>
-
-              {mostrarForm && (
-                <form className="tarjeta" action={(fd) => registrar(fd)} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  <div className="campo">
-                    <label>Fecha</label>
-                    <input name="fecha" type="date" defaultValue={new Date().toISOString().slice(0, 10)} required />
-                  </div>
-                  <div className="campo">
-                    <label>Monto</label>
-                    <input name="monto" type="number" required />
-                  </div>
-                  {tipo === "aporte" ? (
-                    <>
-                      <div className="campo">
-                        <label>Quién aporta</label>
-                        <input name="nombre" required />
+              {informe.cierre.cerrado ? (
+                <div className="tarjeta" style={{ marginTop: 12 }}>
+                  <p className="muted" style={{ fontSize: "0.82rem", margin: "0 0 10px" }}>
+                    Mes cerrado{informe.cierre.auto ? " automáticamente" : ` por ${informe.cierre.por}`}.
+                  </p>
+                  {autPendiente ? (
+                    <p className="aviso" style={{ margin: 0 }}>Ya pediste autorización — esperando aprobación.</p>
+                  ) : pidiendoAut ? (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      <div className="campo" style={{ marginBottom: 0 }}>
+                        <label>Motivo</label>
+                        <textarea rows={3} value={motivoAut} maxLength={300} placeholder="¿Qué necesitas corregir y por qué?" onChange={(e) => setMotivoAut(e.target.value)} />
                       </div>
-                      <div className="campo">
-                        <label>Método</label>
-                        <select name="metodo">
-                          {METODOS_FONDO.map((m) => <option key={m} value={m}>{m}</option>)}
-                        </select>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button className="boton" disabled={enviandoAut} onClick={pedirAutorizacion}>Enviar solicitud</button>
+                        <button className="boton-secundario" onClick={() => { setPidiendoAut(false); setMotivoAut(""); }}>Cancelar</button>
                       </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="campo">
-                        <label>Comercio</label>
-                        <input name="comercio" required />
-                      </div>
-                      <div className="campo">
-                        <label>N° de boleta</label>
-                        <input name="boleta" placeholder="o S/B si no tiene" required />
-                      </div>
-                      <div className="campo">
-                        <label>Categoría</label>
-                        <select name="categoria">
-                          {CATEG_GASTO.map((c) => <option key={c} value={c}>{c}</option>)}
-                        </select>
-                      </div>
-                    </>
-                  )}
-                  <div className="campo">
-                    <label>Descripción</label>
-                    <textarea name="descripcion" rows={2} required={tipo === "gasto"} />
-                  </div>
-                  <div className="campo">
-                    <label>Foto del comprobante (opcional)</label>
-                    <input type="file" accept="image/*" onChange={(e) => manejarFoto(e.target.files?.[0])} />
-                    {fotoError && <p className="aviso" style={{ margin: "4px 0 0" }}>{fotoError}</p>}
-                    {foto && <p className="ok" style={{ margin: "4px 0 0", fontSize: "0.78rem" }}>Foto lista para enviar.</p>}
-                  </div>
-                  {informe.cierre.cerrado && (
-                    <div className="campo">
-                      <label>Motivo (mes cerrado)</label>
-                      <textarea name="motivo" rows={2} placeholder="Por qué corresponde registrar esto fuera de plazo" />
                     </div>
+                  ) : (
+                    <button className="boton-secundario" onClick={() => setPidiendoAut(true)}>Pedir autorización para modificar</button>
                   )}
-                  <button className="boton" type="submit" disabled={guardando}>
-                    {guardando ? "Guardando…" : "Registrar"}
+                </div>
+              ) : informe.puedeEditar ? (
+                <div className="tarjeta" style={{ marginTop: 12 }}>
+                  <p style={{ margin: "0 0 2px", fontWeight: 600 }}>Cierre de {nombreMes(informe.mes)}</p>
+                  <p className="muted" style={{ margin: "0 0 10px", fontSize: "0.82rem" }}>
+                    {diasQuedan(informe.mes)} Si no cierras, se cierra solo el día 5.
+                  </p>
+                  <button className="boton-secundario" disabled={cerrando} onClick={cerrarMes}>
+                    {cerrando ? "Cerrando…" : "Cerrar mes"}
                   </button>
-                </form>
-              )}
+                </div>
+              ) : null}
             </>
           )}
 
-          <p className="muted" style={{ margin: "16px 0 8px" }}>Movimientos de {nombreMes(informe.mes)}</p>
-          {movs?.length === 0 && <p className="muted">Sin movimientos registrados este mes.</p>}
-          {movs?.map((m) => (
-            <div key={m.id} style={{ padding: "8px 0", borderBottom: "1px solid var(--line)" }}>
-              <div className="fila" style={{ border: 0, padding: 0 }}>
-                <div>
-                  <div>{m.tipo === "aporte" ? m.nombre : m.comercio}{m.anulado ? " (anulado)" : ""}</div>
-                  <div className="muted" style={{ fontSize: "0.78rem" }}>{m.fecha} · {m.tipo}</div>
-                </div>
-                <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span className="num" style={{ color: m.tipo === "aporte" ? "var(--ok)" : "var(--danger)" }}>
-                    {m.tipo === "aporte" ? "+" : "-"}{fmt(m.monto)}
-                  </span>
-                  {informe.puedeEditar && !m.anulado && anulando !== m.id && (
-                    <button className="boton-peligro" style={{ fontSize: "0.72rem", padding: "4px 8px" }} onClick={() => abrirAnular(m.id)}>
-                      Anular
-                    </button>
-                  )}
-                </span>
-              </div>
-              {anulando === m.id && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
-                  <input
-                    placeholder="Motivo de la anulación (mínimo 5 caracteres)"
-                    value={motivoAnular}
-                    onChange={(e) => setMotivoAnular(e.target.value)}
-                  />
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <button className="boton-peligro" style={{ fontSize: "0.78rem" }} onClick={() => confirmarAnular(m.id)}>Confirmar anulación</button>
-                    <button className="boton-secundario" style={{ fontSize: "0.78rem" }} onClick={() => setAnulando(null)}>Cancelar</button>
-                  </div>
-                </div>
-              )}
+          {tab === "aportes" && (
+            <>
+              {formularioRegistro("aporte")}
+              <p className="muted" style={{ margin: "16px 0 8px" }}>Aportes de {nombreMes(informe.mes)}</p>
+              {listaMovs(aportesDelMes)}
+            </>
+          )}
+
+          {tab === "gastos" && (
+            <>
+              {formularioRegistro("gasto")}
+              <p className="muted" style={{ margin: "16px 0 8px" }}>Gastos de {nombreMes(informe.mes)}</p>
+              {listaMovs(gastosDelMes)}
+            </>
+          )}
+
+          {tab === "informe" && (
+            <div className="tarjeta">
+              <p className="muted" style={{ margin: "0 0 8px", fontSize: "0.75rem" }}>INFORME · LISTO PARA COMPARTIR</p>
+              <pre style={{ whiteSpace: "pre-wrap", fontFamily: "inherit", fontSize: "0.88rem", margin: "0 0 14px" }}>
+                {textoInforme(informe, movs)}
+              </pre>
+              <button className="boton" onClick={compartirInforme}>
+                {copiado ? "Copiado ✓" : "Compartir / copiar"}
+              </button>
             </div>
-          ))}
+          )}
         </>
       )}
     </div>

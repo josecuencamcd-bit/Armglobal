@@ -84,9 +84,18 @@ export function modulosVisibles(p: PerfilVisibilidad): Set<string> {
  * sueltos en la barra inferior junto a Inicio; el resto queda detrás de
  * "Más". Antes la barra era fija (Inicio/Soporte/Bajas/Panorama/
  * Cumpleaños para todos) sin importar el rol — acá cada persona ve una
- * barra distinta, como en la app vieja. */
+ * barra distinta, como en la app vieja.
+ *
+ * "finanzas" e "informe" (claves de MODULOS_APP en modulosApp.ts, las que
+ * un Admin app puede prender/apagar por persona en /perfiles) quedan
+ * fuera a propósito: CLAVE_A_MODULO_APP no tiene ningún tile cuyo valor
+ * sea "finanzas" ni "informe" (el tile real de Finanzas usa la clave
+ * vieja "reporte", ya listada), así que si entraban acá competían por uno
+ * de los 4 lugares sin llevar a ninguna pantalla — eso era lo que dejaba
+ * la barra con menos de 4 accesos para una cuenta con esos módulos
+ * prendidos manualmente. */
 const PRIORIDAD_NAV = [
-  "reporte", "aportes", "finanzas", "fondo", "informe", "asistencia", "equipo",
+  "reporte", "aportes", "fondo", "asistencia", "equipo",
   "soporte", "visitas", "solicitudes", "panorama", "equipostats", "cumples",
   "reuniones", "miperfil",
 ] as const;
