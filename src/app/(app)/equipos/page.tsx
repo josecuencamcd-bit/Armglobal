@@ -38,6 +38,8 @@ function promedio(valores: (number | null)[]): number | null {
   return Math.round((nums.reduce((a, b) => a + b, 0) / nums.length) * 10) / 10;
 }
 
+type SolicitudBaja = { id: number; integrante_id: number | null; estado: string };
+
 type Ficha = {
   id: number;
   servicio: string;
@@ -68,6 +70,9 @@ export default function EquiposPage() {
   const [guardando, setGuardando] = useState(false);
   const [editando, setEditando] = useState<Integrante | null>(null);
   const [guardandoEdit, setGuardandoEdit] = useState(false);
+  const [bajasPendientes, setBajasPendientes] = useState<Set<number>>(new Set());
+  const [pidiendoBaja, setPidiendoBaja] = useState<number | null>(null);
+  const [enviandoBaja, setEnviandoBaja] = useState(false);
 
   const [servicio, setServicio] = useState<(typeof SERVICIOS)[number]>(SERVICIOS[0]);
   const [fechaFicha, setFechaFicha] = useState(hoyISO());
@@ -76,11 +81,22 @@ export default function EquiposPage() {
   const [guardandoFicha, setGuardandoFicha] = useState(false);
 
   const cargar = useCallback(async (c: string, a: string) => {
-    const res = await fetch(`/api/integrantes?campus=${encodeURIComponent(c)}&area=${encodeURIComponent(a)}`);
+    const [res, resBajas] = await Promise.all([
+      fetch(`/api/integrantes?campus=${encodeURIComponent(c)}&area=${encodeURIComponent(a)}`),
+      fetch(`/api/integrantes/solicitudes-baja?campus=${encodeURIComponent(c)}&area=${encodeURIComponent(a)}`),
+    ]);
     const json = await res.json();
     if (!json.ok) { setError(json.error); return; }
     setLista(json.data);
     setError(null);
+    const jsonBajas = await resBajas.json();
+    if (jsonBajas.ok) {
+      setBajasPendientes(new Set(
+        (jsonBajas.data as SolicitudBaja[])
+          .filter((s) => s.estado === "Pendiente" && s.integrante_id != null)
+          .map((s) => s.integrante_id as number)
+      ));
+    }
   }, []);
 
   const cargarFicha = useCallback(async (a: string, serv: string, f: string) => {
@@ -181,11 +197,22 @@ export default function EquiposPage() {
     await cargar(campus, area);
   }
 
-  async function darDeBaja(id: number) {
-    if (!confirm("¿Marcar como inactivo?")) return;
-    const res = await fetch(`/api/integrantes/${id}`, { method: "DELETE" });
+  /** api_ecoSolBaja: un líder NUNCA da de baja directo — pide la baja con
+   * motivo y el Administrador la aprueba desde /bajas (vSolicitudes de la
+   * app vieja). Antes acá se llamaba DELETE /api/integrantes/[id] directo,
+   * saltándose por completo esa aprobación. */
+  async function solicitarBaja(i: Integrante, motivo: string) {
+    if (!motivo.trim()) { setError("Falta el motivo de la baja."); return; }
+    setEnviandoBaja(true);
+    const res = await fetch("/api/integrantes/solicitudes-baja", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ integrante_id: i.id, campus: i.campus, area: i.area, nombre: i.nombre, motivo }),
+    });
     const json = await res.json();
+    setEnviandoBaja(false);
     if (!json.ok) { setError(json.error); return; }
+    setPidiendoBaja(null);
     await cargar(campus, area);
   }
 
@@ -331,11 +358,33 @@ export default function EquiposPage() {
               <button className="boton-secundario" onClick={() => setEditando(editando?.id === i.id ? null : i)}>
                 {editando?.id === i.id ? "Cerrar" : "Editar"}
               </button>
-              <button className="boton-peligro" onClick={() => darDeBaja(i.id)}>
-                Dar de baja
-              </button>
+              {!bajasPendientes.has(i.id) && (
+                <button className="boton-peligro" onClick={() => setPidiendoBaja(pidiendoBaja === i.id ? null : i.id)}>
+                  Solicitar baja
+                </button>
+              )}
             </span>
           </div>
+          {bajasPendientes.has(i.id) && (
+            <p className="muted" style={{ fontSize: "0.78rem", margin: "-6px 0 10px" }}>
+              Solicitud de baja pendiente de aprobación.
+            </p>
+          )}
+          {pidiendoBaja === i.id && (
+            <form
+              className="tarjeta"
+              style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 10 }}
+              action={(fd) => solicitarBaja(i, String(fd.get("motivo") ?? ""))}
+            >
+              <div className="campo">
+                <label>Motivo de la baja</label>
+                <input name="motivo" required autoFocus />
+              </div>
+              <button className="boton-peligro" type="submit" disabled={enviandoBaja}>
+                {enviandoBaja ? "Enviando…" : "Enviar solicitud"}
+              </button>
+            </form>
+          )}
           {editando?.id === i.id && (
             <form className="tarjeta" action={(fd) => guardarEdicion(fd)} style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 10 }}>
               <div className="campo">
