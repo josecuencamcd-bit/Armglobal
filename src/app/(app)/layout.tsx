@@ -10,10 +10,8 @@ import { CampusProvider, useCampus } from "@/lib/campus-context";
 import { modulosVisibles, clavesPrincipalesNav, adminSubnav, esPastorC, CLAVE_A_MODULO_APP, type PerfilVisibilidad } from "@/lib/visibilidad-modulos";
 
 /** Inverso de CLAVE_A_MODULO_APP: de una clave vieja (tabsPorRol) a
- * nuestra clave de módulo real. Una clave vieja sin tile propio acá
- * (p. ej. "administracion", que en la app vieja es un selector de campus
- * + subnav, reemplazado en esta migración por el toggle de campus que ya
- * trae cada pantalla) simplemente no aparece en la barra. */
+ * nuestra clave de módulo real — incluye "administracion" (su tile real
+ * es /administracion), así que puede caer en "Más" como cualquier otro. */
 const MODULO_APP_A_CLAVE: Record<string, string> = Object.fromEntries(
   Object.entries(CLAVE_A_MODULO_APP).map(([clave, claveVieja]) => [claveVieja, clave])
 );
@@ -138,17 +136,28 @@ function Shell({ children, impersonando }: { children: React.ReactNode; imperson
   // pintarBottomNav(): Inicio + las 4 claves de mayor prioridad que esta
   // persona tiene visibles van sueltas en la barra; el resto (Reuniones,
   // Mi perfil y lo que no entró en esas 4) queda detrás de "Más".
+  // "administracion" nunca va a la barra suelta (en la app vieja tampoco:
+  // no está en PRIORIDAD_NAV) — se excluye acá de forma directa, sin pasar
+  // por el vaivén de ida y vuelta entre las dos tablas de claves, para que
+  // nunca dependa de ese cálculo.
   const clavesPrincipales = perfil
     ? clavesPrincipalesNav({ roles: perfil.roles, areas: perfil.areas, sirve: perfil.sirve, modulos_on: perfil.modulos_on, modulos_off: perfil.modulos_off })
         .map((cv) => MODULO_APP_A_CLAVE[cv])
-        .filter((k): k is string => !!k)
+        .filter((k): k is string => !!k && k !== "administracion")
     : [];
   const principales = [
     modulosDeEstaPersona.find((m) => m.key === "inicio"),
     ...clavesPrincipales.map((k) => modulosDeEstaPersona.find((m) => m.key === k)).filter((m): m is Modulo => !!m),
   ].filter((m): m is Modulo => !!m);
   const resto = modulosDeEstaPersona.filter((m) => !principales.some((p) => p.key === m.key));
-  const hayActivoEnResto = resto.some((m) => pathname?.startsWith(m.href));
+  const tieneAdministracion = !!visibles?.has("administracion");
+  // Red de seguridad: si por lo que sea "administracion" no llegó por el
+  // camino normal (modulosDeEstaPersona/resto), la agregamos directo acá —
+  // nunca debe depender de un solo cálculo para aparecer en "Más".
+  const restoFinal = tieneAdministracion && !resto.some((m) => m.key === "administracion")
+    ? [...resto, MODULOS.find((m) => m.key === "administracion")!]
+    : resto;
+  const hayActivoEnResto = restoFinal.some((m) => pathname?.startsWith(m.href));
 
   // pintarBottomNav() de la app vieja: la barra no aparece en los tabs
   // "aportes"/"reporte" DEL ENCUENTRO (registrar asistencia/aportes de una
@@ -313,7 +322,7 @@ function Shell({ children, impersonando }: { children: React.ReactNode; imperson
               <b>Más opciones</b>
               <button type="button" onClick={() => setMasAbierto(false)}>✕</button>
             </div>
-            {resto.map((m) => {
+            {restoFinal.map((m) => {
               const activo = pathname?.startsWith(m.href);
               return (
                 <button
