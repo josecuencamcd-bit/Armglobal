@@ -10,6 +10,10 @@
   --accent: #f5a623;
   --accent-2: #ffcf4d;
   --accent-ink: #141414;
+  --accent-soft: #2b2110;
+  --gold: #f5a623;
+  --on-solid: #141414;
+  --brand-ink: #f5f3ef;
   --danger: #ff6b6b;
   --ok: #35d399;
   --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -179,6 +183,60 @@ button {
 }
 
 .num { font-family: var(--font-num); }
+
+/* ---- Tarjetas "hero" (Ingresos totales / Fondo de equipo en Inicio),
+ * "esta semana sirves" y "hoy cumple años", porteadas 1:1 de .hero-card/
+ * .sirves/.cum-hoy de la app vieja — antes estas tres vivían como
+ * .tarjeta genéricas, sin el borde/resplandor dorado que las distingue
+ * del resto de las tarjetas. */
+.hero-card {
+  background: radial-gradient(120% 140% at 0% 0%, var(--accent-soft), var(--surface) 55%);
+  border: 1px solid var(--gold) !important;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4), 0 0 46px -10px rgba(245, 166, 35, 0.35);
+}
+.hero-tit { display: flex; align-items: center; gap: 10px; margin-bottom: 2px; }
+.hero-ic {
+  width: 36px; height: 36px; border-radius: var(--r-sm);
+  background: var(--gold-grad); color: var(--on-solid);
+  display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto;
+  box-shadow: 0 0 18px -4px rgba(245, 166, 35, 0.7);
+}
+.hero-tit b { display: block; font-size: 0.7rem; font-family: var(--font-num); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.hero-tit small { display: block; font-size: 0.78rem; color: var(--ink); opacity: 0.85; }
+.hero-num {
+  font-family: var(--font-num); font-size: 2.1rem; font-weight: 700;
+  letter-spacing: -0.01em; color: var(--gold); margin: 6px 0 2px;
+  text-shadow: 0 0 22px rgba(245, 166, 35, 0.55);
+}
+.hero-card .eco-sub { color: var(--muted); font-size: 0.8rem; }
+.hero-chip {
+  display: flex; align-items: center; gap: 8px; width: fit-content;
+  padding: 5px 12px; border-radius: 20px; font-size: 0.8rem;
+  background: var(--glass-2); border: 1px solid var(--hud-line); margin: 10px 0;
+}
+.hero-chip.ok b { color: var(--ok); } .hero-chip.bad b { color: var(--danger); }
+.hero-chip span { color: var(--muted); margin-left: 4px; }
+
+.sirves {
+  display: flex; gap: 12px; align-items: center;
+  background: var(--accent-soft); border: 1px solid var(--gold);
+  border-radius: 14px; padding: 12px 14px; font-size: 0.92rem;
+}
+.sirves .ic {
+  flex: 0 0 auto; width: 36px; height: 36px; border-radius: 10px;
+  background: var(--gold-grad); color: var(--on-solid);
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.sirves b { display: block; color: var(--gold); }
+
+.cum-hoy {
+  display: flex; align-items: center; gap: 14px; padding: 16px;
+  border-radius: 18px; background: var(--accent-soft); color: var(--brand-ink);
+  border: 1px solid var(--gold);
+}
+.cum-hoy .big { font-size: 2rem; line-height: 1; }
+.cum-hoy b { font-size: 1.1rem; display: block; }
+.cum-hoy small { color: var(--muted); font-size: 0.85rem; }
 
 .aviso {
   font-size: 0.85rem;

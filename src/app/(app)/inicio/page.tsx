@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useCampus } from "@/lib/campus-context";
 import { esFin, puedeSoporte, puedeVerEquipo, type PerfilVisibilidad } from "@/lib/visibilidad-modulos";
 import { GraficoLinea, peso } from "@/lib/grafico-linea";
+import { Icono } from "@/lib/iconos";
 
 /** Reemplaza vInicio() de Code.gs: solo el panel (tarjetas de ingresos,
  * fondo, tu equipo, pendientes, turno, cumpleaños) — la app vieja no tenía
@@ -198,36 +199,45 @@ export default function InicioPage() {
       )}
 
       {resumen && (
-        <div className="tarjeta" style={{ marginBottom: 16 }}>
-          <p className="muted" style={{ margin: "0 0 2px", fontSize: "0.75rem" }}>INGRESOS TOTALES</p>
-          <p className="muted" style={{ margin: "0 0 10px", fontSize: "0.75rem" }}>Desde el inicio · Campus {resumen.campus}</p>
-          <p className="num" style={{ margin: 0, fontSize: "1.8rem", fontWeight: 700, color: "var(--accent-2)" }}>{peso(resumen.historico)}</p>
-          <p className="muted" style={{ margin: "2px 0 10px", fontSize: "0.8rem" }}>{resumen.cuenta} registros en total</p>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-            <span style={{ color: resumen.pct >= 0 ? "var(--ok)" : "var(--danger)", fontWeight: 700, fontSize: "0.85rem" }}>
-              {resumen.pct >= 0 ? "▲" : "▼"} {Math.abs(resumen.pct)}%
-            </span>
-            <span className="muted" style={{ fontSize: "0.8rem" }}>Este mes: {peso(resumen.mesActual)}</span>
+        <div className="tarjeta hero-card" style={{ marginBottom: 16 }}>
+          <div className="hero-tit">
+            <span className="hero-ic"><Icono id="panorama" size={18} /></span>
+            <div>
+              <b>Ingresos totales</b>
+              <small>Desde el inicio · Campus {resumen.campus}</small>
+            </div>
+          </div>
+          <p className="hero-num">{peso(resumen.historico)}</p>
+          <p className="eco-sub" style={{ margin: "0 0 2px" }}>{resumen.cuenta} registros en total</p>
+          <div className={`hero-chip ${resumen.pct >= 0 ? "ok" : "bad"}`}>
+            <b>{resumen.pct >= 0 ? "↗ +" : "↘ "}{Math.abs(resumen.pct)}%</b>
+            <span>Este mes: {peso(resumen.mesActual)}</span>
           </div>
           <GraficoLinea datos={resumen.tendencia} />
         </div>
       )}
 
       {resumenLider && (
-        <div className="tarjeta" style={{ marginBottom: 16 }}>
-          <p className="muted" style={{ margin: "0 0 2px", fontSize: "0.75rem" }}>FONDO DE {resumenLider.area.toUpperCase()}</p>
-          <p className="muted" style={{ margin: "0 0 10px", fontSize: "0.75rem" }}>Saldo disponible</p>
-          <p className="num" style={{ margin: 0, fontSize: "1.8rem", fontWeight: 700, color: "var(--accent-2)" }}>{peso(resumenLider.saldo)}</p>
-          <p className="muted" style={{ margin: "2px 0 10px", fontSize: "0.8rem" }}>
+        <div className="tarjeta hero-card" style={{ marginBottom: 16 }}>
+          <div className="hero-tit">
+            <span className="hero-ic"><Icono id="fondo" size={18} /></span>
+            <div>
+              <b>Fondo de {resumenLider.area}</b>
+              <small>Saldo disponible</small>
+            </div>
+          </div>
+          <p className="hero-num">{peso(resumenLider.saldo)}</p>
+          <p className="eco-sub">
             {resumenLider.ultimo
               ? `Último ${resumenLider.ultimo.tipo}: ${peso(resumenLider.ultimo.monto)} · ${resumenLider.ultimo.fecha}`
               : "Aún no hay movimientos este mes"}
           </p>
           <GraficoLinea datos={resumenLider.tendencia} />
           {resumenLider.proximo && (
-            <p className="muted" style={{ margin: "10px 0 0", fontSize: "0.8rem" }}>
-              {resumenLider.proximo.hoy ? "Hoy" : resumenLider.proximo.fecha} · Próximo encuentro: {resumenLider.proximo.encuentro}
-            </p>
+            <div className="hero-chip">
+              <b>{resumenLider.proximo.hoy ? "Hoy" : resumenLider.proximo.fecha}</b>
+              <span>Próximo encuentro: {resumenLider.proximo.encuentro}</span>
+            </div>
           )}
           <button className="boton-secundario" style={{ marginTop: 10 }} onClick={() => router.push("/fondos")}>Ver fondo</button>
         </div>
@@ -316,18 +326,22 @@ export default function InicioPage() {
       )}
 
       {miTurno && (
-        <div className="tarjeta" style={{ marginBottom: 16, cursor: "pointer" }} onClick={() => router.push("/turnos")}>
-          <p className="muted" style={{ margin: "0 0 2px", fontSize: "0.75rem" }}>ESTA SEMANA SIRVES</p>
-          <p style={{ margin: 0, fontWeight: 600 }}>Te toca turno en {miTurno.campus}</p>
+        <div className="sirves" style={{ marginBottom: 16, cursor: "pointer" }} onClick={() => router.push("/turnos")}>
+          <span className="ic"><Icono id="asistencia" size={20} /></span>
+          <div>
+            <b>Esta semana sirves</b>
+            <span>Te toca turno en {miTurno.campus}</span>
+          </div>
         </div>
       )}
 
       {cumplesHoy.length > 0 && (
-        <div className="tarjeta" style={{ marginBottom: 16 }}>
-          <p style={{ margin: 0, fontWeight: 600 }}>
-            🎂 Hoy cumple{cumplesHoy.length > 1 ? "n" : ""} años {cumplesHoy.map((c) => c.nombre.split(" ")[0]).join(", ")}
-          </p>
-          <p className="muted" style={{ margin: "4px 0 0", fontSize: "0.82rem" }}>Un saludo hace la diferencia</p>
+        <div className="cum-hoy" style={{ marginBottom: 16 }}>
+          <span className="big">🎂</span>
+          <div>
+            <b>Hoy cumple{cumplesHoy.length > 1 ? "n" : ""} años {cumplesHoy.map((c) => c.nombre.split(" ")[0]).join(", ")}</b>
+            <small>Un saludo hace la diferencia</small>
+          </div>
         </div>
       )}
 
