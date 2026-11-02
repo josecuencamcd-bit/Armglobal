@@ -89,36 +89,16 @@ export default function CumpleanosPage() {
         </section>
       )}
 
-      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-        <button
-          onClick={() => setModo("todo")}
-          style={{
-            flex: 1, padding: "10px 0", borderRadius: 10, fontWeight: 600, cursor: "pointer",
-            border: modo === "todo" ? "none" : "1px solid var(--line)",
-            background: modo === "todo" ? "var(--gold-grad)" : "var(--surface-2)",
-            color: modo === "todo" ? "var(--accent-ink)" : "var(--ink)",
-          }}
-        >
-          Todo el año
-        </button>
-        <button
-          onClick={() => setModo("mes")}
-          style={{
-            flex: 1, padding: "10px 0", borderRadius: 10, fontWeight: 600, cursor: "pointer",
-            border: modo === "mes" ? "none" : "1px solid var(--line)",
-            background: modo === "mes" ? "var(--gold-grad)" : "var(--surface-2)",
-            color: modo === "mes" ? "var(--accent-ink)" : "var(--ink)",
-          }}
-        >
-          Por mes
-        </button>
+      <div className="seg" style={{ marginBottom: 16 }}>
+        <button aria-pressed={modo === "todo"} onClick={() => setModo("todo")}>Todo el año</button>
+        <button aria-pressed={modo === "mes"} onClick={() => setModo("mes")}>Por mes</button>
       </div>
 
       {modo === "mes" && (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-          <button className="boton-secundario" onClick={() => setMesSel((m) => (m === 1 ? 12 : m - 1))}>‹</button>
-          <span style={{ fontWeight: 600 }}>{MESES_LARGO[mesSel - 1]}</span>
-          <button className="boton-secundario" onClick={() => setMesSel((m) => (m === 12 ? 1 : m + 1))}>›</button>
+        <div className="mes-nav" style={{ marginBottom: 14 }}>
+          <button onClick={() => setMesSel((m) => (m === 1 ? 12 : m - 1))} aria-label="Mes anterior">‹</button>
+          <span>{MESES_LARGO[mesSel - 1]}</span>
+          <button onClick={() => setMesSel((m) => (m === 12 ? 1 : m + 1))} aria-label="Mes siguiente">›</button>
         </div>
       )}
 
@@ -126,10 +106,8 @@ export default function CumpleanosPage() {
 
       {modo === "todo" &&
         grupos.map((g) => (
-          <div key={g.mes} style={{ marginBottom: 18 }}>
-            <p className="muted" style={{ margin: "0 0 8px", fontSize: "0.78rem", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-              {MESES_LARGO[g.mes - 1]}{g.mes === datos?.mesHoy ? " · Este mes" : ""}
-            </p>
+          <div className="cum-grupo" key={g.mes} style={{ marginBottom: 18 }}>
+            <h3>{MESES_LARGO[g.mes - 1]}{g.mes === datos?.mesHoy ? " · Este mes" : ""}</h3>
             {g.items.map((i, idx) => <ItemCumple key={i.nombre + idx} i={i} mostrarFaltan />)}
           </div>
         ))}
@@ -151,8 +129,8 @@ function GruposMes({ datos }: { datos: Datos }) {
   function Grupo({ titulo, items }: { titulo: string; items: Item[] }) {
     if (!items.length) return null;
     return (
-      <div style={{ marginBottom: 18 }}>
-        <p className="muted" style={{ margin: "0 0 8px", fontSize: "0.78rem", textTransform: "uppercase", letterSpacing: "0.04em" }}>{titulo}</p>
+      <div className="cum-grupo" style={{ marginBottom: 18 }}>
+        <h3>{titulo}</h3>
         {items.map((i, idx) => <ItemCumple key={i.nombre + idx} i={i} />)}
       </div>
     );
@@ -170,27 +148,23 @@ function GruposMes({ datos }: { datos: Datos }) {
 
 function ItemCumple({ i, mostrarFaltan }: { i: Item; mostrarFaltan?: boolean }) {
   return (
-    <div className="tarjeta" style={{ display: "flex", alignItems: "center", gap: 12, padding: 12 }}>
-      <div
-        style={{
-          flexShrink: 0, width: 54, textAlign: "center", borderRadius: 10, overflow: "hidden",
-          border: "1px solid var(--hud-line-2)",
-        }}
-      >
-        <div style={{ background: "var(--gold-grad)", color: "var(--accent-ink)", fontSize: "0.68rem", fontWeight: 700, padding: "2px 0", textTransform: "uppercase" }}>
-          {MESES[i.mes - 1]}
-        </div>
-        <div style={{ background: "var(--surface-2)", fontWeight: 700, fontSize: "1.1rem", padding: "4px 0" }}>
-          {String(i.dia).padStart(2, "0")}
-        </div>
+    <div className={`cum-card${i.hoy ? " hoy" : ""}`}>
+      <div className="cum-dia">
+        <i>{MESES[i.mes - 1]}</i>
+        <b>{i.dia}</b>
       </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ fontWeight: 600, margin: 0 }}>{i.nombre}</p>
-        <p className="muted" style={{ margin: "2px 0 0", fontSize: "0.78rem" }}>
+      <div className="cum-info">
+        <b>{i.nombre}</b>
+        <small>
           {i.area} · {i.campus}{mostrarFaltan && i.faltan != null && !i.hoy ? ` · en ${i.faltan} días` : i.hoy ? " · Hoy" : ""}
-        </p>
+        </small>
       </div>
-      <span className="num" style={{ fontWeight: 700, fontSize: "1rem" }}>{i.edad}<span className="muted" style={{ fontSize: "0.7rem", fontWeight: 400 }}> años</span></span>
+      {i.edad != null && (
+        <div className="cum-edad">
+          <b>{i.edad}</b>
+          años
+        </div>
+      )}
     </div>
   );
 }

@@ -292,6 +292,34 @@ button {
   font-weight: 700;
 }
 
+/* Cumpleaños (vCumples): tarjeta con placa de fecha (.cum-dia), usada en
+ * grupos por mes/semana (.cum-grupo) — porte 1:1 de la app vieja. */
+.cum-grupo { display: flex; flex-direction: column; gap: 8px; }
+.cum-grupo h3 {
+  margin: 6px 2px 0; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--muted);
+}
+.cum-card {
+  display: flex; align-items: center; gap: 12px; padding: 10px 12px;
+  border-radius: 14px; background: var(--surface); border: 1px solid var(--line);
+}
+.cum-card.paso { opacity: 0.55; }
+.cum-card.hoy .cum-dia { border-color: var(--gold); }
+.cum-dia { flex: 0 0 auto; width: 48px; border-radius: 12px; overflow: hidden; text-align: center; border: 1px solid var(--line); background: var(--bg); }
+.cum-dia i {
+  display: block; font-style: normal; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; background: var(--accent); color: var(--accent-ink); padding: 2px 0;
+}
+.cum-dia b { display: block; font-size: 1.25rem; font-family: var(--font-num); padding: 3px 0 4px; }
+.cum-info { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
+.cum-info b { overflow-wrap: anywhere; }
+.cum-info small { color: var(--muted); font-size: 0.8rem; }
+.cum-edad { flex: 0 0 auto; text-align: center; font-size: 0.7rem; color: var(--muted); line-height: 1.1; }
+.cum-edad b { display: block; font-size: 1.15rem; color: var(--ink); font-family: var(--font-num); }
+.mes-nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.mes-nav button { width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font-size: 1.2rem; cursor: pointer; }
+.mes-nav span { font-size: 1.15rem; font-weight: 600; }
+
 .aviso {
   font-size: 0.85rem;
   color: var(--danger);
