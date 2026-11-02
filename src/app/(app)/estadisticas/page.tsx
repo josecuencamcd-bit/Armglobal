@@ -73,42 +73,35 @@ export default function EstadisticasPage() {
         </div>
       )}
 
-      <div style={{ display: "flex", gap: 8, margin: "12px 0" }}>
+      <div className="seg3" style={{ margin: "12px 0" }}>
         {[7, 15, 30].map((v) => (
-          <button
-            key={v}
-            className={v === datos.dias ? "boton" : "boton-secundario"}
-            onClick={() => cargar(v, area)}
-            style={{ flex: 1 }}
-          >
+          <button key={v} aria-pressed={v === datos.dias} onClick={() => cargar(v, area)}>
             {v} días
           </button>
         ))}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
-        <div className="tarjeta"><div className="muted" style={{ fontSize: "0.78rem" }}>Veces que sirvieron</div><div style={{ fontSize: "1.4rem", fontWeight: 700 }}>{datos.servicios}</div></div>
-        <div className="tarjeta"><div className="muted" style={{ fontSize: "0.78rem" }}>Asistencia</div><div style={{ fontSize: "1.4rem", fontWeight: 700 }}>{datos.pct == null ? "—" : `${datos.pct}%`}</div></div>
-        <div className="tarjeta"><div className="muted" style={{ fontSize: "0.78rem" }}>Encuentros</div><div style={{ fontSize: "1.4rem", fontWeight: 700 }}>{datos.encuentros}</div></div>
-        <div className="tarjeta"><div className="muted" style={{ fontSize: "0.78rem" }}>Sin servir en el período</div><div style={{ fontSize: "1.4rem", fontWeight: 700 }}>{datos.sinServir}</div></div>
+      <div className="eco-cards" style={{ marginBottom: 16 }}>
+        <div className="eco-card"><span>Veces que sirvieron</span><b>{datos.servicios}</b></div>
+        <div className={`eco-card${datos.pct != null && datos.pct < 60 ? " warn" : " ok"}`}><span>Asistencia</span><b>{datos.pct == null ? "–" : `${datos.pct}%`}</b></div>
+        <div className="eco-card"><span>Encuentros</span><b>{datos.encuentros}</b></div>
+        <div className={`eco-card${datos.sinServir ? " warn" : ""}`}><span>Sin servir en el período</span><b>{datos.sinServir}</b></div>
       </div>
 
       <p className="muted" style={{ fontSize: "0.82rem" }}>Cuántas veces sirvió cada persona</p>
       {!datos.personas.length && <p className="muted">Aún no hay integrantes en este equipo.</p>}
-      {datos.personas.map((p) => (
-        <div className="fila" key={p.nombre} style={{ alignItems: "stretch" }}>
-          <div style={{ flex: 1 }}>
-            <div>{p.nombre}</div>
-            <div className="muted" style={{ fontSize: "0.76rem" }}>
-              Vino {p.vino} · Avisó {p.aviso} · No vino {p.noVino}{p.sinMarcar ? ` · Sin marcar ${p.sinMarcar}` : ""}
+      <section className="panel stack">
+        {datos.personas.map((p) => (
+          <div className="eco-row" key={p.nombre}>
+            <div>
+              <b>{p.nombre}</b>
+              <small>Vino {p.vino} · Avisó {p.aviso} · No vino {p.noVino}{p.sinMarcar ? ` · Sin marcar ${p.sinMarcar}` : ""}</small>
+              <div className="stat-bar"><i style={{ width: `${p.pct ?? 0}%` }} /></div>
             </div>
-            <div style={{ background: "var(--line)", borderRadius: 6, height: 6, marginTop: 4, overflow: "hidden" }}>
-              <div style={{ width: `${p.pct ?? 0}%`, background: "var(--accent)", height: "100%" }} />
-            </div>
+            <b>{p.pct == null ? "–" : `${p.pct}%`}</b>
           </div>
-          <b style={{ marginLeft: 10 }}>{p.pct == null ? "—" : `${p.pct}%`}</b>
-        </div>
-      ))}
+        ))}
+      </section>
     </div>
   );
 }

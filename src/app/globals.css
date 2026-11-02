@@ -320,6 +320,25 @@ button {
 .mes-nav button { width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font-size: 1.2rem; cursor: pointer; }
 .mes-nav span { font-size: 1.15rem; font-weight: 600; }
 
+/* Tarjetas de KPI (.eco-card, grilla .eco-cards) y barra de progreso
+ * (.stat-bar) — porte 1:1 de la app vieja, usadas en Estadísticas
+ * (eCards()) y cualquier otra pantalla con métricas en grilla. */
+.eco-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.eco-card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+  padding: 12px 14px; display: flex; flex-direction: column; gap: 2px;
+}
+.eco-card b { font-family: var(--font-num); font-size: 1.5rem; color: var(--gold); }
+.eco-card span { font-size: 0.78rem; color: var(--muted); }
+.eco-card.warn b { color: var(--accent-2); }
+.eco-card.ok b { color: var(--ok); }
+.eco-card.bad b { color: var(--danger); }
+.eco-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.eco-row > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.eco-row small, .eco-sub { color: var(--muted); font-size: 0.82rem; }
+.stat-bar { height: 6px; border-radius: 99px; background: var(--line); overflow: hidden; margin-top: 4px; }
+.stat-bar i { display: block; height: 100%; background: var(--ok); }
+
 .aviso {
   font-size: 0.85rem;
   color: var(--danger);
