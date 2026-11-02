@@ -63,24 +63,26 @@ export default function AdministracionPage() {
 
       {items.length === 0 && <p className="muted">No hay secciones disponibles para tu perfil en este campus.</p>}
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10, marginTop: 16 }}>
-        {items.map((it) => (
-          <button
-            key={it.clave}
-            onClick={() => router.push(`${it.href}${it.href.includes("?") ? "&" : "?"}admin=1`)}
-            className="tarjeta"
-            style={{
-              display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 6,
-              cursor: "pointer", textAlign: "left", margin: 0,
-            }}
-          >
-            <span style={{ color: "var(--accent)" }}>
-              <Icono id={ICONO_POR_CLAVE[it.clave] ?? "actividad"} size={24} />
-            </span>
-            <span style={{ fontWeight: 600 }}>{it.label}</span>
-          </button>
-        ))}
-      </div>
+      {items.length > 0 && (
+        <div className="tarjeta" style={{ padding: "4px 12px", marginTop: 16 }}>
+          {items.map((it) => (
+            <button
+              key={it.clave}
+              onClick={() => router.push(`${it.href}${it.href.includes("?") ? "&" : "?"}admin=1`)}
+              className="fila"
+              style={{ width: "100%", background: "none", border: 0, cursor: "pointer", textAlign: "left", font: "inherit", color: "inherit" }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ color: "var(--accent)" }}>
+                  <Icono id={ICONO_POR_CLAVE[it.clave] ?? "actividad"} size={20} />
+                </span>
+                <span style={{ fontWeight: 600 }}>{it.label}</span>
+              </div>
+              <span className="muted">›</span>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
