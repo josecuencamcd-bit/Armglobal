@@ -20,7 +20,7 @@ import { GraficoLinea, peso } from "@/lib/grafico-linea";
  * vez de un muro de 10 cuadros iguales (pedido: "que sea ordenado, sin
  * tener que estar scrolleando para buscar todo"). */
 const GRUPOS: { titulo: string; claves: string[] }[] = [
-  { titulo: "Hoy", claves: ["encuentros", "panorama"] },
+  { titulo: "Hoy", claves: ["asistencia", "panorama"] },
   { titulo: "Dinero", claves: ["fondos", "finanzas"] },
   { titulo: "Equipo", claves: ["equipos", "turnos", "visitas"] },
   { titulo: "Administración", claves: ["soporte", "bajas", "perfiles"] },

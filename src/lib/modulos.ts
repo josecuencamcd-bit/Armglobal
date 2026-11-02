@@ -11,7 +11,7 @@ export const MODULOS: Modulo[] = [
   { key: "bajas", label: "Bajas", href: "/bajas", icon: "bajas", listo: true },
   { key: "panorama", label: "Panorama", href: "/panorama", icon: "panorama", listo: true },
   { key: "cumpleanos", label: "Cumpleaños", href: "/cumpleanos", icon: "cumples", listo: true },
-  { key: "encuentros", label: "Asistencia", href: "/encuentros", icon: "asistencia", listo: true },
+  { key: "asistencia", label: "Asistencia", href: "/asistencia", icon: "asistencia", listo: true },
   { key: "fondos", label: "Fondo de equipo", href: "/fondos", icon: "fondo", listo: true },
   { key: "finanzas", label: "Reporte", href: "/finanzas", icon: "finanzas", listo: true },
   { key: "equipos", label: "Mi equipo", href: "/equipos", icon: "equipo", listo: true },
