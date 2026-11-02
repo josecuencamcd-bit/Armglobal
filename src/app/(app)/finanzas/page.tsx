@@ -223,16 +223,12 @@ export default function FinanzasPage() {
             <button className="boton-secundario" onClick={() => cargar(mesMover(informe.mes, 1))}>›</button>
           </div>
 
-          <div className="seg" style={{ display: "flex", border: "1px solid var(--line)", borderRadius: 10, overflow: "hidden", marginBottom: 16 }}>
+          <div className="seg" style={{ marginBottom: 16 }}>
             {TABS.map((t) => (
               <button
                 key={t.key}
+                aria-pressed={tab === t.key}
                 onClick={() => { setTab(t.key); setMostrarForm(false); setMostrarFormAporte(false); }}
-                style={{
-                  flex: 1, padding: "10px 4px", border: 0, cursor: "pointer", fontSize: "0.85rem",
-                  background: tab === t.key ? "var(--accent)" : "transparent",
-                  color: tab === t.key ? "var(--accent-ink)" : "var(--muted)", fontWeight: 600,
-                }}
               >
                 {t.label}
               </button>

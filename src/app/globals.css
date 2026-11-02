@@ -238,6 +238,60 @@ button {
 .cum-hoy b { font-size: 1.1rem; display: block; }
 .cum-hoy small { color: var(--muted); font-size: 0.85rem; }
 
+/* Control segmentado (.seg/.seg3) y chips (.chip) — porte 1:1 de las
+ * reglas finales (capa "HUD") de la app vieja: fondo glass, borde dorado
+ * tenue y la pestaña activa con el gradiente dorado + resplandor. Se usan
+ * en Fondos/Finanzas (pestañas Panel/Aportes/Gastos/Informe) y en
+ * cualquier selector tipo pastilla (chip) del resto de la app. */
+.seg, .seg3 {
+  display: grid;
+  gap: 4px;
+  padding: 4px;
+  border-radius: var(--r-md);
+  background: var(--glass-2);
+  border: 1px solid var(--hud-line);
+}
+.seg { grid-template-columns: 1fr 1fr; }
+.seg3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.seg button, .seg3 button {
+  min-height: 36px;
+  border-radius: var(--r-sm);
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+.seg button:hover:not([aria-pressed="true"]),
+.seg3 button:hover:not([aria-pressed="true"]) { color: var(--ink); background: rgba(245,166,35,.06); }
+.seg button[aria-pressed="true"], .seg3 button[aria-pressed="true"] {
+  background: var(--gold-grad);
+  color: var(--accent-ink);
+  font-weight: 700;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 0 16px -4px rgba(245,166,35,.7);
+}
+.chip {
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--hud-line-2);
+  background: var(--glass-2);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+.chip[aria-pressed="true"] {
+  background: var(--gold-grad);
+  color: var(--accent-ink);
+  border-color: transparent;
+  font-weight: 700;
+}
+
 .aviso {
   font-size: 0.85rem;
   color: var(--danger);
