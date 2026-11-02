@@ -258,19 +258,10 @@ export default function EquiposPage() {
         </select>
       </div>
 
-      <div className="tarjeta" style={{ display: "flex", gap: 10, marginBottom: 16 }}>
-        <div style={{ flex: 1 }}>
-          <p className="num" style={{ margin: 0, fontSize: "1.3rem", fontWeight: 700 }}>{activos.length}</p>
-          <p className="muted" style={{ margin: 0, fontSize: "0.72rem" }}>Integrantes</p>
-        </div>
-        <div style={{ flex: 1 }}>
-          <p className="num" style={{ margin: 0, fontSize: "1.3rem", fontWeight: 700 }}>{promIglesia ?? "—"}</p>
-          <p className="muted" style={{ margin: 0, fontSize: "0.72rem" }}>Años en la iglesia (prom.)</p>
-        </div>
-        <div style={{ flex: 1 }}>
-          <p className="num" style={{ margin: 0, fontSize: "1.3rem", fontWeight: 700 }}>{promServicio ?? "—"}</p>
-          <p className="muted" style={{ margin: 0, fontSize: "0.72rem" }}>Años sirviendo (prom.)</p>
-        </div>
+      <div className="eco-cards" style={{ marginBottom: 16 }}>
+        <div className="eco-card"><span>Integrantes</span><b>{activos.length}</b></div>
+        <div className="eco-card"><span>Años en la iglesia (prom.)</span><b>{promIglesia ?? "—"}</b></div>
+        <div className="eco-card"><span>Años sirviendo (prom.)</span><b>{promServicio ?? "—"}</b></div>
       </div>
 
       {proximosCumples.length > 0 && (
@@ -349,12 +340,20 @@ export default function EquiposPage() {
       {lista?.filter((i) => i.estado === "Activo").length === 0 && (
         <p className="muted">Sin integrantes activos en {area} · {campus}.</p>
       )}
-      {lista?.filter((i) => i.estado === "Activo").map((i) => (
+      {lista?.filter((i) => i.estado === "Activo").map((i) => {
+        const sub = [
+          i.profesion,
+          i.rol_servicio,
+          `${i.anos_servicio ?? 0} ${i.anos_servicio === 1 ? "año" : "años"} sirviendo`,
+          `${i.anos_iglesia ?? 0} ${i.anos_iglesia === 1 ? "año" : "años"} en la iglesia`,
+        ].filter(Boolean).join(" · ");
+        return (
         <div key={i.id}>
           <div className="fila">
             <div>
               <div>{i.nombre}</div>
-              <div className="muted" style={{ fontSize: "0.78rem" }}>{i.telefono || i.correo || ""}</div>
+              <div className="muted" style={{ fontSize: "0.78rem" }}>{sub}</div>
+              {(i.telefono || i.correo) && <div className="muted" style={{ fontSize: "0.76rem" }}>{i.telefono || i.correo}</div>}
             </div>
             <span style={{ display: "flex", gap: 8 }}>
               <button className="boton-secundario" onClick={() => setEditando(editando?.id === i.id ? null : i)}>
@@ -431,7 +430,8 @@ export default function EquiposPage() {
             </form>
           )}
         </div>
-      ))}
+        );
+      })}
 
       <h2 className="titulo" style={{ fontSize: "1.05rem", marginTop: 28 }}>Ficha de servicio</h2>
       <p className="muted" style={{ fontSize: "0.82rem", marginTop: -8 }}>

@@ -40,17 +40,9 @@ export default function PanoramaPage() {
       <h1 className="titulo" style={{ fontSize: "1.3rem" }}>Panorama</h1>
       {error && <p className="aviso">{error}</p>}
 
-      <div style={{ display: "flex", border: "1px solid var(--hud-line)", borderRadius: 999, overflow: "hidden", marginBottom: 16 }}>
+      <div className="seg" style={{ marginBottom: 16 }}>
         {CAMPUS.map((c) => (
-          <button
-            key={c}
-            onClick={() => setCampus(c)}
-            style={{
-              flex: 1, padding: "10px", border: 0, cursor: "pointer", fontWeight: 600,
-              background: campus === c ? "var(--gold-grad)" : "transparent",
-              color: campus === c ? "#1a1203" : "var(--muted)",
-            }}
-          >
+          <button key={c} aria-pressed={campus === c} onClick={() => setCampus(c)}>
             {c}
           </button>
         ))}
@@ -60,44 +52,35 @@ export default function PanoramaPage() {
 
       {datos && (
         <>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10, marginBottom: 6 }}>
-            <Kpi titulo="Integrantes" valor={datos.total} />
-            <Kpi titulo="Años en la iglesia (prom.)" valor={datos.anos.promIglesia} />
-            <Kpi titulo="Años sirviendo (prom.)" valor={datos.anos.promServ} />
-            <Kpi titulo="Visitas por contactar" valor={datos.visitas.pendientes} alerta={datos.visitas.pendientes > 0} />
-            <Kpi titulo="Bajas por aprobar" valor={datos.solicitudes} alerta={datos.solicitudes > 0} />
+          <div className="eco-cards" style={{ marginBottom: 16 }}>
+            <div className="eco-card"><b>{datos.total}</b><span>Integrantes</span></div>
+            <div className="eco-card"><b>{datos.anos.promIglesia}</b><span>Años en la iglesia (prom.)</span></div>
+            <div className="eco-card"><b>{datos.anos.promServ}</b><span>Años sirviendo (prom.)</span></div>
+            <div className={`eco-card${datos.visitas.pendientes ? " warn" : ""}`}><b>{datos.visitas.pendientes}</b><span>Visitas por contactar</span></div>
+            <div className={`eco-card${datos.solicitudes ? " warn" : ""}`}><b>{datos.solicitudes}</b><span>Bajas por aprobar</span></div>
           </div>
 
-          <p className="muted" style={{ margin: "20px 0 8px" }}>Equipos de {campus}</p>
-          {datos.areas.length === 0 && <p className="muted">Sin integrantes registrados en {campus}.</p>}
-          {datos.areas.map((a) => (
-            <div className="tarjeta" key={a.area} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <div>
-                <p style={{ fontWeight: 600, margin: 0 }}>{a.area}</p>
-                <p className="muted" style={{ margin: "2px 0 0", fontSize: "0.8rem" }}>
-                  {a.total} personas · {a.promIglesia} años en la iglesia · {a.promServ} sirviendo
-                </p>
+          <section className="tarjeta stack">
+            <p className="muted" style={{ margin: "0 0 8px", fontSize: "0.75rem" }}>EQUIPOS DE {campus.toUpperCase()}</p>
+            {datos.areas.length === 0 && <p className="muted">Aún no hay integrantes registrados.</p>}
+            {datos.areas.map((a) => (
+              <div className="eco-row" key={a.area}>
+                <div>
+                  <b>{a.area}</b>
+                  <small>{a.total} personas · {a.promIglesia} años en la iglesia · {a.promServ} sirviendo</small>
+                </div>
+                <button
+                  className="boton-secundario"
+                  style={{ width: "auto", padding: "6px 12px", fontSize: "0.8rem", flexShrink: 0 }}
+                  onClick={() => router.push("/equipos")}
+                >
+                  Ver
+                </button>
               </div>
-              <button
-                className="boton"
-                style={{ padding: "8px 14px", fontSize: "0.85rem", width: "auto" }}
-                onClick={() => router.push("/equipos")}
-              >
-                Ver
-              </button>
-            </div>
-          ))}
+            ))}
+          </section>
         </>
       )}
-    </div>
-  );
-}
-
-function Kpi({ titulo, valor, alerta }: { titulo: string; valor: number; alerta?: boolean }) {
-  return (
-    <div className="tarjeta" style={{ margin: 0 }}>
-      <p className="muted" style={{ margin: 0, fontSize: "0.72rem", textTransform: "uppercase" }}>{titulo}</p>
-      <p className="num" style={{ fontSize: "1.8rem", fontWeight: 700, margin: "4px 0 0", color: alerta ? "var(--danger)" : "var(--accent)" }}>{valor}</p>
     </div>
   );
 }

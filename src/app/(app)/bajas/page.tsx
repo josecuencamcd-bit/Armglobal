@@ -44,9 +44,6 @@ export default function BajasPage() {
     await cargar();
   }
 
-  const pendientes = lista?.filter((b) => b.estado === "Pendiente") ?? [];
-  const resueltas = lista?.filter((b) => b.estado !== "Pendiente") ?? [];
-
   return (
     <div className="contenedor" style={{ paddingTop: 24 }}>
       <VolverAdministracion />
@@ -54,39 +51,40 @@ export default function BajasPage() {
       {error && <p className="aviso">{error}</p>}
       {!lista && !error && <p className="muted">Cargando…</p>}
 
-      {lista && pendientes.length === 0 && <p className="muted">Sin bajas pendientes.</p>}
-      {pendientes.map((b) => (
-        <div className="tarjeta" key={b.id}>
-          <p style={{ fontWeight: 600, margin: 0 }}>{b.nombre ?? `Integrante #${b.id}`}</p>
-          <p className="muted" style={{ margin: "2px 0 0", fontSize: "0.8rem" }}>
-            {b.area} · {b.campus} · pidió {b.solicitante ?? "—"} el {fechaCorta(b.fecha)}
-          </p>
-          <p className="muted" style={{ margin: "2px 0 10px", fontSize: "0.8rem" }}>Motivo: {b.motivo}</p>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button className="boton" style={{ flex: 1 }} disabled={ocupado === b.id} onClick={() => resolver(b.id, true)}>
-              {ocupado === b.id ? "…" : "Aprobar"}
-            </button>
-            <button
-              style={{ flex: 1, background: "none", border: "1px solid var(--line)", borderRadius: 10, color: "var(--muted)" }}
-              disabled={ocupado === b.id}
-              onClick={() => resolver(b.id, false)}
-            >
-              Rechazar
-            </button>
-          </div>
-        </div>
-      ))}
-
-      {resueltas.length > 0 && (
-        <>
-          <p className="muted" style={{ margin: "20px 0 8px" }}>Resueltas</p>
-          {resueltas.slice(0, 15).map((b) => (
-            <div className="fila" key={b.id}>
-              <span>{b.nombre ?? `Integrante #${b.id}`}</span>
-              <span className="muted" style={{ fontSize: "0.8rem" }}>{b.estado}</span>
+      {lista && (
+        <section className="tarjeta stack">
+          <span className="label">Solicitudes de baja</span>
+          {!lista.length && <p className="muted">No hay solicitudes.</p>}
+          {lista.map((b) => (
+            <div key={b.id} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <div className="eco-row">
+                <div>
+                  <b>{b.nombre ?? `Integrante #${b.id}`}</b>
+                  <small>{b.area} · {b.campus} · pidió {b.solicitante ?? "—"} el {fechaCorta(b.fecha)}</small>
+                  <small>Motivo: {b.motivo}</small>
+                </div>
+                <span className={`eco-badge ${b.estado === "Aprobada" ? "ok" : b.estado === "Rechazada" ? "bad" : "warn"}`}>
+                  {b.estado}
+                </span>
+              </div>
+              {b.estado === "Pendiente" && (
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button
+                    className="boton-secundario"
+                    style={{ flex: 1 }}
+                    disabled={ocupado === b.id}
+                    onClick={() => resolver(b.id, false)}
+                  >
+                    Rechazar
+                  </button>
+                  <button className="boton" style={{ flex: 1 }} disabled={ocupado === b.id} onClick={() => resolver(b.id, true)}>
+                    {ocupado === b.id ? "…" : "Aprobar baja"}
+                  </button>
+                </div>
+              )}
             </div>
           ))}
-        </>
+        </section>
       )}
     </div>
   );

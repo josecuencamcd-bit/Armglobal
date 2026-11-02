@@ -240,20 +240,18 @@ export default function InicioPage() {
           <p className="muted" style={{ margin: "0 0 10px", fontSize: "0.75rem" }}>
             TU EQUIPO · {equipo.area.toUpperCase()} · Últimos {equipo.dias} días
           </p>
-          <div style={{ display: "flex", gap: 10, marginBottom: equipo.personas.length ? 10 : 0 }}>
-            <div style={{ flex: 1 }}>
-              <p className="num" style={{ margin: 0, fontSize: "1.3rem", fontWeight: 700, color: (equipo.pct ?? 0) < 60 ? "var(--danger)" : "var(--ok)" }}>
-                {equipo.pct ?? "—"}{equipo.pct != null ? "%" : ""}
-              </p>
-              <p className="muted" style={{ margin: 0, fontSize: "0.72rem" }}>Asistencia</p>
+          <div className="eco-cards" style={{ marginBottom: equipo.personas.length ? 10 : 0 }}>
+            <div className={`eco-card${(equipo.pct ?? 0) < 60 ? " warn" : " ok"}`}>
+              <b>{equipo.pct == null ? "–" : `${equipo.pct}%`}</b>
+              <span>Asistencia</span>
             </div>
-            <div style={{ flex: 1 }}>
-              <p className="num" style={{ margin: 0, fontSize: "1.3rem", fontWeight: 700 }}>{equipo.servicios}</p>
-              <p className="muted" style={{ margin: 0, fontSize: "0.72rem" }}>Sirvieron</p>
+            <div className="eco-card">
+              <b>{equipo.servicios}</b>
+              <span>Sirvieron</span>
             </div>
-            <div style={{ flex: 1 }}>
-              <p className="num" style={{ margin: 0, fontSize: "1.3rem", fontWeight: 700, color: equipo.sinServir > 0 ? "var(--danger)" : "inherit" }}>{equipo.sinServir}</p>
-              <p className="muted" style={{ margin: 0, fontSize: "0.72rem" }}>Sin servir</p>
+            <div className={`eco-card${equipo.sinServir ? " warn" : ""}`}>
+              <b>{equipo.sinServir}</b>
+              <span>Sin servir</span>
             </div>
           </div>
           {equipo.personas.slice(0, 3).map((p) => (
@@ -269,24 +267,24 @@ export default function InicioPage() {
         <div className="tarjeta" style={{ marginBottom: 16, borderColor: "var(--danger)" }}>
           <p className="muted" style={{ margin: "0 0 10px", fontSize: "0.75rem" }}>PENDIENTES</p>
           {(avisos!.encuentros.length > 0 || avisos!.cierres.length > 0 || avisos!.autorizaciones > 0) && (
-            <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+            <div className="eco-cards" style={{ marginBottom: 10 }}>
               {avisos!.encuentros.length > 0 && (
-                <div style={{ flex: 1, cursor: "pointer" }} onClick={() => router.push("/encuentros")}>
-                  <p className="num" style={{ margin: 0, fontSize: "1.2rem", fontWeight: 700 }}>{avisos!.encuentros.length}</p>
-                  <p className="muted" style={{ margin: 0, fontSize: "0.68rem" }}>Encuentros pendientes</p>
-                </div>
+                <button type="button" className="eco-card warn kpi-click" onClick={() => router.push("/encuentros")}>
+                  <b>{avisos!.encuentros.length}</b>
+                  <span>📋 Encuentros pendientes</span>
+                </button>
               )}
               {avisos!.cierres.length > 0 && (
-                <div style={{ flex: 1 }}>
-                  <p className="num" style={{ margin: 0, fontSize: "1.2rem", fontWeight: 700 }}>{avisos!.cierres.length}</p>
-                  <p className="muted" style={{ margin: 0, fontSize: "0.68rem" }}>Meses por cerrar</p>
+                <div className="eco-card warn">
+                  <b>{avisos!.cierres.length}</b>
+                  <span>🔒 Meses por cerrar</span>
                 </div>
               )}
               {avisos!.autorizaciones > 0 && (
-                <div style={{ flex: 1, cursor: "pointer" }} onClick={() => router.push("/soporte")}>
-                  <p className="num" style={{ margin: 0, fontSize: "1.2rem", fontWeight: 700 }}>{avisos!.autorizaciones}</p>
-                  <p className="muted" style={{ margin: 0, fontSize: "0.68rem" }}>Autorizaciones</p>
-                </div>
+                <button type="button" className="eco-card warn kpi-click" onClick={() => router.push("/soporte")}>
+                  <b>{avisos!.autorizaciones}</b>
+                  <span>✍️ Autorizaciones</span>
+                </button>
               )}
             </div>
           )}

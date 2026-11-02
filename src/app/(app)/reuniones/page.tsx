@@ -22,12 +22,21 @@ type Datos = { hoy: string; proximas: ReunionFila[]; historial: ReunionFila[]; c
 type Persona = { id: string; nombre: string; correo: string | null; area: string; perfil: string; campus: string | null };
 
 const TIPOS = ["Reunión de equipo", "Reunión 1 a 1", "Café"] as const;
+const REU_ICO: Record<string, string> = { "Reunión de equipo": "👥", "Reunión 1 a 1": "🤝", "Café": "☕" };
 const DURACIONES = [[30, "30 min"], [45, "45 min"], [60, "1 hora"], [90, "1 h 30"], [120, "2 horas"]] as const;
 const PLACEHOLDER_TITULO: Record<(typeof TIPOS)[number], string> = {
   "Café": "Ej.: Café para conversar",
   "Reunión 1 a 1": "Ej.: Seguimiento",
   "Reunión de equipo": "Ej.: Planificación del mes",
 };
+const DIAS_SEMANA = ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"];
+/** Igual a reuDia() de Code.gs: "mié 12/11" en vez de la fecha ISO cruda. */
+function reuDia(f: string) {
+  const p = f.split("-");
+  if (p.length !== 3) return f;
+  const d = new Date(+p[0], +p[1] - 1, +p[2]);
+  return `${DIAS_SEMANA[d.getDay()]} ${p[2]}/${p[1]}`;
+}
 
 /** Módulo Reuniones — equivalente a api_reuLista / api_reuCrear /
  * api_reuCancelar / api_reuDirectorio: agenda de todos los perfiles e
@@ -136,9 +145,9 @@ export default function ReunionesPage() {
       <div className="tarjeta" key={r.id}>
         <div className="fila" style={{ border: 0, padding: 0 }}>
           <div>
-            <p style={{ fontWeight: 600, margin: 0 }}>{r.titulo || r.tipo}</p>
+            <p style={{ fontWeight: 600, margin: 0 }}>{REU_ICO[r.tipo] ?? ""} {r.titulo || r.tipo}</p>
             <p className="muted" style={{ margin: "2px 0 0", fontSize: "0.8rem" }}>
-              {r.fecha}{r.hora ? ` · ${r.hora}` : ""}{r.lugar ? ` · ${r.lugar}` : ""}
+              {reuDia(r.fecha)}{r.hora ? ` · ${r.hora}` : ""}{r.duracion ? ` · ${r.duracion} min` : ""}{r.lugar ? ` · ${r.lugar}` : ""}
               {r.cancelada && <span style={{ color: "var(--danger)" }}> · Cancelada</span>}
             </p>
             {r.invitados.length > 0 && (
@@ -172,15 +181,9 @@ export default function ReunionesPage() {
           action={(fd) => crear(fd)}
           style={{ display: "flex", flexDirection: "column", gap: 10 }}
         >
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>
+          <div className="seg3">
             {TIPOS.map((t) => (
-              <button
-                key={t}
-                type="button"
-                className={t === tipo ? "boton" : "boton-secundario"}
-                onClick={() => setTipo(t)}
-                style={{ fontSize: "0.8rem", padding: "8px 4px" }}
-              >
+              <button key={t} type="button" aria-pressed={t === tipo} onClick={() => setTipo(t)}>
                 {t === "Reunión de equipo" ? "Equipo" : t === "Reunión 1 a 1" ? "1 a 1" : "☕ Café"}
               </button>
             ))}
@@ -215,38 +218,32 @@ export default function ReunionesPage() {
                 + Agregar a todo mi equipo
               </button>
             )}
+            <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar persona por nombre…" style={{ marginBottom: 6 }} />
+            <div className="reu-res">
+              {!directorio && <p className="hint">Cargando personas…</p>}
+              {directorio && resultados.length === 0 && busca.trim() && <p className="hint">Nadie coincide con esa búsqueda.</p>}
+              {resultados.map((p) => (
+                <button key={p.id} type="button" onClick={() => agregarPersona(p)}>
+                  <b>{p.nombre}</b>
+                  <small> · {p.perfil || p.area || "Participante"}{p.perfil && p.area ? ` · ${p.area}` : ""}{p.correo ? "" : " · sin correo"}</small>
+                </button>
+              ))}
+            </div>
             {seleccion.length > 0 && (
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 6 }}>
+              <div className="reu-chips" style={{ marginTop: 6 }}>
                 {seleccion.map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    className="boton-secundario"
-                    style={{ fontSize: "0.75rem", padding: "4px 8px" }}
-                    onClick={() => quitarPersona(p.id)}
-                  >
+                  <button key={p.id} type="button" className="reu-chip" onClick={() => quitarPersona(p.id)}>
                     {p.nombre} ✕
                   </button>
                 ))}
               </div>
             )}
-            <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar persona por nombre…" />
-            {!directorio && <p className="muted" style={{ fontSize: "0.78rem" }}>Cargando personas…</p>}
-            {directorio && resultados.length === 0 && (
-              <p className="muted" style={{ fontSize: "0.78rem" }}>{busca.trim() ? "Nadie coincide con esa búsqueda." : ""}</p>
+            {seleccion.some((p) => !p.correo) && (
+              <p className="hint">
+                {seleccion.filter((p) => !p.correo).map((p) => p.nombre).join(", ")}
+                {seleccion.filter((p) => !p.correo).length > 1 ? " no tienen" : " no tiene"} correo registrado: la reunión queda anotada pero no recibirá invitación.
+              </p>
             )}
-            {resultados.map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                className="fila"
-                style={{ width: "100%", textAlign: "left", background: "none", cursor: "pointer" }}
-                onClick={() => agregarPersona(p)}
-              >
-                <span>{p.nombre}</span>
-                <span className="muted" style={{ fontSize: "0.75rem" }}>{p.perfil || p.area || p.campus || ""}</span>
-              </button>
-            ))}
           </div>
 
           <div className="campo">

@@ -209,12 +209,11 @@ export default function PerfilesPage() {
           >
             <div className="fila" style={{ border: 0, padding: 0 }}>
               <div>
-                <p style={{ fontWeight: 600, margin: 0 }}>
-                  {p.nombre} {p.bloqueado && <span style={{ color: "var(--danger)", fontSize: "0.75rem" }}>· bloqueado</span>}
-                </p>
+                <p style={{ fontWeight: 600, margin: 0 }}>{p.nombre}</p>
                 <p className="muted" style={{ margin: "2px 0 0", fontSize: "0.8rem" }}>
                   {p.roles.join(", ") || "Sin rol"} {p.campus ? `· ${p.campus}` : ""}
                 </p>
+                {p.bloqueado && <span className="eco-badge bad" style={{ marginTop: 4 }}>Bloqueado</span>}
               </div>
               <span className="muted">{abierto === p.id ? "▲" : "▼"}</span>
             </div>
@@ -222,26 +221,20 @@ export default function PerfilesPage() {
 
           {abierto === p.id && (
             <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid var(--line)" }}>
-              <p className="muted" style={{ marginBottom: 6, fontSize: "0.8rem" }}>Roles</p>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 14 }}>
+              <p className="label">Roles</p>
+              <div className="chips" style={{ marginBottom: 14 }}>
                 {ROLES.map((r) => {
                   const activo = p.roles.includes(r);
                   return (
                     <button
                       key={r}
+                      type="button"
+                      className="chip"
+                      aria-pressed={activo}
                       disabled={guardando}
                       onClick={() => {
                         const roles = activo ? p.roles.filter((x) => x !== r) : [...p.roles, r];
                         guardarPerfil(p.id, { roles });
-                      }}
-                      style={{
-                        padding: "6px 10px",
-                        borderRadius: 999,
-                        fontSize: "0.75rem",
-                        border: `1px solid ${activo ? "var(--accent)" : "var(--line)"}`,
-                        background: activo ? "var(--accent)" : "transparent",
-                        color: activo ? "var(--accent-ink)" : "var(--muted)",
-                        cursor: "pointer",
                       }}
                     >
                       {r}
@@ -252,26 +245,20 @@ export default function PerfilesPage() {
 
               <ProgramarRol perfil={p} guardando={guardando} onGuardar={guardarPerfil} />
 
-              <p className="muted" style={{ marginBottom: 6, fontSize: "0.8rem" }}>Área que lidera</p>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 14 }}>
+              <p className="label">Área que lidera</p>
+              <div className="chips" style={{ marginBottom: 14 }}>
                 {AREAS.map((a) => {
                   const activo = p.areas.includes(a);
                   return (
                     <button
                       key={a}
+                      type="button"
+                      className="chip"
+                      aria-pressed={activo}
                       disabled={guardando}
                       onClick={() => {
                         const areas = activo ? p.areas.filter((x) => x !== a) : [...p.areas, a];
                         guardarPerfil(p.id, { areas });
-                      }}
-                      style={{
-                        padding: "6px 10px",
-                        borderRadius: 999,
-                        fontSize: "0.75rem",
-                        border: `1px solid ${activo ? "var(--accent)" : "var(--line)"}`,
-                        background: activo ? "var(--accent)" : "transparent",
-                        color: activo ? "var(--accent-ink)" : "var(--muted)",
-                        cursor: "pointer",
                       }}
                     >
                       {a}
@@ -280,26 +267,20 @@ export default function PerfilesPage() {
                 })}
               </div>
 
-              <p className="muted" style={{ marginBottom: 6, fontSize: "0.8rem" }}>Otras áreas donde sirve como voluntario</p>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 14 }}>
+              <p className="label">Otras áreas donde sirve como voluntario</p>
+              <div className="chips" style={{ marginBottom: 14 }}>
                 {AREAS.map((a) => {
                   const activo = p.sirve.includes(a);
                   return (
                     <button
                       key={a}
+                      type="button"
+                      className="chip"
+                      aria-pressed={activo}
                       disabled={guardando}
                       onClick={() => {
                         const sirve = activo ? p.sirve.filter((x) => x !== a) : [...p.sirve, a];
                         guardarPerfil(p.id, { sirve });
-                      }}
-                      style={{
-                        padding: "6px 10px",
-                        borderRadius: 999,
-                        fontSize: "0.75rem",
-                        border: `1px solid ${activo ? "var(--accent)" : "var(--line)"}`,
-                        background: activo ? "var(--accent)" : "transparent",
-                        color: activo ? "var(--accent-ink)" : "var(--muted)",
-                        cursor: "pointer",
                       }}
                     >
                       {a}
@@ -331,28 +312,23 @@ export default function PerfilesPage() {
                 {entrando === p.id ? "Entrando…" : `Ver la app como ${p.nombre.split(" ")[0]}`}
               </button>
 
-              <p className="muted" style={{ marginBottom: 6, fontSize: "0.8rem" }}>
-                Módulos activados a mano (además de los que le da su rol)
+              <p className="label">Módulos (aparte de su perfil)</p>
+              <p className="eco-sub" style={{ margin: "0 0 8px" }}>
+                Actívalos para que vea un módulo extra, o desactívalos para ocultarle uno que su perfil ya incluiría.
               </p>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 14 }}>
+              <div className="chips" style={{ marginBottom: 14 }}>
                 {MODULOS_APP.map((m) => {
                   const encendido = p.modulos_on.includes(m);
                   const apagado = p.modulos_off.includes(m);
                   return (
                     <button
                       key={m}
+                      type="button"
+                      className={`chip${apagado ? " chip-off" : ""}`}
+                      aria-pressed={encendido}
                       disabled={guardando}
                       onClick={() => toggleModuloPersona(p, m)}
                       title={encendido ? "Forzado encendido — toca para apagarlo" : apagado ? "Forzado apagado — toca para volver a heredar del rol" : "Según su rol — toca para forzar encendido"}
-                      style={{
-                        padding: "6px 10px",
-                        borderRadius: 999,
-                        fontSize: "0.75rem",
-                        border: `1px solid ${encendido ? "var(--ok)" : apagado ? "var(--danger)" : "var(--line)"}`,
-                        background: encendido ? "var(--ok)" : apagado ? "transparent" : "transparent",
-                        color: encendido ? "#0a1f14" : apagado ? "var(--danger)" : "var(--muted)",
-                        cursor: "pointer",
-                      }}
                     >
                       {nombresMod[m] ?? TITULOS_MOD[m]}
                     </button>
@@ -434,22 +410,17 @@ function ProgramarRol({
 
   return (
     <div className="tarjeta" style={{ margin: "0 0 14px", padding: 10 }}>
-      <p className="muted" style={{ margin: "0 0 6px", fontSize: "0.78rem" }}>Nuevos roles desde…</p>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
+      <p className="label">Nuevos roles desde…</p>
+      <div className="chips" style={{ marginBottom: 10 }}>
         {ROLES.map((r) => {
           const activo = roles.includes(r);
           return (
             <button
               key={r}
               type="button"
+              className="chip"
+              aria-pressed={activo}
               onClick={() => setRoles(activo ? roles.filter((x) => x !== r) : [...roles, r])}
-              style={{
-                padding: "6px 10px", borderRadius: 999, fontSize: "0.75rem",
-                border: `1px solid ${activo ? "var(--accent)" : "var(--line)"}`,
-                background: activo ? "var(--accent)" : "transparent",
-                color: activo ? "var(--accent-ink)" : "var(--muted)",
-                cursor: "pointer",
-              }}
             >
               {r}
             </button>

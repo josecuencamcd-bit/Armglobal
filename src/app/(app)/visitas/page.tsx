@@ -153,13 +153,16 @@ export default function VisitasPage() {
       </div>
       {error && <p className="aviso">{error}</p>}
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, margin: "14px 0" }}>
-        {kpis.map((k) => (
-          <div key={k.label} className="tarjeta" style={{ margin: 0, padding: "10px 12px", textAlign: "center" }}>
-            <p className="num" style={{ fontSize: "1.3rem", fontWeight: 700, margin: 0 }}>{k.n}</p>
-            <p className="muted" style={{ margin: 0, fontSize: "0.68rem" }}>{k.label.toUpperCase()}</p>
-          </div>
-        ))}
+      <div className="eco-cards" style={{ margin: "14px 0" }}>
+        {kpis.map((k) => {
+          const color = k.label === "Pendiente" ? "warn" : k.label === "Sin respuesta" ? "bad" : k.label === "Total" ? "" : "ok";
+          return (
+            <div key={k.label} className={`eco-card${color ? " " + color : ""}`}>
+              <span>{k.label}</span>
+              <b>{k.n}</b>
+            </div>
+          );
+        })}
       </div>
 
       <button className="boton" style={{ marginBottom: 16 }} onClick={() => setMostrarForm((v) => !v)}>
@@ -207,7 +210,10 @@ export default function VisitasPage() {
       {lista && lista.length > 0 && filtradas.length === 0 && <p className="muted">Nada coincide con la búsqueda.</p>}
       {filtradas.map((v) => (
         <div className="tarjeta" key={v.id}>
-          <p style={{ fontWeight: 600, margin: 0 }}>{v.nombre}</p>
+          <div className="eco-row" style={{ marginBottom: 6 }}>
+            <b>{v.nombre}</b>
+            <span className={`eco-badge ${v.estado === "Sin respuesta" ? "bad" : v.estado === "Pendiente" ? "warn" : "ok"}`}>{v.estado}</span>
+          </div>
           <p className="muted" style={{ margin: "2px 0 10px", fontSize: "0.8rem" }}>
             {v.telefono || "Sin teléfono"}{v.nota ? ` · ${v.nota}` : ""}
           </p>

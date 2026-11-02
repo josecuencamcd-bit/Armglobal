@@ -94,49 +94,47 @@ export default function TurnosPage() {
       </p>
       {error && <p className="aviso">{error}</p>}
 
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 14, margin: "4px 0 16px" }}>
-        <button type="button" className="boton-secundario" style={{ width: "auto", padding: "6px 14px" }} onClick={() => setMes((m) => mesMover(m, -1))}>‹</button>
+      <div className="eco-row" style={{ justifyContent: "center", gap: 14, margin: "4px 0 16px" }}>
+        <button type="button" className="boton-secundario" style={{ width: "auto", minHeight: 36, padding: "0 14px" }} onClick={() => setMes((m) => mesMover(m, -1))}>‹</button>
         <b style={{ textTransform: "capitalize" }}>{mesTitulo(mes)}</b>
-        <button type="button" className="boton-secundario" style={{ width: "auto", padding: "6px 14px" }} onClick={() => setMes((m) => mesMover(m, 1))}>›</button>
+        <button type="button" className="boton-secundario" style={{ width: "auto", minHeight: 36, padding: "0 14px" }} onClick={() => setMes((m) => mesMover(m, 1))}>›</button>
       </div>
 
-      {datos?.semanas.map((s) => (
-        <div className="tarjeta" key={s.semana}>
-          <b style={{ display: "block", marginBottom: 4 }}>Semana del {fechaCorta(s.semana)} al {fechaCorta(s.hasta)}</b>
-          {s.nombres.length > 0 && (
-            <p className="muted" style={{ fontSize: "0.78rem", margin: "0 0 10px" }}>Hoy: {s.nombres.join(" y ")}</p>
-          )}
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
-            {datos.personas.map((p) => {
-              const activo = (seleccion[s.semana] ?? []).includes(p.correo);
-              return (
-                <button
-                  key={p.correo}
-                  type="button"
-                  onClick={() => toggle(s.semana, p.correo)}
-                  style={{
-                    padding: "6px 10px", borderRadius: 999, fontSize: "0.78rem",
-                    border: `1px solid ${activo ? "var(--accent)" : "var(--line)"}`,
-                    background: activo ? "var(--accent)" : "transparent",
-                    color: activo ? "var(--accent-ink)" : "var(--ink)", cursor: "pointer",
-                  }}
-                >
-                  {p.nombre}
-                </button>
-              );
-            })}
-          </div>
-          <button
-            type="button"
-            className="boton-secundario"
-            style={{ width: "auto", padding: "6px 14px", fontSize: "0.82rem" }}
-            disabled={guardando === s.semana}
-            onClick={() => guardar(s.semana)}
-          >
-            {guardando === s.semana ? "Guardando…" : "Guardar"}
-          </button>
-        </div>
-      ))}
+      <div className="stack">
+        {datos?.semanas.map((s) => (
+          <section className="tarjeta stack" style={{ margin: 0 }} key={s.semana}>
+            <b>Semana del {fechaCorta(s.semana)} al {fechaCorta(s.hasta)}</b>
+            {s.nombres.length > 0 && (
+              <small className="eco-sub">Hoy: {s.nombres.join(" y ")}</small>
+            )}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {datos.personas.map((p) => {
+                const activo = (seleccion[s.semana] ?? []).includes(p.correo);
+                return (
+                  <button
+                    key={p.correo}
+                    type="button"
+                    className="chip"
+                    aria-pressed={activo}
+                    onClick={() => toggle(s.semana, p.correo)}
+                  >
+                    {p.nombre}
+                  </button>
+                );
+              })}
+            </div>
+            <button
+              type="button"
+              className="boton-secundario"
+              style={{ width: "auto", minHeight: 36, padding: "0 14px", alignSelf: "flex-start" }}
+              disabled={guardando === s.semana}
+              onClick={() => guardar(s.semana)}
+            >
+              {guardando === s.semana ? "Guardando…" : "Guardar"}
+            </button>
+          </section>
+        ))}
+      </div>
     </div>
   );
 }
