@@ -325,6 +325,8 @@ function Shell({ children, impersonando }: { children: React.ReactNode; imperson
             {/* DIAGNÓSTICO TEMPORAL — se saca en el próximo commit */}
             <p style={{ fontSize: "0.65rem", color: "var(--muted)", padding: "0 4px 8px", wordBreak: "break-all" }}>
               DEBUG roles: {JSON.stringify(perfil?.roles)} · admin:{String(tieneAdministracion)}
+              <br />resto:[{resto.map((m) => m.key).join(",")}] restoFinal:[{restoFinal.map((m) => m.key).join(",")}]
+              <br />modulosDeEstaPersona:[{modulosDeEstaPersona.map((m) => m.key).join(",")}] principales:[{principales.map((m) => m.key).join(",")}]
             </p>
             {restoFinal.map((m) => {
               const activo = pathname?.startsWith(m.href);
