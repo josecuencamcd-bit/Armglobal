@@ -7,7 +7,7 @@ import type { Database } from "@/lib/supabase/types";
 import { MODULOS, type Modulo } from "@/lib/modulos";
 import { Icono } from "@/lib/iconos";
 import { CampusProvider, useCampus } from "@/lib/campus-context";
-import { modulosVisibles, clavesPrincipalesNav, adminSubnav, CLAVE_A_MODULO_APP, type PerfilVisibilidad } from "@/lib/visibilidad-modulos";
+import { modulosVisibles, clavesPrincipalesNav, adminSubnav, esPastorC, CLAVE_A_MODULO_APP, type PerfilVisibilidad } from "@/lib/visibilidad-modulos";
 
 /** Inverso de CLAVE_A_MODULO_APP: de una clave vieja (tabsPorRol) a
  * nuestra clave de módulo real. Una clave vieja sin tile propio acá
@@ -117,8 +117,15 @@ function Shell({ children, impersonando }: { children: React.ReactNode; imperson
   const visibles = perfil
     ? modulosVisibles({ roles: perfil.roles, areas: perfil.areas, sirve: perfil.sirve, modulos_on: perfil.modulos_on, modulos_off: perfil.modulos_off })
     : null;
+  // pintarBottomNav() de la app vieja nunca lista "reporte"/"aportes" para
+  // quien no es Pastor de campus (Ministro/Administrador solo los abren
+  // DESDE Administración) — ni sueltos ni detrás de "Más". Antes acá solo
+  // se excluían de los 4 sueltos (clavesPrincipalesNav), así que se colaban
+  // en "Más" para esos roles; eso era el "menú con mil botones".
+  const esPastorCampus = perfil ? esPastorC({ roles: perfil.roles, areas: perfil.areas, sirve: perfil.sirve, modulos_on: perfil.modulos_on, modulos_off: perfil.modulos_off }) : false;
   const modulosDeEstaPersona = MODULOS.filter((m) => {
     const claveVieja = CLAVE_A_MODULO_APP[m.key];
+    if ((claveVieja === "aportes" || claveVieja === "reporte") && !esPastorCampus) return false;
     if (!claveVieja || !visibles) return true;
     return visibles.has(claveVieja);
   });
