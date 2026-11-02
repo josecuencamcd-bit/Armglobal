@@ -6,6 +6,7 @@ import { METODOS_FONDO, CATEG_GASTO } from "@/lib/sesiones";
 import { useCampus } from "@/lib/campus-context";
 import { fotoAJpegDataUrl } from "@/lib/fotos-cliente";
 import { GraficoLinea } from "@/lib/grafico-linea";
+import { VolverAdministracion } from "@/lib/volver-admin";
 
 type Informe = {
   area: string;
@@ -382,6 +383,7 @@ function FondosContenido() {
 
   return (
     <div className="contenedor" style={{ paddingTop: 24 }}>
+      <VolverAdministracion />
       <h1 className="titulo" style={{ fontSize: "1.3rem" }}>Fondos</h1>
       {error && <p className="aviso">{error}</p>}
 

@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { AREAS } from "@/lib/sesiones";
 import { useCampus } from "@/lib/campus-context";
+import { VolverAdministracion } from "@/lib/volver-admin";
 
 type Integrante = {
   id: number;
@@ -234,6 +235,7 @@ export default function EquiposPage() {
 
   return (
     <div className="contenedor" style={{ paddingTop: 24 }}>
+      <VolverAdministracion />
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
         <h1 className="titulo" style={{ fontSize: "1.3rem" }}>Equipos</h1>
         <span className="muted" style={{ fontSize: "0.82rem" }}>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useCampus } from "@/lib/campus-context";
+import { VolverAdministracion } from "@/lib/volver-admin";
 
 const ESTADOS = ["Pendiente", "Contactado", "Agendado", "Reunido", "Sin respuesta"] as const;
 
@@ -138,6 +139,7 @@ export default function VisitasPage() {
 
   return (
     <div className="contenedor" style={{ paddingTop: 24 }}>
+      <VolverAdministracion />
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
         <h1 className="titulo" style={{ fontSize: "1.3rem" }}>Visitas</h1>
         <span className="muted" style={{ fontSize: "0.82rem" }}>

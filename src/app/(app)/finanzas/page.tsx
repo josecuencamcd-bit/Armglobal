@@ -5,6 +5,7 @@ import Link from "next/link";
 import { GASTOS_ITEMS } from "@/lib/sesiones";
 import { useCampus } from "@/lib/campus-context";
 import { GraficoLinea } from "@/lib/grafico-linea";
+import { VolverAdministracion } from "@/lib/volver-admin";
 
 type Informe = {
   campus: string;
@@ -212,6 +213,7 @@ export default function FinanzasPage() {
 
   return (
     <div className="contenedor" style={{ paddingTop: 24 }}>
+      <VolverAdministracion />
       <h1 className="titulo" style={{ fontSize: "1.3rem" }}>Finanzas</h1>
       {error && <p className="aviso">{error}</p>}
 

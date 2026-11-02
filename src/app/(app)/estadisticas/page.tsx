@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { VolverAdministracion } from "@/lib/volver-admin";
 
 type Persona = { nombre: string; vino: number; aviso: number; noVino: number; sinMarcar: number; pct: number | null };
 type Datos = {
@@ -55,6 +56,7 @@ export default function EstadisticasPage() {
 
   return (
     <div className="contenedor" style={{ paddingTop: 24 }}>
+      <VolverAdministracion />
       <h1 className="titulo" style={{ fontSize: "1.3rem" }}>Estadísticas</h1>
       <p className="muted" style={{ fontSize: "0.82rem", marginTop: -6 }}>
         Del {fechaCorta(datos.desde)} al {fechaCorta(datos.hasta)} · equipo {datos.area} ({datos.integrantes} personas). Solo ves a tu equipo.

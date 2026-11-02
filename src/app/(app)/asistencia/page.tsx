@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { AREAS } from "@/lib/sesiones";
 import { useCampus } from "@/lib/campus-context";
+import { VolverAdministracion } from "@/lib/volver-admin";
 
 type Fila = { id: number; integrante_id: number; nombre: string; estado: string | null; observacion: string | null; respuesta: string | null };
 type Integrante = { id: number; nombre: string; rol_servicio: string | null };
@@ -189,6 +190,7 @@ function AsistenciaContenido() {
 
   return (
     <div className="contenedor" style={{ paddingTop: 24 }}>
+      <VolverAdministracion />
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 14 }}>
         <h1 className="titulo" style={{ fontSize: "1.3rem", margin: 0 }}>Asistencia</h1>
         <span className="muted" style={{ fontSize: "0.82rem" }}>

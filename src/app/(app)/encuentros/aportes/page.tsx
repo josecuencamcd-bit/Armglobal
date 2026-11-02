@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ENCUENTROS, EVENTOS, proximaFecha } from "@/lib/sesiones";
 import { useCampus } from "@/lib/campus-context";
+import { VolverAdministracion } from "@/lib/volver-admin";
 
 /** Selector de encuentro para Aportes — misma pantalla de Encuentro/Fecha
  * que el selector de Asistencia, pero entra directo a
@@ -26,6 +27,7 @@ export default function SelectorAportesPage() {
 
   return (
     <div className="contenedor" style={{ paddingTop: 32 }}>
+      <VolverAdministracion />
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
         <h1 className="titulo" style={{ fontSize: "1.3rem" }}>
           Aportes

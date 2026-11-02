@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { VolverAdministracion } from "@/lib/volver-admin";
 
 type Baja = { id: number; nombre: string | null; campus: string; area: string; motivo: string; estado: string; solicitante: string | null; fecha: string };
 
@@ -48,6 +49,7 @@ export default function BajasPage() {
 
   return (
     <div className="contenedor" style={{ paddingTop: 24 }}>
+      <VolverAdministracion />
       <h1 className="titulo" style={{ fontSize: "1.3rem" }}>Bajas</h1>
       {error && <p className="aviso">{error}</p>}
       {!lista && !error && <p className="muted">Cargando…</p>}

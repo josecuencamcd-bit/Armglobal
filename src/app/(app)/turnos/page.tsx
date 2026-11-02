@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useCampus } from "@/lib/campus-context";
+import { VolverAdministracion } from "@/lib/volver-admin";
 
 type Semana = { semana: string; hasta: string; correos: string[]; nombres: string[] };
 type Persona = { correo: string; nombre: string };
@@ -76,6 +77,7 @@ export default function TurnosPage() {
 
   return (
     <div className="contenedor" style={{ paddingTop: 24 }}>
+      <VolverAdministracion />
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
         <h1 className="titulo" style={{ fontSize: "1.3rem" }}>Turnos</h1>
         <span className="muted" style={{ fontSize: "0.82rem" }}>

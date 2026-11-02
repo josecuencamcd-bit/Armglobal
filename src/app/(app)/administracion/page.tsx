@@ -67,7 +67,7 @@ export default function AdministracionPage() {
         {items.map((it) => (
           <button
             key={it.clave}
-            onClick={() => router.push(it.href)}
+            onClick={() => router.push(`${it.href}${it.href.includes("?") ? "&" : "?"}admin=1`)}
             className="tarjeta"
             style={{
               display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 6,

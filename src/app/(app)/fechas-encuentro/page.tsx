@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { VolverAdministracion } from "@/lib/volver-admin";
 
 type Fecha = { fecha: string; activo: boolean };
 
@@ -63,6 +64,7 @@ export default function FechasEncuentroPage() {
 
   return (
     <div className="contenedor" style={{ paddingTop: 24 }}>
+      <VolverAdministracion />
       <h1 className="titulo" style={{ fontSize: "1.3rem" }}>Fechas de encuentro</h1>
       <p className="muted" style={{ fontSize: "0.82rem", marginTop: -6 }}>
         Puerto Natales · marca qué domingos sí tienen encuentro.
