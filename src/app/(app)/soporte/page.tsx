@@ -7,6 +7,7 @@ import { Icono } from "@/lib/iconos";
 type Acceso = { correo: string; nombre: string; nota: string | null; estado: string };
 type AutEncuentro = { id: number; nombre: string; campus: string; encuentro: string; fecha: string; motivo: string; estado: string };
 type AutFondos = { id: number; solicitante: string | null; campus: string; area: string; mes: string; motivo: string; estado: string };
+type Ayuda = { id: number; correo: string; nombre: string | null; perfil_id: string | null; tipo: string | null; mensaje: string; estado: string };
 
 const TILES: { key: string; label: string; icon: string; href?: string }[] = [
   { key: "accesos", label: "Accesos", icon: "soporte" },
@@ -31,20 +32,48 @@ export default function SoportePage() {
   const [accesos, setAccesos] = useState<Acceso[] | null>(null);
   const [autEnc, setAutEnc] = useState<AutEncuentro[] | null>(null);
   const [autFon, setAutFon] = useState<AutFondos[] | null>(null);
+  const [ayudas, setAyudas] = useState<Ayuda[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState<string | null>(null);
+  const [entrando, setEntrando] = useState<string | null>(null);
 
   const cargar = useCallback(async () => {
-    const [ra, rae, raf] = await Promise.all([
+    const [ra, rae, raf, ray] = await Promise.all([
       fetch("/api/solicitudes-acceso"),
       fetch("/api/autorizaciones"),
       fetch("/api/fondos/autorizaciones"),
+      fetch("/api/ayuda"),
     ]);
-    const [ja, jae, jaf] = await Promise.all([ra.json(), rae.json(), raf.json()]);
+    const [ja, jae, jaf, jay] = await Promise.all([ra.json(), rae.json(), raf.json(), ray.json()]);
     if (ja.ok) setAccesos(ja.data.filter((x: Acceso) => x.estado === "Pendiente"));
     if (jae.ok) setAutEnc(jae.data.filter((x: AutEncuentro) => x.estado === "Pendiente"));
     if (jaf.ok) setAutFon(jaf.data.filter((x: AutFondos) => x.estado === "Pendiente Pastor" || x.estado === "Pendiente Admin"));
+    if (jay.ok) setAyudas(jay.data.filter((x: Ayuda) => x.estado === "Pendiente"));
   }, []);
+
+  async function resolverAyuda(id: number) {
+    setOcupado(`ay${id}`);
+    const res = await fetch(`/api/ayuda/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: "{}" });
+    const json = await res.json();
+    setOcupado(null);
+    if (!json.ok) { setError(json.error); return; }
+    await cargar();
+  }
+
+  async function verComo(perfilId: string, nombre: string) {
+    if (!confirm(`¿Entrar a la app como ${nombre}? Lo que registres desde ahí va a quedar guardado a su nombre.`)) return;
+    setEntrando(perfilId);
+    const res = await fetch("/api/admin/impersonar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ perfilId }),
+    });
+    const json = await res.json();
+    setEntrando(null);
+    if (!json.ok) { setError(json.error); return; }
+    router.push("/inicio");
+    router.refresh();
+  }
 
   useEffect(() => {
     cargar();
@@ -96,6 +125,28 @@ export default function SoportePage() {
           </button>
         ))}
       </div>
+
+      <Seccion titulo="Avisos de ayuda" vacio="No hay avisos pendientes." cantidad={ayudas?.length}>
+        {ayudas?.map((a) => (
+          <div className="eco-row" key={a.id}>
+            <div>
+              <b>{a.nombre ?? a.correo} · {a.tipo ?? "Aviso"}</b>
+              <small>{a.correo}</small>
+              {a.mensaje && <small>Dice: {a.mensaje}</small>}
+            </div>
+            <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+              {a.perfil_id && (
+                <button className="boton-secundario" style={{ padding: "6px 10px", fontSize: "0.82rem" }} disabled={entrando === a.perfil_id} onClick={() => verComo(a.perfil_id!, a.nombre ?? a.correo)}>
+                  👁 Ver como
+                </button>
+              )}
+              <button className="boton" style={{ padding: "6px 10px", fontSize: "0.82rem" }} disabled={ocupado === `ay${a.id}`} onClick={() => resolverAyuda(a.id)}>
+                Resuelto
+              </button>
+            </div>
+          </div>
+        ))}
+      </Seccion>
 
       <Seccion titulo="Solicitudes de acceso" vacio="No hay solicitudes pendientes." cantidad={accesos?.length}>
         {accesos?.map((a) => (

@@ -146,20 +146,12 @@ export default function InicioPage() {
         </h1>
         <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
           {mostrarSoporte && (
-            <button
-              onClick={() => router.push("/soporte")}
-              className="boton-secundario"
-              style={{ width: "auto", padding: "6px 10px", fontSize: "0.78rem", position: "relative" }}
-            >
+            <button onClick={() => router.push("/soporte")} className="soporte-btn">
               ⚙ Soporte
-              {!!avisos?.autorizaciones && (
-                <span style={{ position: "absolute", top: -4, right: -4, background: "var(--danger)", color: "#fff", borderRadius: 999, fontSize: "0.6rem", padding: "1px 5px", fontWeight: 700 }}>
-                  {avisos.autorizaciones}
-                </span>
-              )}
+              {!!avisos?.autorizaciones && <span className="nb">{avisos.autorizaciones}</span>}
             </button>
           )}
-          <button onClick={() => setAyudaAbierta((v) => !v)} className="boton-secundario" style={{ width: "auto", padding: "6px 10px", fontSize: "0.78rem" }}>
+          <button onClick={() => setAyudaAbierta((v) => !v)} className="ayuda-btn">
             ? Ayuda
           </button>
         </div>

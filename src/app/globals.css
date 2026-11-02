@@ -339,6 +339,22 @@ button {
 .stat-bar { height: 6px; border-radius: 99px; background: var(--line); overflow: hidden; margin-top: 4px; }
 .stat-bar i { display: block; height: 100%; background: var(--ok); }
 
+/* Botones de la fila "Hola, X" en Inicio (⚙ Soporte / ? Ayuda) — porte 1:1
+ * (capa HUD final) de la app vieja. */
+.soporte-btn, .ayuda-btn {
+  position: relative; min-height: 30px; height: 30px; padding: 0 11px; border-radius: var(--r-sm);
+  white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; flex: 0 0 auto;
+  font-family: var(--font-num); font-size: 0.68rem; letter-spacing: 0.06em; text-transform: uppercase;
+  background: var(--glass); border: 1px solid var(--hud-line-2); color: var(--ink); cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.soporte-btn:hover, .ayuda-btn:hover { border-color: var(--gold); box-shadow: 0 0 14px -4px rgba(245,166,35,.6); }
+.soporte-btn .nb { margin-left: 2px; display: inline-flex; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 10px; background: var(--danger); color: #fff; font-size: 0.6rem; align-items: center; justify-content: center; }
+.eco-badge { display: inline-flex; align-items: center; padding: 2px 9px; border-radius: 999px; font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+.eco-badge.warn { background: var(--accent-soft); color: var(--gold); }
+.eco-badge.ok { background: color-mix(in srgb, var(--ok) 20%, transparent); color: var(--ok); }
+.eco-badge.bad { background: color-mix(in srgb, var(--danger) 20%, transparent); color: var(--danger); }
+
 .aviso {
   font-size: 0.85rem;
   color: var(--danger);

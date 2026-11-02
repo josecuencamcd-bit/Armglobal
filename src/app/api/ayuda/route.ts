@@ -33,5 +33,17 @@ export async function GET() {
   const supabase = await createClient();
   const { data, error } = await supabase.from("ayuda").select("*").order("fecha", { ascending: false });
   if (error) return fromSupabaseError(error);
-  return ok(data ?? []);
+  const filas = data ?? [];
+
+  // Para el botón "Ver como" en Soporte: junta el id de perfil de cada
+  // correo (RLS de "ayuda" ya deja ver todas las filas solo a Admin app,
+  // así que esto nunca se resuelve para un usuario común).
+  const correos = [...new Set(filas.map((f) => f.correo))];
+  let idPorCorreo: Record<string, string> = {};
+  if (correos.length) {
+    const { data: perfiles } = await supabase.from("perfiles").select("id, correo").in("correo", correos);
+    idPorCorreo = Object.fromEntries((perfiles ?? []).map((p) => [p.correo, p.id]));
+  }
+
+  return ok(filas.map((f) => ({ ...f, perfil_id: idPorCorreo[f.correo] ?? null })));
 }
