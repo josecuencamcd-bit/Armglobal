@@ -112,8 +112,13 @@ function Shell({ children, impersonando }: { children: React.ReactNode; imperson
   // Qué tiles muestra realmente esta persona: los módulos que mapean a la
   // lista vieja (CLAVE_A_MODULO_APP) se filtran por su rol + lo que un
   // Admin app haya activado/desactivado para ella en /perfiles. Los que no
-  // tienen equivalente ahí (turnos, perfiles, actividad, etc.) se quedan
-  // visibles como antes.
+  // tienen equivalente ahí NUNCA van sueltos en el nav global ni en "Más":
+  // "turnos"/"fechas-encuentro" solo se abren DESDE Administración
+  // (ADMIN_SUBNAV, exclusivo de Pastor/Pastor de campus); "perfiles"/
+  // "actividad" solo se abren DESDE Soporte (su propia grilla de tiles).
+  // Antes, al no tener claveVieja, el filtro de abajo los dejaba SIEMPRE
+  // visibles para cualquier rol — ese bypass era el "menú con mil botones".
+  const SOLO_DESDE_OTRA_PANTALLA = new Set(["turnos", "fechas-encuentro", "perfiles", "actividad"]);
   const visibles = perfil
     ? modulosVisibles({ roles: perfil.roles, areas: perfil.areas, sirve: perfil.sirve, modulos_on: perfil.modulos_on, modulos_off: perfil.modulos_off })
     : null;
@@ -124,6 +129,7 @@ function Shell({ children, impersonando }: { children: React.ReactNode; imperson
   // en "Más" para esos roles; eso era el "menú con mil botones".
   const esPastorCampus = perfil ? esPastorC({ roles: perfil.roles, areas: perfil.areas, sirve: perfil.sirve, modulos_on: perfil.modulos_on, modulos_off: perfil.modulos_off }) : false;
   const modulosDeEstaPersona = MODULOS.filter((m) => {
+    if (SOLO_DESDE_OTRA_PANTALLA.has(m.key)) return false;
     const claveVieja = CLAVE_A_MODULO_APP[m.key];
     if ((claveVieja === "aportes" || claveVieja === "reporte") && !esPastorCampus) return false;
     if (!claveVieja || !visibles) return true;
