@@ -322,6 +322,10 @@ function Shell({ children, impersonando }: { children: React.ReactNode; imperson
               <b>Más opciones</b>
               <button type="button" onClick={() => setMasAbierto(false)}>✕</button>
             </div>
+            {/* DIAGNÓSTICO TEMPORAL — se saca en el próximo commit */}
+            <p style={{ fontSize: "0.65rem", color: "var(--muted)", padding: "0 4px 8px", wordBreak: "break-all" }}>
+              DEBUG roles: {JSON.stringify(perfil?.roles)} · admin:{String(tieneAdministracion)}
+            </p>
             {restoFinal.map((m) => {
               const activo = pathname?.startsWith(m.href);
               return (
