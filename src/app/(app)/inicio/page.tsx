@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useCampus } from "@/lib/campus-context";
-import { esFin, puedeSoporte, puedeVerEquipo, type PerfilVisibilidad } from "@/lib/visibilidad-modulos";
+import { esFin, esPastorC, puedeSoporte, puedeVerEquipo, tiene, type PerfilVisibilidad } from "@/lib/visibilidad-modulos";
 import { GraficoLinea, peso } from "@/lib/grafico-linea";
 import { Icono } from "@/lib/iconos";
 
@@ -136,6 +136,10 @@ export default function InicioPage() {
   const mostrarCampus = perfil ? !esFin(perfil) : false;
   const mostrarSoporte = perfil ? puedeSoporte(perfil) : false;
   const mostrarEquipo = perfil ? puedeVerEquipo(perfil) : false;
+  // Acceso directo a Administración desde Inicio — no depende de la hoja
+  // "Más" (su propio scroll venía fallando en algunos celulares). Mismo
+  // criterio que modulosVisibles(): esPastorC() || Ministro || Administrador.
+  const mostrarAdministracion = perfil ? (esPastorC(perfil) || tiene(perfil, "Ministro") || tiene(perfil, "Administrador")) : false;
   const totalAvisos = (avisos?.encuentros.length ?? 0) + (avisos?.notas.length ?? 0) + (avisos?.cierres.length ?? 0) + (avisos?.autorizaciones ? 1 : 0);
 
   return (
@@ -160,6 +164,23 @@ export default function InicioPage() {
         <p className="muted" style={{ margin: "0 0 16px", fontSize: "0.8rem" }}>Campus {campusActivo}</p>
       )}
       {!mostrarCampus && <div style={{ marginBottom: 12 }} />}
+
+      {mostrarAdministracion && (
+        <button
+          type="button"
+          onClick={() => router.push("/administracion")}
+          className="tarjeta"
+          style={{
+            display: "flex", alignItems: "center", gap: 10, width: "100%",
+            padding: "14px 16px", marginBottom: 16, cursor: "pointer", textAlign: "left",
+            background: "var(--gold-grad)", color: "#1a1203", border: "none",
+          }}
+        >
+          <Icono id="administracion" size={20} />
+          <span style={{ fontWeight: 700, flex: 1 }}>Administración</span>
+          <span>›</span>
+        </button>
+      )}
 
       {ayudaAbierta && (
         <div className="tarjeta" style={{ marginBottom: 16 }}>
