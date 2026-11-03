@@ -139,11 +139,13 @@ function Shell({ children, impersonando }: { children: React.ReactNode; imperson
   // "administracion" nunca va a la barra suelta (en la app vieja tampoco:
   // no está en PRIORIDAD_NAV) — se excluye acá de forma directa, sin pasar
   // por el vaivén de ida y vuelta entre las dos tablas de claves, para que
-  // nunca dependa de ese cálculo.
+  // nunca dependa de ese cálculo. "soporte" y "bajas" (solicitudes) también
+  // se excluyen a pedido: quedan detrás de "Más" en vez de sueltas.
+  const NUNCA_SUELTOS = new Set(["administracion", "soporte", "bajas"]);
   const clavesPrincipales = perfil
     ? clavesPrincipalesNav({ roles: perfil.roles, areas: perfil.areas, sirve: perfil.sirve, modulos_on: perfil.modulos_on, modulos_off: perfil.modulos_off })
         .map((cv) => MODULO_APP_A_CLAVE[cv])
-        .filter((k): k is string => !!k && k !== "administracion")
+        .filter((k): k is string => !!k && !NUNCA_SUELTOS.has(k))
     : [];
   const principales = [
     modulosDeEstaPersona.find((m) => m.key === "inicio"),
