@@ -516,9 +516,10 @@ button.reu-chip { cursor: pointer; }
   width: 100%;
   max-width: 480px;
   margin: 0 auto;
-  max-height: 70vh;
-  max-height: 70dvh;
+  max-height: 85vh;
+  max-height: 85dvh;
   overflow-y: auto;
+  touch-action: pan-y;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
   background: var(--surface-2);
