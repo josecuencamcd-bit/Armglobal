@@ -242,13 +242,15 @@ export default function EncuentroPage() {
       {estado && (
         <>
           <Seccion titulo="Responsable">
-            <select
-              value={estado.sesion?.responsable ?? estado.responsable}
-              disabled={guardando || (estado.finalizado && !autorizado)}
-              onChange={(e) => setCampo("responsable", e.target.value)}
-            >
-              {equiposVigentes().map((eq) => <option key={eq} value={eq}>{eq}</option>)}
-            </select>
+            <div className="campo">
+              <select
+                value={estado.sesion?.responsable ?? estado.responsable}
+                disabled={guardando || (estado.finalizado && !autorizado)}
+                onChange={(e) => setCampo("responsable", e.target.value)}
+              >
+                {equiposVigentes().map((eq) => <option key={eq} value={eq}>{eq}</option>)}
+              </select>
+            </div>
           </Seccion>
 
           <Seccion titulo="Datos del reporte">
