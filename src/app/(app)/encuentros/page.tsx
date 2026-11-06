@@ -1,16 +1,29 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ENCUENTROS, EVENTOS, proximaFecha } from "@/lib/sesiones";
 import { useCampus } from "@/lib/campus-context";
+import { VolverAdministracion } from "@/lib/volver-admin";
 
 /** Selector de encuentro (tipo/fecha), equivalente a la pantalla inicial
  * del módulo Encuentros en el HTML embebido de Code.gs. El campus ya no
  * se elige acá: viene del contexto de sesión (header / primer ingreso),
  * para que toda la app quede segmentada por el mismo campus a la vez. */
 export default function SelectorEncuentroPage() {
+  return (
+    <Suspense fallback={<div className="contenedor">Cargando…</div>}>
+      <SelectorEncuentroContenido />
+    </Suspense>
+  );
+}
+
+function SelectorEncuentroContenido() {
   const router = useRouter();
+  // Igual que vieneDeAdmin() de la app vieja: llegando desde Administración
+  // (con ?admin=1) el campus ya quedó fijo allá, así que no se muestra el
+  // selector de campus acá (evita mezclar campus).
+  const vieneDeAdmin = useSearchParams().get("admin") === "1";
   const { campusActivo: campus, puedeElegir, elegirCampus } = useCampus();
   const [encuentro, setEncuentro] = useState(ENCUENTROS[campus][0]);
   const [evento, setEvento] = useState(EVENTOS[0]);
@@ -28,13 +41,14 @@ export default function SelectorEncuentroPage() {
 
   return (
     <div className="contenedor" style={{ paddingTop: 32 }}>
+      <VolverAdministracion />
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
         <h1 className="titulo" style={{ fontSize: "1.3rem" }}>
           Encuentros
         </h1>
         <span className="muted" style={{ fontSize: "0.82rem" }}>
           {campus}
-          {puedeElegir && (
+          {puedeElegir && !vieneDeAdmin && (
             <button type="button" onClick={elegirCampus} style={{ background: "none", border: 0, color: "var(--accent)", marginLeft: 6, cursor: "pointer", padding: 0, font: "inherit" }}>
               cambiar
             </button>

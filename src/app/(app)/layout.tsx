@@ -162,11 +162,13 @@ function Shell({ children, impersonando }: { children: React.ReactNode; imperson
   const hayActivoEnResto = restoFinal.some((m) => pathname?.startsWith(m.href));
 
   // pintarBottomNav() de la app vieja: la barra no aparece en los tabs
-  // "aportes"/"reporte" DEL ENCUENTRO (registrar asistencia/aportes de una
-  // sesión puntual) — nuestras /encuentros/[key] y /encuentros/[key]/aportes
-  // y el selector dedicado /encuentros/aportes. OJO: "reporte"/"finanzas"
-  // (el informe MENSUAL, vFinanzas) y "estadisticas" (equipostats, Mi
-  // equipo) son pantallas distintas que sí mantienen la barra normal —
+  // "aportes"/"reporte" — AMBOS del encuentro puntual (registrar su
+  // asistencia/reporte/aportes), no del informe mensual. "Reporte" (clave
+  // "finanzas" en MODULOS, clave "reporte" en ADMIN_SUBNAV) abre /encuentros
+  // (el mismo tab-reporte de la app vieja), nunca /finanzas — el informe
+  // MENSUAL (vFinanzas) solo se abre vía "Reportes" (plural, Pastor/Pastor
+  // de campus, dentro de Administración). "estadisticas" (equipostats, Mi
+  // equipo) es una pantalla distinta que sí mantiene la barra normal —
   // "stats" (la de Panorama) es la única que la oculta y no tiene pantalla
   // propia todavía en esta migración.
   const navOculta = !!pathname && pathname.startsWith("/encuentros/") && pathname !== "/encuentros";

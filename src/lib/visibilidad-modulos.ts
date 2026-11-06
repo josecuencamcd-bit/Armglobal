@@ -157,7 +157,7 @@ export function adminSubnav(p: PerfilVisibilidad, campus: "Punta Arenas" | "Puer
     { clave: "visitas", label: "Conexión", href: "/visitas", ok: esFin(p) && (esAlto(p) || tiene(p, "Administrador") || esConex(p)) },
     { clave: "solicitudes", label: "Bajas", href: "/bajas", ok: esFin(p) && !esAppAdmin(p) },
     { clave: "equipostats", label: "Estadísticas", href: "/estadisticas", ok: esFin(p) && esLider(p) && !esPanorama(p) },
-    { clave: "reporte", label: "Reporte", href: "/finanzas", ok: !esPastorC(p) && esFin(p) },
+    { clave: "reporte", label: "Reporte", href: "/encuentros", ok: !esPastorC(p) && esFin(p) },
     { clave: "aportes", label: "Aportes", href: "/encuentros/aportes", ok: !esPastorC(p) && esFin(p) },
   ];
   return items.filter((x) => x.ok);

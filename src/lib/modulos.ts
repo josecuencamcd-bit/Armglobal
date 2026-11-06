@@ -13,7 +13,7 @@ export const MODULOS: Modulo[] = [
   { key: "cumpleanos", label: "Cumpleaños", href: "/cumpleanos", icon: "cumples", listo: true },
   { key: "asistencia", label: "Asistencia", href: "/asistencia", icon: "asistencia", listo: true },
   { key: "fondos", label: "Fondo de equipo", href: "/fondos", icon: "fondo", listo: true },
-  { key: "finanzas", label: "Reporte", href: "/finanzas", icon: "finanzas", listo: true },
+  { key: "finanzas", label: "Reporte", href: "/encuentros", icon: "asistencia", listo: true },
   { key: "equipos", label: "Mi equipo", href: "/equipos", icon: "equipo", listo: true },
   { key: "turnos", label: "Turnos", href: "/turnos", icon: "turnos", listo: true },
   // Solo tiene sentido en Puerto Natales (no tiene encuentro todos los
