@@ -824,6 +824,27 @@ export type Database = {
         }
         Relationships: []
       }
+      presencia: {
+        Row: {
+          actualizado_en: string
+          campus: Database["public"]["Enums"]["campus_t"] | null
+          id: string
+          nombre: string
+        }
+        Insert: {
+          actualizado_en?: string
+          campus?: Database["public"]["Enums"]["campus_t"] | null
+          id: string
+          nombre: string
+        }
+        Update: {
+          actualizado_en?: string
+          campus?: Database["public"]["Enums"]["campus_t"] | null
+          id?: string
+          nombre?: string
+        }
+        Relationships: []
+      }
       reuniones: {
         Row: {
           correo: string

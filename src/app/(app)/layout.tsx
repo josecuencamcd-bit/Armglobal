@@ -7,6 +7,7 @@ import type { Database } from "@/lib/supabase/types";
 import { MODULOS, type Modulo } from "@/lib/modulos";
 import { Icono } from "@/lib/iconos";
 import { CampusProvider, useCampus } from "@/lib/campus-context";
+import { EnLinea } from "@/lib/en-linea";
 import { modulosVisibles, clavesPrincipalesNav, adminSubnav, esPastorC, CLAVE_A_MODULO_APP, type PerfilVisibilidad } from "@/lib/visibilidad-modulos";
 
 /** Inverso de CLAVE_A_MODULO_APP: de una clave vieja (tabsPorRol) a
@@ -20,7 +21,7 @@ const MODULO_APP_A_CLAVE: Record<string, string> = Object.fromEntries(
 const ICONO_POR_CLAVE_ADMIN: Record<string, string> = {
   turnos: "turnos", fondos: "fondo", reportes: "finanzas", fechas: "turnos",
   equipo: "equipo", asistencia: "asistencia", fondo: "fondo", visitas: "visitas",
-  solicitudes: "bajas", equipostats: "actividad", reporte: "finanzas", aportes: "aportes",
+  solicitudes: "bajas", equipostats: "actividad", reporte: "asistencia", aportes: "aportes",
 };
 
 type Rol = Database["public"]["Enums"]["rol_t"];
@@ -230,6 +231,8 @@ function Shell({ children, impersonando }: { children: React.ReactNode; imperson
           )}
         </div>
       </header>
+
+      {perfil && <EnLinea />}
 
       {impersonando && (
         <div
