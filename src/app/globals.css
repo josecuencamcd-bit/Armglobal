@@ -42,6 +42,30 @@ html, body {
   overflow-x: hidden;
 }
 
+/* ---- Acabados generales: ambiente "HUD" sutil detrás de todo el
+ * contenido (resplandor superior + grilla tenue), selección de texto y
+ * scrollbar con la identidad dorada, y feedback táctil consistente —
+ * nada de esto existía antes y el resultado se sentía "plano". */
+body {
+  position: relative;
+  background-image:
+    radial-gradient(900px 480px at 50% -120px, rgba(245, 166, 35, 0.10), transparent 70%),
+    linear-gradient(rgba(245, 166, 35, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(245, 166, 35, 0.05) 1px, transparent 1px);
+  background-size: auto, 34px 34px, 34px 34px;
+  background-position: top center, center, center;
+  background-attachment: fixed;
+  -webkit-tap-highlight-color: transparent;
+}
+
+::selection { background: rgba(245, 166, 35, 0.35); color: #fff; }
+
+::-webkit-scrollbar { width: 9px; height: 9px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--hud-line-2); border-radius: 99px; border: 2px solid transparent; background-clip: content-box; }
+::-webkit-scrollbar-thumb:hover { background: rgba(245, 166, 35, 0.5); background-clip: content-box; }
+html { scrollbar-width: thin; scrollbar-color: var(--hud-line-2) transparent; }
+
 a { color: inherit; }
 
 input, select, button, textarea {
@@ -50,11 +74,27 @@ input, select, button, textarea {
   color: inherit;
 }
 
+button { transition: filter 0.15s ease, transform 0.08s ease, background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease; }
+button:active { transform: scale(0.98); }
+
 button {
   background: none;
   border: none;
   appearance: none;
   -webkit-appearance: none;
+}
+
+/* Foco accesible y "en marca": un anillo dorado en vez del azul por
+ * defecto del navegador, solo cuando se navega con teclado. */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
 }
 
 .contenedor {
@@ -91,6 +131,21 @@ button {
   padding: 16px;
   margin-bottom: 12px;
   position: relative;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Filo superior con degradé dorado tenue — el mismo lenguaje de la
+ * línea bajo el brandbar, pero a escala de tarjeta, para dar un borde
+ * "con acabado" en vez del borde plano único de antes. */
+.tarjeta::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: 14px;
+  right: 14px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--hud-line-2), transparent);
+  pointer-events: none;
 }
 
 /* Esquina "HUD" (porteada 1:1 del visual de Code.gs): un corchete sutil
@@ -146,7 +201,35 @@ button {
   border-radius: 8px;
   color: var(--ink);
   padding: 10px 12px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
 }
+
+.campo input::placeholder,
+.campo textarea::placeholder { color: var(--muted); opacity: 0.8; }
+
+.campo input:hover,
+.campo select:hover,
+.campo textarea:hover { border-color: var(--hud-line-2); }
+
+.campo input:focus,
+.campo select:focus,
+.campo textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(245, 166, 35, 0.16);
+  background: var(--surface);
+}
+
+.campo select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 34px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6' fill='none'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%239a9aa2' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+
+.campo select:disabled { opacity: 0.55; cursor: not-allowed; }
 
 .boton {
   background: var(--gold-grad);
@@ -160,6 +243,11 @@ button {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 8px 22px -10px rgba(245, 166, 35, 0.8);
 }
 
+.boton:hover:not(:disabled) {
+  filter: brightness(1.06);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 10px 28px -10px rgba(245, 166, 35, 0.95);
+}
+.boton:active:not(:disabled) { filter: brightness(0.96); }
 .boton:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .boton-secundario {
@@ -173,6 +261,9 @@ button {
   width: 100%;
 }
 
+.boton-secundario:hover:not(:disabled) { border-color: var(--hud-line-2); background: var(--surface); }
+.boton-secundario:disabled { opacity: 0.5; cursor: not-allowed; }
+
 .boton-peligro {
   background: transparent;
   color: var(--danger);
@@ -181,6 +272,9 @@ button {
   padding: 10px 14px;
   cursor: pointer;
 }
+
+.boton-peligro:hover:not(:disabled) { background: rgba(255, 107, 107, 0.1); }
+.boton-peligro:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .num { font-family: var(--font-num); }
 
@@ -408,6 +502,7 @@ button.reu-chip { cursor: pointer; }
   font-size: 1.1rem;
   font-weight: 600;
   margin: 0 0 12px;
+  letter-spacing: -0.01em;
 }
 
 .muted { color: var(--muted); font-size: 0.85rem; }
@@ -469,6 +564,8 @@ button.reu-chip { cursor: pointer; }
   transition: background 0.15s ease, color 0.15s ease;
 }
 .bottom-nav button:disabled { cursor: default; color: #55555c; }
+.bottom-nav button:not(:disabled):not([aria-current="true"]):hover { color: var(--ink); background: rgba(245, 166, 35, 0.07); }
+.bottom-nav button:not(:disabled):active { transform: scale(0.96); }
 .bottom-nav button span { font-size: 0.64rem; font-weight: 600; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bottom-nav button[aria-current="true"] {
   color: var(--accent);
@@ -490,6 +587,7 @@ button.reu-chip { cursor: pointer; }
   justify-content: center;
   font-weight: 700;
   font-size: 0.82rem;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4), 0 0 16px -2px rgba(245, 166, 35, 0.55);
 }
 
 /* Hoja "Más opciones"/Administración: puerto 1:1 de .nav-sheet/.nav-sheet-card
