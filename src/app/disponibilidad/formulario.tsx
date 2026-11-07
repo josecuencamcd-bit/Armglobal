@@ -4,7 +4,14 @@ import { useEffect, useState } from "react";
 
 type Integrante = { id: number; nombre: string };
 type EncuentroSemana = { clave: string; fecha: string; etiqueta: string };
-type Contexto = { campus: string[]; areas: string[]; semana: string; encuentros: EncuentroSemana[] };
+type Contexto = {
+  campus: string[];
+  areas: string[];
+  semana: string;
+  encuentros: EncuentroSemana[];
+  abierta: boolean;
+  mensajeCerrada: string;
+};
 
 const SIN_DISPONIBILIDAD = "Sin Disponibilidad";
 
@@ -120,6 +127,13 @@ export default function DisponibilidadForm() {
 
       {error && <p className="aviso">{error}</p>}
 
+      {contexto && !contexto.abierta ? (
+        <div className="tarjeta" style={{ textAlign: "center" }}>
+          <p style={{ margin: "0 0 8px", fontSize: "0.95rem" }}>🔒 Encuesta cerrada por ahora</p>
+          <p className="muted" style={{ margin: 0 }}>{contexto.mensajeCerrada}</p>
+        </div>
+      ) : (
+        <>
       {paso === "area" && (
         <div className="tarjeta">
           <p style={{ margin: "0 0 12px", fontSize: "0.9rem" }}>¿En qué equipo sirves?</p>
@@ -211,6 +225,8 @@ export default function DisponibilidadForm() {
             </a>
           </p>
         </div>
+      )}
+        </>
       )}
     </div>
   );

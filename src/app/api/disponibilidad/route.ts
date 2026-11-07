@@ -4,8 +4,10 @@ import { fail, fromSupabaseError, ok, parseBody } from "@/lib/api-helpers";
 import {
   AREAS_DISPONIBILIDAD,
   CAMPUS_DISPONIBILIDAD,
+  MENSAJE_ENCUESTA_CERRADA,
   SIN_DISPONIBILIDAD,
   encuentrosSemana,
+  encuestaAbierta,
   semanaDe,
 } from "@/lib/disponibilidad";
 
@@ -34,6 +36,8 @@ const DisponibilidadSchema = z.object({
  * la otra.
  */
 export async function POST(req: Request) {
+  if (!encuestaAbierta()) return fail(MENSAJE_ENCUESTA_CERRADA, 403);
+
   const parsed = await parseBody(req, DisponibilidadSchema);
   if ("error" in parsed) return parsed.error;
   const { campus, area, integranteId, encuentros } = parsed.data;

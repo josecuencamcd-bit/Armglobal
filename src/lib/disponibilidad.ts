@@ -90,3 +90,34 @@ export const SERVICIO_DE_ENCUENTRO: Record<string, string> = {
 export const ENCUENTRO_DE_SERVICIO: Record<string, string> = Object.fromEntries(
   Object.entries(SERVICIO_DE_ENCUENTRO).map(([enc, serv]) => [serv, enc])
 );
+
+/** Ventana en la que la encuesta pública acepta respuestas (pedido de José
+ * Miguel): se habilita los viernes a las 8:00 am y se cierra los miércoles
+ * a las 8:00 pm — jueves completo y viernes antes de las 8 quedan cerrados.
+ * Como `semanaDe`/`encuentrosSemana` siempre calculan la PRÓXIMA fecha de
+ * cada encuentro desde hoy, en cuanto abre de nuevo el viernes ya apunta a
+ * la fecha nueva, sin arrastrar nada de la ronda anterior — no hace falta
+ * ningún borrado ni reseteo aparte. */
+function horaPuntaArenas(fecha: Date): { dia: number; hora: number } {
+  const partes = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Punta_Arenas",
+    weekday: "short",
+    hour: "2-digit",
+    hour12: false,
+  }).formatToParts(fecha);
+  const diaTexto = partes.find((p) => p.type === "weekday")?.value ?? "Sun";
+  const horaTexto = partes.find((p) => p.type === "hour")?.value ?? "0";
+  const DIAS: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  return { dia: DIAS[diaTexto] ?? 0, hora: Number(horaTexto) % 24 };
+}
+
+export function encuestaAbierta(ahora: Date = new Date()): boolean {
+  const { dia, hora } = horaPuntaArenas(ahora);
+  if (dia === 5) return hora >= 8; // viernes desde las 8am
+  if (dia === 3) return hora < 20; // miércoles hasta antes de las 8pm
+  if (dia === 4) return false; // jueves cerrado todo el día
+  return dia === 6 || dia === 0 || dia === 1 || dia === 2; // sáb/dom/lun/mar abiertos
+}
+
+export const MENSAJE_ENCUESTA_CERRADA =
+  "La encuesta de disponibilidad no está abierta en este momento. Se habilita los viernes a las 8:00 am y se cierra los miércoles a las 8:00 pm.";
