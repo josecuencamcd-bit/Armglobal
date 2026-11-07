@@ -375,6 +375,50 @@ export type Database = {
         }
         Relationships: []
       }
+      disponibilidad: {
+        Row: {
+          actualizado_en: string
+          area: Database["public"]["Enums"]["area_t"]
+          campus: Database["public"]["Enums"]["campus_t"]
+          creado_en: string
+          encuentros: string[]
+          id: number
+          integrante_id: number
+          nombre: string
+          semana: string
+        }
+        Insert: {
+          actualizado_en?: string
+          area: Database["public"]["Enums"]["area_t"]
+          campus: Database["public"]["Enums"]["campus_t"]
+          creado_en?: string
+          encuentros?: string[]
+          id?: never
+          integrante_id: number
+          nombre: string
+          semana: string
+        }
+        Update: {
+          actualizado_en?: string
+          area?: Database["public"]["Enums"]["area_t"]
+          campus?: Database["public"]["Enums"]["campus_t"]
+          creado_en?: string
+          encuentros?: string[]
+          id?: never
+          integrante_id?: number
+          nombre?: string
+          semana?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "disponibilidad_integrante_id_fkey"
+            columns: ["integrante_id"]
+            isOneToOne: false
+            referencedRelation: "integrantes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fechas_encuentro: {
         Row: {
           activo: boolean
