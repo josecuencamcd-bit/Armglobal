@@ -18,6 +18,9 @@ type Integrante = {
   anos_servicio: number | null;
   rol_servicio: string | null;
   profesion: string | null;
+  /** Equipos además del principal (Camino 2) — alguien que sirve en más de
+   * un equipo y responde la encuesta de disponibilidad por cada uno. */
+  equipos_extra: string[];
 };
 
 /** Días que faltan para el próximo cumpleaños (0 = hoy), igual criterio
@@ -189,6 +192,7 @@ export default function EquiposPage() {
         anos_iglesia: fd.get("anos_iglesia") ? Number(fd.get("anos_iglesia")) : undefined,
         anos_servicio: fd.get("anos_servicio") ? Number(fd.get("anos_servicio")) : undefined,
         rol_servicio: fd.get("rol_servicio") || undefined,
+        equipos_extra: fd.getAll("equipos_extra"),
       }),
     });
     const json = await res.json();
@@ -354,6 +358,9 @@ export default function EquiposPage() {
               <div>{i.nombre}</div>
               <div className="muted" style={{ fontSize: "0.78rem" }}>{sub}</div>
               {(i.telefono || i.correo) && <div className="muted" style={{ fontSize: "0.76rem" }}>{i.telefono || i.correo}</div>}
+              {i.equipos_extra.length > 0 && (
+                <div className="muted" style={{ fontSize: "0.76rem" }}>También sirve en: {i.equipos_extra.join(", ")}</div>
+              )}
             </div>
             <span style={{ display: "flex", gap: 8 }}>
               <button className="boton-secundario" onClick={() => setEditando(editando?.id === i.id ? null : i)}>
@@ -405,6 +412,27 @@ export default function EquiposPage() {
                 <select name="area" defaultValue={i.area}>
                   {AREAS.map((a) => <option key={a} value={a}>{a}</option>)}
                 </select>
+              </div>
+              <div className="campo">
+                <label>También sirve en (equipos adicionales)</label>
+                <div className="chips">
+                  {AREAS.filter((a) => a !== i.area).map((a) => (
+                    <label
+                      key={a}
+                      className="chip"
+                      style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer" }}
+                    >
+                      <input
+                        type="checkbox"
+                        name="equipos_extra"
+                        value={a}
+                        defaultChecked={i.equipos_extra.includes(a)}
+                        style={{ margin: 0 }}
+                      />
+                      {a}
+                    </label>
+                  ))}
+                </div>
               </div>
               <div className="campo">
                 <label>Fecha de nacimiento (opcional)</label>

@@ -27,9 +27,11 @@ const DisponibilidadSchema = z.object({
  * SIN_DISPONIBILIDAD — nunca combinado con encuentros reales (ver
  * encuentrosSemana/SIN_DISPONIBILIDAD en src/lib/disponibilidad.ts).
  *
- * Upsert por (integrante_id, semana): si la persona ya respondió esta
- * semana y vuelve a enviar (cambio de último momento), se reemplaza su
- * respuesta en vez de duplicarla.
+ * Upsert por (integrante_id, area, semana): si la persona ya respondió por
+ * ese equipo esta semana y vuelve a enviar (cambio de último momento), se
+ * reemplaza esa respuesta puntual — pero si sirve en dos equipos (Camino 2)
+ * y responde por cada uno, queda una fila por equipo, sin que una pise a
+ * la otra.
  */
 export async function POST(req: Request) {
   const parsed = await parseBody(req, DisponibilidadSchema);
@@ -44,18 +46,36 @@ export async function POST(req: Request) {
 
   const admin = createAdminClient();
 
-  // Confirma que el integrante es real y pertenece a ese campus/equipo —
+  // Confirma que el integrante es real y que ese equipo es el suyo —
+  // principal (integrantes.area) o adicional (integrante_equipos_extra) —
   // nunca confiamos en lo que venga del navegador para estos tres campos.
   const { data: integrante, error: errInt } = await admin
     .from("integrantes")
     .select("id, nombre")
     .eq("id", integranteId)
     .eq("campus", campus)
-    .eq("area", area)
     .neq("estado", "Baja")
     .maybeSingle();
   if (errInt) return fromSupabaseError(errInt);
-  if (!integrante) return fail("No encontramos a esa persona en ese equipo.");
+  if (!integrante) return fail("No encontramos a esa persona.");
+
+  const { data: integranteArea } = await admin
+    .from("integrantes")
+    .select("id")
+    .eq("id", integranteId)
+    .eq("area", area)
+    .maybeSingle();
+  let perteneceAlEquipo = Boolean(integranteArea);
+  if (!perteneceAlEquipo) {
+    const { data: extra } = await admin
+      .from("integrante_equipos_extra")
+      .select("id")
+      .eq("integrante_id", integranteId)
+      .eq("area", area)
+      .maybeSingle();
+    perteneceAlEquipo = Boolean(extra);
+  }
+  if (!perteneceAlEquipo) return fail("No encontramos a esa persona en ese equipo.");
 
   const semana = semanaDe(campus);
   const { error } = await admin.from("disponibilidad").upsert(
@@ -67,7 +87,7 @@ export async function POST(req: Request) {
       semana,
       encuentros: limpio,
     },
-    { onConflict: "integrante_id,semana" }
+    { onConflict: "integrante_id,area,semana" }
   );
   if (error) return fromSupabaseError(error);
 

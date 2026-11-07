@@ -37,7 +37,26 @@ export async function GET(req: Request) {
 
   const { data, error } = await query;
   if (error) return fromSupabaseError(error);
-  return ok(data ?? []);
+
+  // Camino 2 (disponibilidad por más de un equipo): adjunta los equipos
+  // adicionales de cada integrante listado, para que "Mi equipo" los
+  // muestre y los pueda editar — ver integrante_equipos_extra.
+  const ids = (data ?? []).map((i) => i.id);
+  let porId = new Map<number, string[]>();
+  if (ids.length > 0) {
+    const { data: extra, error: errExtra } = await supabase
+      .from("integrante_equipos_extra")
+      .select("integrante_id, area")
+      .in("integrante_id", ids);
+    if (errExtra) return fromSupabaseError(errExtra);
+    porId = new Map();
+    for (const e of extra ?? []) {
+      porId.set(e.integrante_id, [...(porId.get(e.integrante_id) ?? []), e.area]);
+    }
+  }
+  const conExtra = (data ?? []).map((i) => ({ ...i, equipos_extra: porId.get(i.id) ?? [] }));
+
+  return ok(conExtra);
 }
 
 export async function POST(req: Request) {

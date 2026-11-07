@@ -388,6 +388,15 @@ textarea:focus-visible,
   font-weight: 700;
 }
 .chip.chip-off { background: rgba(220,38,38,.12); color: #f87171; border-color: rgba(220,38,38,.4); text-decoration: line-through; }
+/* Chip que envuelve un checkbox nativo (ej. "equipos adicionales" en Mi
+ * equipo) — mismo look que un chip con aria-pressed, pero reaccionando al
+ * :checked del input en vez de un atributo que un <label> no puede tener. */
+.chip:has(input:checked) {
+  background: var(--gold-grad);
+  color: var(--accent-ink);
+  border-color: transparent;
+  font-weight: 700;
+}
 .eco-link { border: 0; background: none; color: var(--accent); font: inherit; font-weight: 600; padding: 6px 0; text-align: left; cursor: pointer; }
 
 /* Cumpleaños (vCumples): tarjeta con placa de fecha (.cum-dia), usada en

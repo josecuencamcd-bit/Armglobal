@@ -647,6 +647,38 @@ export type Database = {
           },
         ]
       }
+      integrante_equipos_extra: {
+        Row: {
+          area: Database["public"]["Enums"]["area_t"]
+          campus: Database["public"]["Enums"]["campus_t"]
+          creado_en: string
+          id: number
+          integrante_id: number
+        }
+        Insert: {
+          area: Database["public"]["Enums"]["area_t"]
+          campus: Database["public"]["Enums"]["campus_t"]
+          creado_en?: string
+          id?: never
+          integrante_id: number
+        }
+        Update: {
+          area?: Database["public"]["Enums"]["area_t"]
+          campus?: Database["public"]["Enums"]["campus_t"]
+          creado_en?: string
+          id?: never
+          integrante_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integrante_equipos_extra_integrante_id_fkey"
+            columns: ["integrante_id"]
+            isOneToOne: false
+            referencedRelation: "integrantes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       integrante_seguimiento: {
         Row: {
           area: Database["public"]["Enums"]["area_t"]
