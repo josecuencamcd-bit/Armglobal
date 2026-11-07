@@ -188,17 +188,18 @@ textarea:focus-visible,
   margin-bottom: 12px;
 }
 
-/* Barra de búsqueda tipo pastilla — ícono + texto, sin label ni caja
- * rectangular, para los campos donde escribir también busca (ej. "Nombre"
- * al agregar un integrante, que busca en otros equipos). */
+/* Barra de búsqueda — mismo rectángulo que el resto de los inputs de la
+ * app (sin pastilla), con el ícono de lupa como única diferencia, para los
+ * campos donde escribir también busca (ej. "Nombre" al agregar un
+ * integrante, que busca en otros equipos). */
 .buscador {
   display: flex;
   align-items: center;
   gap: 8px;
   background: var(--surface-2);
   border: 1px solid var(--line);
-  border-radius: 999px;
-  padding: 10px 16px;
+  border-radius: 8px;
+  padding: 10px 12px;
   transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
 }
 .buscador svg { flex-shrink: 0; color: var(--muted); }
