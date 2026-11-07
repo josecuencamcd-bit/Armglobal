@@ -6,6 +6,7 @@ import { AREAS, TALLAS, proximaFecha } from "@/lib/sesiones";
 import { useCampus } from "@/lib/campus-context";
 import { VolverAdministracion } from "@/lib/volver-admin";
 import { AREAS_DISPONIBILIDAD, ENCUENTRO_DE_SERVICIO } from "@/lib/disponibilidad";
+import { FONDO_AREAS } from "@/lib/visibilidad-modulos";
 import MerchInventario from "./merch-inventario";
 
 type Integrante = {
@@ -178,6 +179,13 @@ export default function EquiposPage() {
   const [solicitudesMerch, setSolicitudesMerch] = useState<SolicitudMerch[] | null>(null);
   const [resolviendoId, setResolviendoId] = useState<number | null>(null);
   const [comprobanteVisto, setComprobanteVisto] = useState<{ id: number; url: string } | null>(null);
+
+  // Pestaña "Reportes de equipo": agrupa, según el área que se está
+  // viendo, los informes que le corresponden a ese líder — Fondo (solo
+  // áreas con fondo propio), Asistencia (cualquier área) e Inventario/
+  // ventas de Merch (solo área Merch, ya renderizado más abajo en esta
+  // misma página — acá solo se enlaza con un ancla).
+  const [mostrarReportes, setMostrarReportes] = useState(false);
 
   const cargar = useCallback(async (c: string, a: string) => {
     const [res, resBajas] = await Promise.all([
@@ -601,6 +609,46 @@ export default function EquiposPage() {
         </select>
       </div>
 
+      <button
+        type="button"
+        className="boton-secundario"
+        style={{ marginBottom: 16 }}
+        onClick={() => setMostrarReportes((v) => !v)}
+      >
+        {mostrarReportes ? "Cerrar reportes de equipo" : `Reportes de equipo · ${area}`}
+      </button>
+
+      {mostrarReportes && (
+        <div className="tarjeta stack" style={{ marginBottom: 16 }}>
+          <span className="label">Reportes de {area}</span>
+          {(FONDO_AREAS as readonly string[]).includes(area) && (
+            <Link href="/fondos" className="eco-row" style={{ textDecoration: "none", color: "inherit" }}>
+              <div>
+                <b>Fondo de equipo</b>
+                <small>Aportes, gastos y cierre mensual de {area}.</small>
+              </div>
+              <span className="muted">Ver →</span>
+            </Link>
+          )}
+          <Link href="/estadisticas" className="eco-row" style={{ textDecoration: "none", color: "inherit" }}>
+            <div>
+              <b>Asistencia del equipo</b>
+              <small>Cuántas veces sirvió o faltó cada integrante (7/15/30 días).</small>
+            </div>
+            <span className="muted">Ver →</span>
+          </Link>
+          {area === "Merch" && (
+            <a href="#merch-inventario" className="eco-row" style={{ textDecoration: "none", color: "inherit" }}>
+              <div>
+                <b>Ventas e inventario de Merch</b>
+                <small>Stock actual, cargas, ventas e informe por rango de fechas — más abajo en esta página.</small>
+              </div>
+              <span className="muted">Ir ↓</span>
+            </a>
+          )}
+        </div>
+      )}
+
       {area === "Merch" && (
         <div className="tarjeta stack" style={{ marginBottom: 16 }}>
           <span className="label">Solicitudes de polera / polerón</span>
@@ -667,7 +715,11 @@ export default function EquiposPage() {
         </div>
       )}
 
-      {area === "Merch" && <MerchInventario campus={campus} />}
+      {area === "Merch" && (
+        <div id="merch-inventario">
+          <MerchInventario campus={campus} />
+        </div>
+      )}
 
       <div className="eco-cards" style={{ marginBottom: 16 }}>
         <div className="eco-card"><span>Integrantes</span><b>{activos.length}</b></div>
