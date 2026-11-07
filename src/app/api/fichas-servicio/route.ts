@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { ok, fromSupabaseError, parseBody } from "@/lib/api-helpers";
+import { ok, fail, fromSupabaseError, parseBody } from "@/lib/api-helpers";
 import { z } from "zod";
 
 /** Unifica las 7 hojas espejo de Fichas/Técnica de Code.gs vía `servicio` +
@@ -37,6 +37,14 @@ export async function POST(req: Request) {
   if ("error" in parsedBody) return parsedBody.error;
 
   const supabase = await createClient();
+  const { data: cabecera } = await supabase
+    .from("ficha_cabecera")
+    .select("cerrada")
+    .eq("servicio", parsedBody.data.servicio)
+    .eq("fecha", parsedBody.data.fecha)
+    .maybeSingle();
+  if (cabecera?.cerrada) return fail("La ficha de esta semana está cerrada.", 403);
+
   const { data, error } = await supabase
     .from("fichas_servicio")
     .insert({ ...parsedBody.data, actualizado: new Date().toISOString() })

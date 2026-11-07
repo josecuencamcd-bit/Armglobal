@@ -93,6 +93,14 @@ export async function POST(req: Request) {
   if (!identidad) return fail("No autenticado.", 401);
   if (!esFin(identidad.perfil)) return fail("No tienes permiso para editar la ficha.", 403);
 
+  const { data: actual } = await supabase
+    .from("ficha_cabecera")
+    .select("cerrada")
+    .eq("servicio", parsedBody.data.servicio)
+    .eq("fecha", parsedBody.data.fecha)
+    .maybeSingle();
+  if (actual?.cerrada) return fail("La ficha de esta semana está cerrada — reábrela primero.", 403);
+
   const { data, error } = await supabase
     .from("ficha_cabecera")
     .upsert(

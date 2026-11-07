@@ -473,6 +473,9 @@ export type Database = {
       ficha_cabecera: {
         Row: {
           actualizado: string
+          cerrada: boolean
+          cerrada_en: string | null
+          cerrada_por: string | null
           encargados_tecnicos: string | null
           fecha: string
           id: number
@@ -488,6 +491,9 @@ export type Database = {
         }
         Insert: {
           actualizado?: string
+          cerrada?: boolean
+          cerrada_en?: string | null
+          cerrada_por?: string | null
           encargados_tecnicos?: string | null
           fecha: string
           id?: never
@@ -503,6 +509,9 @@ export type Database = {
         }
         Update: {
           actualizado?: string
+          cerrada?: boolean
+          cerrada_en?: string | null
+          cerrada_por?: string | null
           encargados_tecnicos?: string | null
           fecha?: string
           id?: never

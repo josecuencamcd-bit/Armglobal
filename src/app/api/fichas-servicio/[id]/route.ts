@@ -18,6 +18,22 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   if ("error" in parsedBody) return parsedBody.error;
 
   const supabase = await createClient();
+
+  const { data: fila } = await supabase
+    .from("fichas_servicio")
+    .select("servicio, fecha")
+    .eq("id", Number(params.id))
+    .maybeSingle();
+  if (fila) {
+    const { data: cabecera } = await supabase
+      .from("ficha_cabecera")
+      .select("cerrada")
+      .eq("servicio", fila.servicio)
+      .eq("fecha", fila.fecha)
+      .maybeSingle();
+    if (cabecera?.cerrada) return fail("La ficha de esta semana está cerrada.", 403);
+  }
+
   const { data, error, count } = await supabase
     .from("fichas_servicio")
     .update({ ...parsedBody.data, actualizado: new Date().toISOString() }, { count: "exact" })

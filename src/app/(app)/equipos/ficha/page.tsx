@@ -22,6 +22,8 @@ type Cabecera = {
   lider_voluntariado: string | null;
   stand_merch: string | null;
   stand_aplc: string | null;
+  cerrada: boolean;
+  cerrada_por: string | null;
 } | null;
 
 type DatosCabecera = {
@@ -85,6 +87,7 @@ function FichaCompletaInner() {
   const [editando, setEditando] = useState(false);
   const [form, setForm] = useState<Record<string, string>>({});
   const [guardando, setGuardando] = useState(false);
+  const [cerrando, setCerrando] = useState(false);
   const visorRef = useRef<HTMLDivElement>(null);
 
   const cargarFicha = useCallback(async (serv: string, f: string, c: string) => {
@@ -151,6 +154,20 @@ function FichaCompletaInner() {
     setGuardando(false);
     if (!json.ok) { setError(json.error); return; }
     setEditando(false);
+    await cargarFicha(servicio, fecha, campus);
+  }
+
+  async function alternarCierre(cerrar: boolean) {
+    setCerrando(true);
+    setError(null);
+    const res = await fetch("/api/ficha-cabecera/cerrar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ servicio, fecha, cerrada: cerrar }),
+    });
+    const json = await res.json();
+    setCerrando(false);
+    if (!json.ok) { setError(json.error); return; }
     await cargarFicha(servicio, fecha, campus);
   }
 
@@ -236,6 +253,11 @@ function FichaCompletaInner() {
               <div style={{ fontSize: 19, fontWeight: 700, letterSpacing: 0.5 }}>FICHA DE SERVICIO</div>
               <div style={{ fontSize: 13, color: "#555", marginTop: 2 }}>ARM Global · {campus}</div>
               <div style={{ fontSize: 13, marginTop: 6 }}><strong>{servicio}</strong> · {fechaLegible(fecha)}</div>
+              {c?.cabecera?.cerrada && (
+                <div style={{ fontSize: 11, fontWeight: 700, color: "#b91c1c", marginTop: 6, letterSpacing: 0.5 }}>
+                  🔒 CERRADA{c.cabecera.cerrada_por ? ` · ${c.cabecera.cerrada_por}` : ""}
+                </div>
+              )}
             </div>
 
             <div style={{ fontSize: 12, marginBottom: 16, lineHeight: 1.7 }}>
@@ -302,7 +324,31 @@ function FichaCompletaInner() {
             >
               {editando ? "Cerrar edición" : "Editar líder de voluntariado / stands"}
             </button>
+            <button
+              type="button"
+              className="boton-secundario"
+              style={{
+                width: "auto",
+                padding: "0 14px",
+                borderColor: datosCabecera?.cabecera?.cerrada ? "#16a34a" : "#b91c1c",
+                color: datosCabecera?.cabecera?.cerrada ? "#16a34a" : "#b91c1c",
+              }}
+              onClick={() => alternarCierre(!datosCabecera?.cabecera?.cerrada)}
+              disabled={cerrando}
+            >
+              {cerrando
+                ? "Guardando…"
+                : datosCabecera?.cabecera?.cerrada
+                ? "Reabrir ficha"
+                : "Cerrar ficha"}
+            </button>
           </div>
+
+          {datosCabecera?.cabecera?.cerrada && (
+            <p className="muted" style={{ fontSize: "0.8rem", marginTop: 6 }}>
+              La ficha de esta semana está cerrada — ningún líder de área puede editarla hasta que la reabras.
+            </p>
+          )}
 
           {editando && (
             <section className="tarjeta stack" style={{ marginTop: 14 }}>
