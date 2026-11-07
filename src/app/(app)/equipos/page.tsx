@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { AREAS, proximaFecha } from "@/lib/sesiones";
 import { useCampus } from "@/lib/campus-context";
 import { VolverAdministracion } from "@/lib/volver-admin";
@@ -100,6 +100,10 @@ export default function EquiposPage() {
   const [nombrePuesto, setNombrePuesto] = useState("");
   const [nombreLibre, setNombreLibre] = useState(false);
 
+  const [mostrarVistaPrevia, setMostrarVistaPrevia] = useState(false);
+  const [generandoImagen, setGenerandoImagen] = useState(false);
+  const vistaPreviaRef = useRef<HTMLDivElement>(null);
+
   const cargar = useCallback(async (c: string, a: string) => {
     const [res, resBajas] = await Promise.all([
       fetch(`/api/integrantes?campus=${encodeURIComponent(c)}&area=${encodeURIComponent(a)}`),
@@ -174,6 +178,63 @@ export default function EquiposPage() {
     const lista = resumen?.porEncuentro.find((e) => e.clave === clave)?.disponibles ?? [];
     return lista.filter((p) => !yaAsignados.has(p.nombre.trim()));
   }, [resumen, servicio, yaAsignados]);
+
+  // Agrupa las filas de la ficha por puesto (igual que la ficha real, donde
+  // "Acomodadores" aparece una sola vez con 1-3 nombres) para la vista
+  // previa / imagen que se comparte por WhatsApp.
+  const puestosAgrupados = useMemo(() => {
+    const orden: string[] = [];
+    const porPuesto = new Map<string, { encargado: string; nombres: string[] }>();
+    for (const f of ficha ?? []) {
+      const clave = f.puesto.trim();
+      if (!porPuesto.has(clave)) {
+        orden.push(clave);
+        porPuesto.set(clave, { encargado: "", nombres: [] });
+      }
+      const g = porPuesto.get(clave)!;
+      if (f.encargado) g.encargado = f.encargado;
+      if (f.nombre?.trim()) g.nombres.push(f.nombre.trim());
+    }
+    return orden.map((puesto) => ({ puesto, ...porPuesto.get(puesto)! }));
+  }, [ficha]);
+
+  function fechaLegibleFicha(iso: string): string {
+    const [y, m, d] = iso.split("-");
+    return `${d}/${m}/${y}`;
+  }
+
+  async function descargarImagenFicha() {
+    if (!vistaPreviaRef.current) return;
+    setGenerandoImagen(true);
+    setError(null);
+    try {
+      const { default: html2canvas } = await import("html2canvas");
+      const canvas = await html2canvas(vistaPreviaRef.current, {
+        scale: 2,
+        backgroundColor: "#ffffff",
+        useCORS: true,
+      });
+      const blob: Blob | null = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+      if (!blob) throw new Error("sin blob");
+      const nombreArchivo = `Ficha ${area} - ${servicio} - ${fechaFicha}.png`.replace(/\//g, "-");
+      const file = new File([blob], nombreArchivo, { type: "image/png" });
+      const nav = navigator as Navigator & { canShare?: (data?: ShareData) => boolean; share?: (data: ShareData) => Promise<void> };
+      if (nav.canShare && nav.canShare({ files: [file] }) && nav.share) {
+        await nav.share({ files: [file], title: nombreArchivo });
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = nombreArchivo;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    } catch {
+      setError("No se pudo generar la imagen de la ficha. Intenta de nuevo.");
+    } finally {
+      setGenerandoImagen(false);
+    }
+  }
 
   async function crearFicha(fd: FormData) {
     const puesto = String(fd.get("puesto") ?? "").trim();
@@ -596,9 +657,14 @@ export default function EquiposPage() {
         </div>
       )}
 
-      <button className="boton" style={{ marginBottom: 16 }} onClick={() => setMostrarFormFicha((v) => !v)}>
-        {mostrarFormFicha ? "Cerrar" : "Agregar puesto"}
-      </button>
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
+        <button className="boton" onClick={() => setMostrarFormFicha((v) => !v)}>
+          {mostrarFormFicha ? "Cerrar" : "Agregar puesto"}
+        </button>
+        <button className="boton" onClick={() => setMostrarVistaPrevia((v) => !v)} disabled={ficha?.length === 0}>
+          {mostrarVistaPrevia ? "Ocultar vista previa" : "Vista previa / imagen"}
+        </button>
+      </div>
 
       {mostrarFormFicha && (
         <form className="tarjeta" action={(fd) => crearFicha(fd)} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -635,6 +701,59 @@ export default function EquiposPage() {
             {guardandoFicha ? "Guardando…" : "Agregar"}
           </button>
         </form>
+      )}
+
+      {mostrarVistaPrevia && ficha && ficha.length > 0 && (
+        <div style={{ marginBottom: 20 }}>
+          <div
+            ref={vistaPreviaRef}
+            style={{
+              background: "#ffffff",
+              color: "#1a1a1a",
+              padding: "24px 22px",
+              borderRadius: 10,
+              border: "1px solid #e2e2e2",
+              maxWidth: 460,
+              fontFamily: "Arial, Helvetica, sans-serif",
+            }}
+          >
+            <div style={{ textAlign: "center", borderBottom: "3px solid #1a1a1a", paddingBottom: 10, marginBottom: 14 }}>
+              <div style={{ fontSize: 18, fontWeight: 700, letterSpacing: 0.5 }}>FICHA DE SERVICIO</div>
+              <div style={{ fontSize: 13, color: "#555", marginTop: 2 }}>ARM Global · {campus}</div>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 14, color: "#333" }}>
+              <span><strong>{servicio}</strong></span>
+              <span>{fechaLegibleFicha(fechaFicha)}</span>
+            </div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#1a1a1a", marginBottom: 10, textTransform: "uppercase" }}>
+              {area}
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {puestosAgrupados.map((g) => (
+                <div key={g.puesto} style={{ borderBottom: "1px solid #eee", paddingBottom: 8 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "#1a1a1a" }}>{g.puesto}</div>
+                  {g.encargado && (
+                    <div style={{ fontSize: 11, color: "#777" }}>Encargado: {g.encargado}</div>
+                  )}
+                  <div style={{ fontSize: 13, color: "#333", marginTop: 2 }}>
+                    {g.nombres.length > 0 ? g.nombres.join(" · ") : "— sin asignar —"}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div style={{ fontSize: 10, color: "#aaa", textAlign: "center", marginTop: 16 }}>
+              Generado desde la app · {new Date().toLocaleDateString("es-CL")}
+            </div>
+          </div>
+          <button
+            className="boton"
+            style={{ marginTop: 10 }}
+            onClick={descargarImagenFicha}
+            disabled={generandoImagen}
+          >
+            {generandoImagen ? "Generando…" : "Descargar / compartir imagen"}
+          </button>
+        </div>
       )}
 
       {ficha?.length === 0 && (
