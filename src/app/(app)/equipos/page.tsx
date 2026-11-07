@@ -99,6 +99,11 @@ export default function EquiposPage() {
   const [revelado, setRevelado] = useState<string | null>(null);
   const [nombrePuesto, setNombrePuesto] = useState("");
   const [nombreLibre, setNombreLibre] = useState(false);
+  const [selectorAbierto, setSelectorAbierto] = useState(false);
+  const [otroEquipoAbierto, setOtroEquipoAbierto] = useState(false);
+  const [otroEquipoArea, setOtroEquipoArea] = useState<(typeof AREAS)[number]>(AREAS[0]);
+  const [otroEquipoLista, setOtroEquipoLista] = useState<Integrante[] | null>(null);
+  const [cargandoOtroEquipo, setCargandoOtroEquipo] = useState(false);
 
   const [mostrarVistaPrevia, setMostrarVistaPrevia] = useState(false);
   const [generandoImagen, setGenerandoImagen] = useState(false);
@@ -178,6 +183,35 @@ export default function EquiposPage() {
     const lista = resumen?.porEncuentro.find((e) => e.clave === clave)?.disponibles ?? [];
     return lista.filter((p) => !yaAsignados.has(p.nombre.trim()));
   }, [resumen, servicio, yaAsignados]);
+  const idsDisponiblesServicio = useMemo(
+    () => new Set(disponiblesServicio.map((p) => p.id)),
+    [disponiblesServicio]
+  );
+
+  /** Todo el equipo del área (no solo quienes respondieron la encuesta), con
+   * los disponibles para este servicio primero — así el líder puede asignar
+   * a alguien aunque no haya respondido, tal como lo pidió. */
+  const equipoOrdenado = useMemo(() => {
+    const activos = (lista ?? []).filter(
+      (i) => i.estado !== "Baja" && !yaAsignados.has(i.nombre.trim())
+    );
+    return [...activos].sort((a, b) => {
+      const da = idsDisponiblesServicio.has(a.id) ? 0 : 1;
+      const db = idsDisponiblesServicio.has(b.id) ? 0 : 1;
+      if (da !== db) return da - db;
+      return a.nombre.localeCompare(b.nombre, "es");
+    });
+  }, [lista, idsDisponiblesServicio, yaAsignados]);
+
+  useEffect(() => {
+    if (!otroEquipoAbierto) return;
+    setCargandoOtroEquipo(true);
+    fetch(`/api/integrantes?campus=${encodeURIComponent(campus)}&area=${encodeURIComponent(otroEquipoArea)}`)
+      .then((r) => r.json())
+      .then((j) => setOtroEquipoLista(j.ok ? j.data : []))
+      .catch(() => setOtroEquipoLista([]))
+      .finally(() => setCargandoOtroEquipo(false));
+  }, [otroEquipoAbierto, otroEquipoArea, campus]);
 
   // Agrupa las filas de la ficha por puesto (igual que la ficha real, donde
   // "Acomodadores" aparece una sola vez con 1-3 nombres) para la vista
@@ -266,6 +300,8 @@ export default function EquiposPage() {
     setMostrarFormFicha(false);
     setNombrePuesto("");
     setNombreLibre(false);
+    setSelectorAbierto(false);
+    setOtroEquipoAbierto(false);
     await cargarFicha(area, servicio, fechaFicha);
   }
 
@@ -674,23 +710,105 @@ export default function EquiposPage() {
           </div>
           <div className="campo">
             <label>Nombre</label>
-            {!nombreLibre && disponiblesServicio.length > 0 ? (
-              <select value={nombrePuesto} onChange={(e) => setNombrePuesto(e.target.value)}>
-                <option value="">— elegir de los disponibles —</option>
-                {disponiblesServicio.map((p) => (
-                  <option key={p.id} value={p.nombre}>{p.nombre}</option>
+            <button
+              type="button"
+              className="chip"
+              style={{ width: "100%", textAlign: "left" }}
+              onClick={() => setSelectorAbierto((v) => !v)}
+            >
+              {nombrePuesto || "— tocar para elegir persona —"}
+            </button>
+
+            {selectorAbierto && (
+              <div className="tarjeta" style={{ marginTop: 8, padding: 10, display: "flex", flexDirection: "column", gap: 4, maxHeight: 260, overflowY: "auto" }}>
+                {equipoOrdenado.length === 0 && (
+                  <p className="muted" style={{ fontSize: "0.8rem" }}>Sin personas en {area} para elegir.</p>
+                )}
+                {equipoOrdenado.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    className="fila"
+                    style={{
+                      justifyContent: "flex-start", gap: 8, width: "100%", background: "none",
+                      border: "none", borderBottom: "1px solid var(--line)", font: "inherit",
+                      color: "inherit", cursor: "pointer", textAlign: "left",
+                    }}
+                    onClick={() => { setNombrePuesto(p.nombre); setSelectorAbierto(false); setNombreLibre(false); }}
+                  >
+                    <span
+                      style={{
+                        display: "inline-block", width: 8, height: 8, borderRadius: "50%", flexShrink: 0,
+                        background: idsDisponiblesServicio.has(p.id) ? "#2ecc71" : "transparent",
+                        border: idsDisponiblesServicio.has(p.id) ? "none" : "1px solid #999",
+                      }}
+                      title={idsDisponiblesServicio.has(p.id) ? "Respondió disponible" : "No respondió"}
+                    />
+                    {p.nombre}
+                  </button>
                 ))}
-              </select>
-            ) : (
-              <input name="nombre" value={nombrePuesto} onChange={(e) => setNombrePuesto(e.target.value)} placeholder="Nombre" />
+
+                <button
+                  type="button"
+                  className="chip"
+                  style={{ marginTop: 6, width: "fit-content" }}
+                  onClick={() => setOtroEquipoAbierto((v) => {
+                    if (!v && otroEquipoArea === area) {
+                      const otra = AREAS.find((a) => a !== area);
+                      if (otra) setOtroEquipoArea(otra);
+                    }
+                    return !v;
+                  })}
+                >
+                  {otroEquipoAbierto ? "Ocultar otro equipo" : "Otro equipo"}
+                </button>
+
+                {otroEquipoAbierto && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 4 }}>
+                    <select value={otroEquipoArea} onChange={(e) => setOtroEquipoArea(e.target.value as (typeof AREAS)[number])}>
+                      {AREAS.filter((a) => a !== area).map((a) => (
+                        <option key={a} value={a}>{a}</option>
+                      ))}
+                    </select>
+                    {cargandoOtroEquipo && <p className="muted" style={{ fontSize: "0.8rem" }}>Cargando…</p>}
+                    {!cargandoOtroEquipo && (otroEquipoLista ?? [])
+                      .filter((p) => p.estado !== "Baja")
+                      .map((p) => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          className="fila"
+                          style={{
+                            justifyContent: "flex-start", width: "100%", background: "none",
+                            border: "none", borderBottom: "1px solid var(--line)", font: "inherit",
+                            color: "inherit", cursor: "pointer", textAlign: "left",
+                          }}
+                          onClick={() => { setNombrePuesto(p.nombre); setSelectorAbierto(false); setOtroEquipoAbierto(false); setNombreLibre(false); }}
+                        >
+                          {p.nombre} <span className="muted" style={{ fontSize: "0.75rem", marginLeft: 6 }}>({otroEquipoArea})</span>
+                        </button>
+                      ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {nombreLibre && (
+              <input
+                name="nombre"
+                value={nombrePuesto}
+                onChange={(e) => setNombrePuesto(e.target.value)}
+                placeholder="Nombre"
+                style={{ marginTop: 8 }}
+              />
             )}
             <button
               type="button"
               className="chip"
               style={{ marginTop: 6, width: "fit-content" }}
-              onClick={() => { setNombreLibre((v) => !v); setNombrePuesto(""); }}
+              onClick={() => { setNombreLibre((v) => !v); setNombrePuesto(""); setSelectorAbierto(false); }}
             >
-              {nombreLibre ? "Elegir de los disponibles" : "Escribir otro nombre"}
+              {nombreLibre ? "Elegir de la lista" : "Escribir otro nombre"}
             </button>
           </div>
           <div className="campo">
