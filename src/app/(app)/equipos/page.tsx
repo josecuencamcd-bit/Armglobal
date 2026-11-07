@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { AREAS } from "@/lib/sesiones";
+import { useEffect, useState, useCallback, useMemo } from "react";
+import { AREAS, proximaFecha } from "@/lib/sesiones";
 import { useCampus } from "@/lib/campus-context";
 import { VolverAdministracion } from "@/lib/volver-admin";
+import { AREAS_DISPONIBILIDAD, ENCUENTRO_DE_SERVICIO } from "@/lib/disponibilidad";
 
 type Integrante = {
   id: number;
@@ -55,6 +56,15 @@ type Ficha = {
   encargado: string | null;
 };
 
+type PersonaDisponible = { id: number; nombre: string };
+type ResumenEncuentro = { clave: string; fecha: string; etiqueta: string; disponibles: PersonaDisponible[] };
+type ResumenDisponibilidad = {
+  semana: string;
+  porEncuentro: ResumenEncuentro[];
+  sinDisponibilidad: PersonaDisponible[];
+  totalRespondieron: number;
+};
+
 /** Equivalente a FICHA_HOJAS/FICHA_AREAS de Code.gs: antes se sincronizaba
  * sola desde una hoja de cálculo externa (Ficha) cada hora; acá el líder la
  * carga a mano desde "Mi equipo" (api_fichaActualizar → /api/fichas-servicio). */
@@ -79,10 +89,16 @@ export default function EquiposPage() {
   const [enviandoBaja, setEnviandoBaja] = useState(false);
 
   const [servicio, setServicio] = useState<(typeof SERVICIOS)[number]>(SERVICIOS[0]);
-  const [fechaFicha, setFechaFicha] = useState(hoyISO());
+  const [fechaFicha, setFechaFicha] = useState(() => proximaFecha(ENCUENTRO_DE_SERVICIO[SERVICIOS[0]]));
+  const [fechaTocada, setFechaTocada] = useState(false);
   const [ficha, setFicha] = useState<Ficha[] | null>(null);
   const [mostrarFormFicha, setMostrarFormFicha] = useState(false);
   const [guardandoFicha, setGuardandoFicha] = useState(false);
+
+  const [resumen, setResumen] = useState<ResumenDisponibilidad | null>(null);
+  const [revelado, setRevelado] = useState<string | null>(null);
+  const [nombrePuesto, setNombrePuesto] = useState("");
+  const [nombreLibre, setNombreLibre] = useState(false);
 
   const cargar = useCallback(async (c: string, a: string) => {
     const [res, resBajas] = await Promise.all([
@@ -112,15 +128,63 @@ export default function EquiposPage() {
     setFicha(json.data.filter((x: Ficha) => x.area === a));
   }, []);
 
+  /** Quién respondió la encuesta de disponibilidad de esta semana para este
+   * equipo — solo existe para los 6 equipos con encuesta (AREAS_DISPONIBILIDAD);
+   * Stand de Oración y Administración no la tienen, así que el resumen queda
+   * vacío ahí y la ficha vuelve a aceptar nombre libre. */
+  const cargarResumen = useCallback(async (c: string, a: string) => {
+    if (!AREAS_DISPONIBILIDAD.includes(a as (typeof AREAS_DISPONIBILIDAD)[number])) {
+      setResumen(null);
+      return;
+    }
+    const res = await fetch(`/api/disponibilidad/resumen?campus=${encodeURIComponent(c)}&area=${encodeURIComponent(a)}`);
+    const json = await res.json();
+    if (!json.ok) { setResumen(null); return; }
+    setResumen(json.data);
+  }, []);
+
   useEffect(() => {
     cargar(campus, area);
-  }, [campus, area, cargar]);
+    cargarResumen(campus, area);
+  }, [campus, area, cargar, cargarResumen]);
 
   useEffect(() => {
     cargarFicha(area, servicio, fechaFicha);
   }, [area, servicio, fechaFicha, cargarFicha]);
 
+  // Al cambiar de servicio, la fecha salta a la próxima ocurrencia real de
+  // ese día (jueves/domingo que viene) en vez de quedarse en una fecha vieja
+  // — así la ficha "empieza vacía" automáticamente cada semana, porque
+  // fichas_servicio se guarda por fecha real y una fecha nueva no trae nada.
+  // Si el líder toca la fecha a mano, respeta su elección.
+  useEffect(() => {
+    if (fechaTocada) return;
+    setFechaFicha(proximaFecha(ENCUENTRO_DE_SERVICIO[servicio]));
+  }, [servicio, fechaTocada]);
+
+  // Encuentro de disponibilidad que corresponde al servicio elegido, y
+  // quiénes están disponibles ahí, sin contar a quien ya quedó asignado a
+  // algún puesto de esta misma ficha (para no repetir a la misma persona).
+  const yaAsignados = useMemo(
+    () => new Set((ficha ?? []).map((f) => f.nombre?.trim()).filter((n): n is string => Boolean(n))),
+    [ficha]
+  );
+  const disponiblesServicio = useMemo(() => {
+    const clave = ENCUENTRO_DE_SERVICIO[servicio];
+    const lista = resumen?.porEncuentro.find((e) => e.clave === clave)?.disponibles ?? [];
+    return lista.filter((p) => !yaAsignados.has(p.nombre.trim()));
+  }, [resumen, servicio, yaAsignados]);
+
   async function crearFicha(fd: FormData) {
+    const puesto = String(fd.get("puesto") ?? "").trim();
+    const yaEnEstePuesto = (ficha ?? []).filter(
+      (f) => f.puesto.trim().toLowerCase() === puesto.toLowerCase()
+    ).length;
+    if (yaEnEstePuesto >= 3) {
+      setError(`"${puesto}" ya tiene 3 personas asignadas — ese es el máximo por puesto.`);
+      return;
+    }
+    const nombre = nombreLibre ? String(fd.get("nombre") ?? "").trim() : nombrePuesto;
     setGuardandoFicha(true);
     const res = await fetch("/api/fichas-servicio", {
       method: "POST",
@@ -130,8 +194,8 @@ export default function EquiposPage() {
         tipo: area,
         area,
         fecha: fechaFicha,
-        puesto: fd.get("puesto"),
-        nombre: fd.get("nombre") || undefined,
+        puesto,
+        nombre: nombre || undefined,
         encargado: fd.get("encargado") || undefined,
       }),
     });
@@ -139,6 +203,8 @@ export default function EquiposPage() {
     setGuardandoFicha(false);
     if (!json.ok) { setError(json.error); return; }
     setMostrarFormFicha(false);
+    setNombrePuesto("");
+    setNombreLibre(false);
     await cargarFicha(area, servicio, fechaFicha);
   }
 
@@ -469,7 +535,13 @@ export default function EquiposPage() {
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
         <div className="campo" style={{ flex: 1, minWidth: 160 }}>
           <label>Servicio</label>
-          <select value={servicio} onChange={(e) => setServicio(e.target.value as (typeof SERVICIOS)[number])}>
+          <select
+            value={servicio}
+            onChange={(e) => {
+              setServicio(e.target.value as (typeof SERVICIOS)[number]);
+              setFechaTocada(false);
+            }}
+          >
             {SERVICIOS.map((s) => (
               <option key={s} value={s}>{s}</option>
             ))}
@@ -477,9 +549,52 @@ export default function EquiposPage() {
         </div>
         <div className="campo" style={{ flex: 1, minWidth: 140 }}>
           <label>Fecha</label>
-          <input type="date" value={fechaFicha} onChange={(e) => setFechaFicha(e.target.value)} />
+          <input
+            type="date"
+            value={fechaFicha}
+            onChange={(e) => { setFechaTocada(true); setFechaFicha(e.target.value); }}
+          />
         </div>
       </div>
+
+      {resumen && (
+        <div className="tarjeta" style={{ marginBottom: 16, display: "flex", flexDirection: "column", gap: 8 }}>
+          <div className="muted" style={{ fontSize: "0.8rem" }}>
+            Disponibilidad de esta semana ({resumen.totalRespondieron} respondieron) — toca para ver los nombres.
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {resumen.porEncuentro.map((e) => (
+              <button
+                key={e.clave}
+                type="button"
+                className="chip"
+                aria-pressed={revelado === e.clave}
+                onClick={() => setRevelado((v) => (v === e.clave ? null : e.clave))}
+              >
+                {e.etiqueta.replace(/^\w+ /, "")}: {e.disponibles.length} disponibles
+              </button>
+            ))}
+            <button
+              type="button"
+              className="chip"
+              aria-pressed={revelado === "sin"}
+              onClick={() => setRevelado((v) => (v === "sin" ? null : "sin"))}
+            >
+              Sin disponibilidad: {resumen.sinDisponibilidad.length}
+            </button>
+          </div>
+          {revelado && revelado !== "sin" && (
+            <div className="muted" style={{ fontSize: "0.82rem" }}>
+              {resumen.porEncuentro.find((e) => e.clave === revelado)?.disponibles.map((p) => p.nombre).join(", ") || "Nadie respondió todavía."}
+            </div>
+          )}
+          {revelado === "sin" && (
+            <div className="muted" style={{ fontSize: "0.82rem" }}>
+              {resumen.sinDisponibilidad.map((p) => p.nombre).join(", ") || "Nadie marcó esta opción."}
+            </div>
+          )}
+        </div>
+      )}
 
       <button className="boton" style={{ marginBottom: 16 }} onClick={() => setMostrarFormFicha((v) => !v)}>
         {mostrarFormFicha ? "Cerrar" : "Agregar puesto"}
@@ -493,7 +608,24 @@ export default function EquiposPage() {
           </div>
           <div className="campo">
             <label>Nombre</label>
-            <input name="nombre" />
+            {!nombreLibre && disponiblesServicio.length > 0 ? (
+              <select value={nombrePuesto} onChange={(e) => setNombrePuesto(e.target.value)}>
+                <option value="">— elegir de los disponibles —</option>
+                {disponiblesServicio.map((p) => (
+                  <option key={p.id} value={p.nombre}>{p.nombre}</option>
+                ))}
+              </select>
+            ) : (
+              <input name="nombre" value={nombrePuesto} onChange={(e) => setNombrePuesto(e.target.value)} placeholder="Nombre" />
+            )}
+            <button
+              type="button"
+              className="chip"
+              style={{ marginTop: 6, width: "fit-content" }}
+              onClick={() => { setNombreLibre((v) => !v); setNombrePuesto(""); }}
+            >
+              {nombreLibre ? "Elegir de los disponibles" : "Escribir otro nombre"}
+            </button>
           </div>
           <div className="campo">
             <label>Encargado</label>

@@ -75,3 +75,18 @@ export function semanaDe(campus: (typeof CAMPUS)[number]): string {
   const primeraFecha = encuentrosSemana(campus)[0]?.fecha;
   return lunesDe(primeraFecha ?? new Date().toISOString().slice(0, 10));
 }
+
+/** Une la clave de encuentro de la encuesta de disponibilidad ("Jueves PM")
+ * con el nombre de servicio que usa la ficha física en papel y
+ * `fichas_servicio.servicio` ("Jueves 8pm") — son la misma reunión, dos
+ * nombres distintos en dos partes de la app. Task 4: armar la ficha a partir
+ * de quién respondió disponible. */
+export const SERVICIO_DE_ENCUENTRO: Record<string, string> = {
+  "Jueves PM": "Jueves 8pm",
+  "Domingo AM": "Domingo 11am",
+  "Domingo PM": "Domingo 6pm",
+};
+
+export const ENCUENTRO_DE_SERVICIO: Record<string, string> = Object.fromEntries(
+  Object.entries(SERVICIO_DE_ENCUENTRO).map(([enc, serv]) => [serv, enc])
+);
