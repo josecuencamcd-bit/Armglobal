@@ -50,7 +50,7 @@ const SERVICIOS = ["Jueves 8pm", "Domingo 11am", "Domingo 6pm"] as const;
  * (nueva, o de datos viejos) queda al final, orden alfabético. */
 const ORDEN_AREAS = [
   "Administración", "Voluntariado", "Conexión", "Stand de Oración",
-  "Kids", "Tweens", "Worship", "Técnica", "Merch",
+  "Kids", "Tweens", "Worship", "Técnica", "Merch", "Amor por la Casa",
 ];
 
 /** Campos que siguen siendo manuales — Predicador/Siembra/Producción ya se

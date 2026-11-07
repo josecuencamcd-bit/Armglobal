@@ -1559,6 +1559,7 @@ export type Database = {
         | "Stand de Oración"
         | "Campus"
         | "Merch"
+        | "Amor por la Casa"
       campus_t: "Punta Arenas" | "Puerto Natales"
       categoria_aporte_t:
         | "Ofrenda"
@@ -1721,6 +1722,7 @@ export const Constants = {
         "Stand de Oración",
         "Campus",
         "Merch",
+        "Amor por la Casa",
       ],
       campus_t: ["Punta Arenas", "Puerto Natales"],
       categoria_aporte_t: [

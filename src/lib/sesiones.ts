@@ -8,10 +8,13 @@ import { z } from "zod";
  */
 export const CAMPUS = ["Punta Arenas", "Puerto Natales"] as const;
 /** Mismo enum `area_t` que en Postgres — usado por integrantes, fondos_equipo, etc.
- * "Merch" habilitado como equipo propio (perfil, integrantes, ficha) —
- * el módulo de inventario/tallas de Merch sigue pendiente aparte. */
+ * "Merch" y "Amor por la Casa" habilitados como equipo propio (perfil,
+ * integrantes, ficha) — si no se usan en una semana, quedan vacíos en la
+ * ficha, igual que cualquier otra área. El módulo de inventario/tallas de
+ * Merch sigue pendiente aparte. */
 export const AREAS = [
-  "Kids", "Tweens", "Técnica", "Worship", "Conexión", "Voluntariado", "Stand de Oración", "Merch",
+  "Kids", "Tweens", "Técnica", "Worship", "Conexión", "Voluntariado",
+  "Stand de Oración", "Merch", "Amor por la Casa",
 ] as const;
 export const ENCUENTROS: Record<string, string[]> = {
   "Punta Arenas": ["Jueves PM", "Domingo AM", "Domingo PM", "Evento Especial"],
