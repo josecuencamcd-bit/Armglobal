@@ -107,7 +107,10 @@ export type Database = {
           id: number
           motivo: string | null
           nombre: string | null
+          pastor: string | null
+          pastor_en: string | null
           pedido: string
+          rechazo: string | null
           resuelto_por: string | null
           sesion_key: string | null
           vence: string | null
@@ -121,7 +124,10 @@ export type Database = {
           id?: never
           motivo?: string | null
           nombre?: string | null
+          pastor?: string | null
+          pastor_en?: string | null
           pedido?: string
+          rechazo?: string | null
           resuelto_por?: string | null
           sesion_key?: string | null
           vence?: string | null
@@ -135,7 +141,10 @@ export type Database = {
           id?: never
           motivo?: string | null
           nombre?: string | null
+          pastor?: string | null
+          pastor_en?: string | null
           pedido?: string
+          rechazo?: string | null
           resuelto_por?: string | null
           sesion_key?: string | null
           vence?: string | null
@@ -1528,6 +1537,7 @@ export type Database = {
         Returns: boolean
       }
       auth_id_efectivo: { Args: never; Returns: string }
+      auth_mismo_dia: { Args: { f: string }; Returns: boolean }
       auth_sirve: {
         Args: never
         Returns: Database["public"]["Enums"]["area_t"][]

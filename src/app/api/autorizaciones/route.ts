@@ -1,14 +1,25 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { ok, fail, fromSupabaseError, parseBody } from "@/lib/api-helpers";
 import { ArgsSchema, CAMPUS, claveSesion } from "@/lib/sesiones";
 import { identidadActuante } from "@/lib/identidad";
+import { avisarAdmins } from "@/lib/email";
 import { z } from "zod";
+
+const ROLES_PASTOR = ["Pastor de campus", "Pastor", "Pastor principal"] as const;
 
 /**
  * Equivalente a api_autPedir(): un usuario de Finanzas pide autorización
- * para reabrir un encuentro ya finalizado. La policy autorizaciones_encuentro_insert
+ * para reabrir un encuentro de un día anterior (mismo día es libre — ver
+ * auth_mismo_dia en la migración). La policy autorizaciones_encuentro_insert
  * exige auth_es_finanzas() + que `correo` sea el propio (lo resolvemos acá
  * leyendo perfiles, igual que Code.gs usaba Session.getActiveUser()).
+ *
+ * Dos pasos — mismo patrón que /api/fondos/autorizaciones: queda
+ * "Pendiente Pastor" (pasa a "Pendiente Admin" si el Pastor da el Ok, o
+ * directo a "Autorizada" si Soporte/Admin app la resuelve sin esperar al
+ * Pastor — ver /api/autorizaciones/[id]). Se avisa por correo al Pastor
+ * del campus y, copiado, a Soporte (Admin app).
  */
 const PedirSchema = z.object({
   campus: z.enum(CAMPUS, { error: () => "Campus no válido." }),
@@ -41,12 +52,38 @@ export async function POST(req: Request) {
         encuentro: args.data.encuentro,
         fecha: args.data.fecha,
         motivo: parsedBody.data.motivo,
-        estado: "Pendiente",
+        estado: "Pendiente Pastor",
         pedido: new Date().toISOString(),
       })
       .select()
       .single();
     if (error) throw error;
+
+    try {
+      const admin = createAdminClient();
+      const [{ data: pastores }, { data: admins }] = await Promise.all([
+        admin.from("perfiles").select("correo").overlaps("roles", ROLES_PASTOR as unknown as string[]).or(`campus.eq.${args.data.campus},campus.is.null`),
+        admin.from("perfiles").select("correo").contains("roles", ["Admin app"]),
+      ]);
+      const destinatarios = [...(pastores ?? []), ...(admins ?? [])]
+        .map((p) => p.correo)
+        .filter((c): c is string => !!c);
+      await avisarAdmins({
+        destinatarios,
+        asunto: `Reabrir encuentro: ${args.data.encuentro} · ${args.data.campus}`,
+        titulo: "Pide autorización para modificar un encuentro",
+        datos: [
+          ["Quién pide", perfil.nombre],
+          ["Encuentro", `${args.data.encuentro} · ${args.data.campus}`],
+          ["Fecha", args.data.fecha],
+          ["Motivo", parsedBody.data.motivo],
+        ],
+        nota: "Pastor: revísala y da el Ok en Soporte > Reabrir encuentros. Soporte: puedes aprobarla directo si hace falta, sin esperar al Pastor.",
+      });
+    } catch {
+      // un correo que falla no debe tumbar la solicitud ya guardada
+    }
+
     return ok(data, 201);
   } catch (e) {
     return fromSupabaseError(e as { message: string; code?: string });

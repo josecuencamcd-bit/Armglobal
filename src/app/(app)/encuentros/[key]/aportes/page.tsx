@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { CATEGORIAS_ENCUENTRO, METODOS } from "@/lib/sesiones";
+import { CATEGORIAS_ENCUENTRO, METODOS, hoy } from "@/lib/sesiones";
 import ModalCompartir from "@/components/ModalCompartir";
 
 type Aporte = { id: string; nombre: string; monto: number; categoria: string; metodo: string };
@@ -22,6 +22,12 @@ const peso = (n: number) => `$${n.toLocaleString("es-CL")}`;
  * totales por categoría, totales por forma de pago, total general y el
  * formulario rápido (nombre, monto, categoría y un botón de guardado por
  * cada método de pago, en vez de un selector + un botón genérico).
+ *
+ * Mismo candado que /encuentros/[key]: el mismo día del encuentro se puede
+ * agregar/borrar aportes libremente; pasado ese día hace falta una
+ * autorización vigente (Pastor da el Ok, Soporte da el paso final — ver
+ * /api/autorizaciones), igual que RLS ya lo exige del lado del servidor
+ * (aportes_insert/aportes_delete).
  */
 export default function AportesEncuentroPage() {
   const params = useParams<{ key: string }>();
@@ -34,6 +40,12 @@ export default function AportesEncuentroPage() {
   const [guardando, setGuardando] = useState<string | null>(null);
   const [compartiendo, setCompartiendo] = useState(false);
 
+  const [autorizado, setAutorizado] = useState(false);
+  const [solicitudPendiente, setSolicitudPendiente] = useState(false);
+  const [pidiendo, setPidiendo] = useState(false);
+  const [motivo, setMotivo] = useState("");
+  const [enviandoMotivo, setEnviandoMotivo] = useState(false);
+
   const cargar = useCallback(async () => {
     const res = await fetch(`/api/sesiones/${key}`);
     const json = await res.json();
@@ -42,9 +54,38 @@ export default function AportesEncuentroPage() {
     setError(null);
   }, [key]);
 
+  const cargarAutorizacion = useCallback(async () => {
+    const [rp, ra] = await Promise.all([fetch("/api/perfil"), fetch(`/api/autorizaciones?sesion_key=${encodeURIComponent(decodeURIComponent(key))}`)]);
+    const [jp, ja] = await Promise.all([rp.json(), ra.json()]);
+    if (!jp.ok || !ja.ok) return;
+    const mias = (ja.data as { correo: string; estado: string; vence: string | null }[])
+      .filter((a) => a.correo === jp.data.correo);
+    setAutorizado(mias.some((a) => a.estado === "Autorizada" && a.vence && new Date(a.vence) > new Date()));
+    setSolicitudPendiente(mias.some((a) => a.estado === "Pendiente Pastor" || a.estado === "Pendiente Admin"));
+  }, [key]);
+
   useEffect(() => {
     cargar();
-  }, [cargar]);
+    cargarAutorizacion();
+  }, [cargar, cargarAutorizacion]);
+
+  async function pedirAutorizacion() {
+    if (!motivo.trim()) { setError("Cuéntanos el motivo para pedir autorización."); return; }
+    setEnviandoMotivo(true);
+    const [c, e, ev, f] = decodeURIComponent(key).split("|");
+    const res = await fetch("/api/autorizaciones", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ campus: c, encuentro: e, evento: ev, fecha: f, motivo: motivo.trim() }),
+    });
+    const json = await res.json();
+    setEnviandoMotivo(false);
+    if (!json.ok) { setError(json.error); return; }
+    setPidiendo(false);
+    setMotivo("");
+    setError(null);
+    await cargarAutorizacion();
+  }
 
   async function guardarComo(metodo: string) {
     const m = Number(monto);
@@ -74,6 +115,8 @@ export default function AportesEncuentroPage() {
   if (!estado && !error) return <div className="contenedor">Cargando…</div>;
 
   const [campus, encuentro, , fecha] = decodeURIComponent(key).split("|");
+  const esHoy = fecha === hoy();
+  const bloqueado = !esHoy && !autorizado;
   const aportes = estado?.aportes ?? [];
   const porCategoria = CATEGORIAS_ENCUENTRO.map((c) => ({ categoria: c, total: aportes.filter((a) => a.categoria === c).reduce((s, a) => s + a.monto, 0) }));
   const porMetodo = METODOS.map((m) => ({ metodo: m, total: aportes.filter((a) => a.metodo === m).reduce((s, a) => s + a.monto, 0) }));
@@ -110,6 +153,15 @@ export default function AportesEncuentroPage() {
         {encuentro} · {campus} · {fechaCL(fecha)}{estado?.responsable ? ` · Responsable: ${estado.responsable}` : ""}
       </p>
       {error && <p className="aviso">{error}</p>}
+      {!esHoy && autorizado && (
+        <p className="ok">Tienes autorización vigente para modificar los aportes de este encuentro.</p>
+      )}
+      {!esHoy && !autorizado && !solicitudPendiente && (
+        <p className="aviso">Este encuentro es de un día anterior. Pide autorización para modificar sus aportes.</p>
+      )}
+      {!esHoy && !autorizado && solicitudPendiente && (
+        <p className="aviso">Ya pediste autorización — esperando que el Pastor o Soporte la aprueben.</p>
+      )}
 
       <div className="tarjeta">
         <p className="muted" style={{ margin: "0 0 8px", fontSize: "0.75rem" }}>TOTALES POR CATEGORÍA</p>
@@ -129,7 +181,7 @@ export default function AportesEncuentroPage() {
         </div>
       </div>
 
-      {!estado?.finalizado && (
+      {!bloqueado && (
         <div className="tarjeta">
           <p className="muted" style={{ margin: "0 0 10px", fontSize: "0.75rem" }}>NUEVO APORTE</p>
           <div className="campo">
@@ -190,20 +242,55 @@ export default function AportesEncuentroPage() {
           </div>
           <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span className="num">{peso(a.monto)}</span>
-            {!estado?.finalizado && (
+            {!bloqueado && (
               <button className="boton-peligro" style={{ fontSize: "0.72rem", padding: "4px 8px" }} onClick={() => borrar(a.id)}>✕</button>
             )}
           </span>
         </div>
       ))}
 
-      <button
-        className="boton"
-        style={{ width: "100%", marginTop: 16, background: "var(--ok)" }}
-        onClick={() => setCompartiendo(true)}
-      >
-        Compartir reporte de aportes
-      </button>
+      <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+        <button
+          className="boton"
+          style={{ flex: 1, background: "var(--ok)" }}
+          onClick={() => setCompartiendo(true)}
+        >
+          Compartir reporte
+        </button>
+        {bloqueado && !solicitudPendiente && (
+          <button
+            type="button"
+            className="boton-secundario"
+            style={{ flex: 1, width: "auto" }}
+            onClick={() => setPidiendo(true)}
+          >
+            Modificar registro
+          </button>
+        )}
+      </div>
+
+      {pidiendo && (
+        <div className="tarjeta">
+          <p style={{ margin: "0 0 8px", fontWeight: 600 }}>Pedir autorización para modificar</p>
+          <div className="campo" style={{ marginBottom: 10 }}>
+            <label>Motivo</label>
+            <textarea rows={3} value={motivo} onChange={(e) => setMotivo(e.target.value)} placeholder="Cuéntanos qué necesitas corregir y por qué" />
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button type="button" className="boton" style={{ flex: 1 }} disabled={enviandoMotivo} onClick={pedirAutorizacion}>
+              {enviandoMotivo ? "Enviando…" : "Enviar solicitud"}
+            </button>
+            <button
+              type="button"
+              className="boton-secundario"
+              style={{ flex: 1, width: "auto" }}
+              onClick={() => { setPidiendo(false); setMotivo(""); }}
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
 
       <ModalCompartir
         abierto={compartiendo}

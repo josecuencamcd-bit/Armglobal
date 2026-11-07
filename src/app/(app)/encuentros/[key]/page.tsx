@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ASIS_IDS, VOL_IDS, MODALIDADES, equiposVigentes } from "@/lib/sesiones";
+import { ASIS_IDS, VOL_IDS, MODALIDADES, equiposVigentes, hoy } from "@/lib/sesiones";
 import { fotoAJpegDataUrl } from "@/lib/fotos-cliente";
 import ModalCompartir from "@/components/ModalCompartir";
 
@@ -169,9 +169,18 @@ export default function EncuentroPage() {
     setEstado(json.data);
   }
 
-  async function finalizar() {
-    if (!confirm("¿Marcar este encuentro como finalizado?")) return;
-    const res = await fetch(`/api/sesiones/${key}/finalizar`, { method: "POST" });
+  /** Dentro del mismo día del encuentro se puede cerrar y reabrir las
+   * veces que haga falta (ver auth_mismo_dia en RLS) — pasado ese día, ni
+   * este botón ni el resto de los campos se pueden tocar sin una
+   * autorización vigente, así que el intento simplemente falla con el
+   * error de RLS que ya traduce fromSupabaseError. */
+  async function finalizar(valor: boolean) {
+    if (!confirm(valor ? "¿Marcar este encuentro como finalizado?" : "¿Reabrir este encuentro para seguir editándolo?")) return;
+    const res = await fetch(`/api/sesiones/${key}/finalizar`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ finalizado: valor }),
+    });
     const json = await res.json();
     if (!json.ok) { setError(json.error); return; }
     setEstado(json.data);
@@ -220,6 +229,13 @@ export default function EncuentroPage() {
   const equipos = ["", ...equiposVigentes()];
   const totAsis = estado?.asistencia.reduce((s, a) => s + a.cantidad, 0) ?? 0;
   const totVol = estado?.voluntarios.reduce((s, v) => s + v.cantidad, 0) ?? 0;
+  // Mismo día del encuentro: libre para editar (abrir/cerrar/reabrir las
+  // veces que haga falta). Pasado ese día, hace falta autorización vigente
+  // — esto espeja lo que ya exige RLS (auth_mismo_dia/auth_autorizado), así
+  // que si algo queda desincronizado, el guardado falla igual del lado
+  // del servidor.
+  const esHoy = fecha === hoy();
+  const bloqueado = !esHoy && !autorizado;
 
   return (
     <div className="contenedor" style={{ paddingTop: 20 }}>
@@ -231,14 +247,14 @@ export default function EncuentroPage() {
         {encuentro} · {campus} · {fechaCL(fecha)}
       </p>
       {error && <p className="aviso">{error}</p>}
-      {estado?.finalizado && autorizado && (
+      {!esHoy && autorizado && (
         <p className="ok">Tienes autorización vigente para modificar este encuentro.</p>
       )}
-      {estado?.finalizado && !autorizado && !solicitudPendiente && (
-        <p className="aviso">Este encuentro está finalizado. Pide autorización para modificarlo.</p>
+      {!esHoy && !autorizado && !solicitudPendiente && (
+        <p className="aviso">Este encuentro es de un día anterior. Pide autorización para modificarlo.</p>
       )}
-      {estado?.finalizado && !autorizado && solicitudPendiente && (
-        <p className="aviso">Ya pediste autorización para modificar este encuentro — esperando que un Admin app la apruebe.</p>
+      {!esHoy && !autorizado && solicitudPendiente && (
+        <p className="aviso">Ya pediste autorización para modificar este encuentro — esperando que el Pastor o Soporte la aprueben.</p>
       )}
 
       {estado && (
@@ -248,14 +264,14 @@ export default function EncuentroPage() {
               <ResponsableAdministracion
                 administracion={estado.administracionAsignada}
                 valor={estado.sesion?.responsable ?? estado.responsable}
-                disabled={guardando || (estado.finalizado && !autorizado)}
+                disabled={guardando || bloqueado}
                 onToggle={(nombres) => setCampo("responsable", nombres.join(" y "))}
               />
             ) : (
               <div className="campo">
                 <select
                   value={estado.sesion?.responsable ?? estado.responsable}
-                  disabled={guardando || (estado.finalizado && !autorizado)}
+                  disabled={guardando || bloqueado}
                   onChange={(e) => setCampo("responsable", e.target.value)}
                 >
                   {equiposVigentes().map((eq) => <option key={eq} value={eq}>{eq}</option>)}
@@ -269,7 +285,7 @@ export default function EncuentroPage() {
               <label>Modalidad</label>
               <select
                 value={estado.sesion?.modalidad ?? MODALIDADES[0]}
-                disabled={guardando || (estado.finalizado && !autorizado)}
+                disabled={guardando || bloqueado}
                 onChange={(e) => setCampo("modalidad", e.target.value)}
               >
                 {MODALIDADES.map((m) => <option key={m} value={m}>{m}</option>)}
@@ -280,7 +296,7 @@ export default function EncuentroPage() {
               <input
                 defaultValue={estado.sesion?.predicador ?? ""}
                 placeholder="Nombre del predicador"
-                disabled={guardando || (estado.finalizado && !autorizado)}
+                disabled={guardando || bloqueado}
                 onBlur={(e) => setCampo("predicador", e.target.value)}
               />
             </div>
@@ -289,7 +305,7 @@ export default function EncuentroPage() {
               <input
                 defaultValue={estado.sesion?.mensaje ?? ""}
                 placeholder="Título del mensaje"
-                disabled={guardando || (estado.finalizado && !autorizado)}
+                disabled={guardando || bloqueado}
                 onBlur={(e) => setCampo("mensaje", e.target.value)}
               />
             </div>
@@ -299,7 +315,7 @@ export default function EncuentroPage() {
             <Stepper
               label="Aceptaron a Jesús"
               valor={estado.sesion?.aceptaron ?? 0}
-              disabled={guardando || (estado.finalizado && !autorizado)}
+              disabled={guardando || bloqueado}
               onChange={(v) => setCampo("aceptaron", v)}
             />
           </Seccion>
@@ -312,7 +328,7 @@ export default function EncuentroPage() {
                   key={id}
                   label={ASIS_LABELS[id] ?? id}
                   valor={fila?.cantidad ?? 0}
-                  disabled={guardando || (estado.finalizado && !autorizado)}
+                  disabled={guardando || bloqueado}
                   onChange={(v) => setCampo(`asis_${id}`, v)}
                 />
               );
@@ -327,7 +343,7 @@ export default function EncuentroPage() {
                   key={id}
                   label={VOL_LABELS[id] ?? id}
                   valor={fila?.cantidad ?? 0}
-                  disabled={guardando || (estado.finalizado && !autorizado)}
+                  disabled={guardando || bloqueado}
                   onChange={(v) => setCampo(`vol_${id}`, v)}
                 />
               );
@@ -338,13 +354,13 @@ export default function EncuentroPage() {
             <Stepper
               label="Aceptaron a Jesús"
               valor={estado.sesion?.on_acepto ?? 0}
-              disabled={guardando || (estado.finalizado && !autorizado)}
+              disabled={guardando || bloqueado}
               onChange={(v) => setCampo("onAcepto", v)}
             />
             <Stepper
               label="Espectadores a la vez"
               valor={estado.sesion?.on_espect ?? 0}
-              disabled={guardando || (estado.finalizado && !autorizado)}
+              disabled={guardando || bloqueado}
               onChange={(v) => setCampo("onEspect", v)}
             />
           </Seccion>
@@ -355,7 +371,7 @@ export default function EncuentroPage() {
               <input
                 defaultValue={estado.sesion?.lideres ?? ""}
                 placeholder="Nombres"
-                disabled={guardando || (estado.finalizado && !autorizado)}
+                disabled={guardando || bloqueado}
                 onBlur={(e) => setCampo("lideres", e.target.value)}
               />
             </div>
@@ -363,7 +379,7 @@ export default function EncuentroPage() {
               <label>Adm. de campus</label>
               <select
                 value={estado.sesion?.adm ?? ""}
-                disabled={guardando || (estado.finalizado && !autorizado)}
+                disabled={guardando || bloqueado}
                 onChange={(e) => setCampo("adm", e.target.value)}
               >
                 {equipos.map((eq) => <option key={eq || "ninguno"} value={eq}>{eq || "Sin asignar"}</option>)}
@@ -390,7 +406,7 @@ export default function EncuentroPage() {
                   <div key={f.path} style={{ position: "relative" }}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={f.url} alt="Cierre" style={{ width: 84, height: 84, objectFit: "cover", borderRadius: 8, border: "1px solid var(--line)" }} />
-                    {!(estado.finalizado && !autorizado) && (
+                    {!bloqueado && (
                       <button
                         type="button"
                         onClick={() => borrarFoto(f.path)}
@@ -408,7 +424,7 @@ export default function EncuentroPage() {
             )}
             {!fotos && <p className="muted" style={{ fontSize: "0.8rem" }}>Cargando fotos…</p>}
             {fotos && fotos.length >= 6 && <p className="muted" style={{ fontSize: "0.78rem" }}>Ya hay 6 fotos (máximo).</p>}
-            {fotos && fotos.length < 6 && !(estado.finalizado && !autorizado) && (
+            {fotos && fotos.length < 6 && !bloqueado && (
               <label className="boton-secundario" style={{ display: "inline-block", fontSize: "0.8rem", cursor: "pointer" }}>
                 {subiendoFoto ? "Subiendo…" : "+ Agregar foto"}
                 <input
@@ -442,29 +458,29 @@ export default function EncuentroPage() {
             </button>
             <button
               type="button"
-              disabled={estado.finalizado}
-              onClick={finalizar}
+              disabled={bloqueado}
+              onClick={() => finalizar(!estado.finalizado)}
               style={{
                 flex: 1, borderRadius: 10, padding: "12px 6px", fontWeight: 700, fontSize: "0.85rem",
-                border: "none", cursor: estado.finalizado ? "default" : "pointer",
+                border: "none", cursor: bloqueado ? "default" : "pointer",
                 background: estado.finalizado ? "var(--gold-grad)" : "var(--surface-2)",
                 color: estado.finalizado ? "var(--accent-ink)" : "var(--ink)",
-                opacity: estado.finalizado ? 1 : 0.9,
+                opacity: bloqueado ? 0.5 : estado.finalizado ? 1 : 0.9,
                 whiteSpace: "pre-line",
               }}
             >
-              Encuentro{"\n"}finalizado
+              {estado.finalizado ? <>Reabrir{"\n"}encuentro</> : <>Encuentro{"\n"}finalizado</>}
             </button>
             <button
               type="button"
-              disabled={!estado.finalizado || autorizado || solicitudPendiente}
+              disabled={!bloqueado || solicitudPendiente}
               onClick={() => setPidiendo(true)}
               style={{
                 flex: 1, borderRadius: 10, padding: "12px 6px", fontWeight: 600, fontSize: "0.85rem",
                 border: "1px solid var(--line)", background: "var(--surface-2)",
-                color: estado.finalizado ? "var(--ink)" : "var(--muted)",
-                cursor: estado.finalizado && !autorizado && !solicitudPendiente ? "pointer" : "default",
-                opacity: estado.finalizado && !autorizado && !solicitudPendiente ? 1 : 0.5,
+                color: bloqueado ? "var(--ink)" : "var(--muted)",
+                cursor: bloqueado && !solicitudPendiente ? "pointer" : "default",
+                opacity: bloqueado && !solicitudPendiente ? 1 : 0.5,
                 whiteSpace: "pre-line",
               }}
             >

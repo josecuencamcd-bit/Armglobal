@@ -46,7 +46,7 @@ export default function SoportePage() {
     ]);
     const [ja, jae, jaf, jay] = await Promise.all([ra.json(), rae.json(), raf.json(), ray.json()]);
     if (ja.ok) setAccesos(ja.data.filter((x: Acceso) => x.estado === "Pendiente"));
-    if (jae.ok) setAutEnc(jae.data.filter((x: AutEncuentro) => x.estado === "Pendiente"));
+    if (jae.ok) setAutEnc(jae.data.filter((x: AutEncuentro) => x.estado === "Pendiente Pastor" || x.estado === "Pendiente Admin"));
     if (jaf.ok) setAutFon(jaf.data.filter((x: AutFondos) => x.estado === "Pendiente Pastor" || x.estado === "Pendiente Admin"));
     if (jay.ok) setAyudas(jay.data.filter((x: Ayuda) => x.estado === "Pendiente"));
   }, []);
@@ -169,6 +169,9 @@ export default function SoportePage() {
             <div>
               <div>{a.nombre} · {a.campus}</div>
               <div className="muted" style={{ fontSize: "0.78rem" }}>{a.encuentro} · {a.fecha} · {a.motivo}</div>
+              <div className="muted" style={{ fontSize: "0.72rem" }}>
+                {a.estado === "Pendiente Pastor" ? "Esperando el Ok del Pastor" : "El Pastor ya dio el Ok · falta el paso final"}
+              </div>
             </div>
             <div style={{ display: "flex", gap: 6 }}>
               <button className="boton" style={{ padding: "6px 10px", fontSize: "0.82rem" }} disabled={ocupado === `ae${a.id}`} onClick={() => resolver(`/api/autorizaciones/${a.id}`, `ae${a.id}`, { aprobar: true })}>Autorizar</button>
