@@ -31,6 +31,24 @@ type Integrante = {
   es_extra?: boolean;
 };
 
+/** Solicitud de polera/polerón para un integrante — cualquier líder la
+ * arma desde su equipo, el líder de Merch (o Finanzas) la resuelve. */
+type SolicitudMerch = {
+  id: number;
+  campus: string;
+  area: string;
+  integrante_id: number | null;
+  solicitante: string;
+  tipo: string;
+  talla: string;
+  cantidad: number;
+  metodo_pago: string;
+  comprobante_url: string | null;
+  estado: string;
+  nota: string | null;
+  creado_en: string;
+};
+
 /** Días que faltan para el próximo cumpleaños (0 = hoy), igual criterio
  * que /api/cumpleanos pero acotado a la lista ya cargada de esta área. */
 function diasHastaCumple(nacimiento: string): number | null {
@@ -42,6 +60,37 @@ function diasHastaCumple(nacimiento: string): number | null {
   let d = Date.UTC(hoy.getFullYear(), +mesStr - 1, +diaStr);
   if (d < base) d = Date.UTC(hoy.getFullYear() + 1, +mesStr - 1, +diaStr);
   return Math.round((d - base) / 86_400_000);
+}
+
+/** Convierte el archivo elegido (foto del comprobante de pago) a un jpeg
+ * en base64, redimensionado para quedar bien debajo del límite de 8MB de
+ * subirFotoJpeg() — mismo formato que espera /api/merch/solicitudes. */
+function archivoAJpegDataUrl(file: File, maxDim = 1600, calidad = 0.82): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("No se pudo leer el archivo."));
+    reader.onload = () => {
+      const img = new window.Image();
+      img.onerror = () => reject(new Error("No se pudo leer la imagen."));
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          const ratio = Math.min(maxDim / width, maxDim / height);
+          width = Math.round(width * ratio);
+          height = Math.round(height * ratio);
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) { reject(new Error("No se pudo procesar la imagen.")); return; }
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", calidad));
+      };
+      img.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
 }
 
 function promedio(valores: (number | null)[]): number | null {
@@ -120,6 +169,15 @@ export default function EquiposPage() {
   const [generandoImagen, setGenerandoImagen] = useState(false);
   const vistaPreviaRef = useRef<HTMLDivElement>(null);
 
+  // Solicitud de polera/polerón (cualquier líder, para un integrante de su
+  // propio equipo) y, cuando area === "Merch", el panel de revisión.
+  const [pidiendoMerch, setPidiendoMerch] = useState<number | null>(null);
+  const [enviandoMerch, setEnviandoMerch] = useState(false);
+  const [errorMerch, setErrorMerch] = useState<string | null>(null);
+  const [solicitudesMerch, setSolicitudesMerch] = useState<SolicitudMerch[] | null>(null);
+  const [resolviendoId, setResolviendoId] = useState<number | null>(null);
+  const [comprobanteVisto, setComprobanteVisto] = useState<{ id: number; url: string } | null>(null);
+
   const cargar = useCallback(async (c: string, a: string) => {
     const [res, resBajas] = await Promise.all([
       fetch(`/api/integrantes?campus=${encodeURIComponent(c)}&area=${encodeURIComponent(a)}`),
@@ -163,10 +221,78 @@ export default function EquiposPage() {
     setResumen(json.data);
   }, []);
 
+  /** Panel de revisión del líder de Merch: todas las solicitudes pendientes
+   * de cualquier equipo — merch_solicitudes_select ya deja ver todo a
+   * quien tiene área "Merch" (o Finanzas); un líder de otra área solo verá
+   * las propias, así que esto no tiene sentido fuera de area === "Merch". */
+  const cargarSolicitudesMerch = useCallback(async (c: string) => {
+    const res = await fetch(`/api/merch/solicitudes?campus=${encodeURIComponent(c)}`);
+    const json = await res.json();
+    if (!json.ok) return;
+    setSolicitudesMerch(json.data);
+  }, []);
+
   useEffect(() => {
     cargar(campus, area);
     cargarResumen(campus, area);
   }, [campus, area, cargar, cargarResumen]);
+
+  useEffect(() => {
+    if (area === "Merch") cargarSolicitudesMerch(campus);
+    else setSolicitudesMerch(null);
+  }, [campus, area, cargarSolicitudesMerch]);
+
+  async function pedirMerch(i: Integrante, fd: FormData) {
+    setEnviandoMerch(true);
+    setErrorMerch(null);
+    try {
+      let comprobante: string | undefined;
+      const archivo = fd.get("comprobante") as File | null;
+      if (archivo && archivo.size > 0) comprobante = await archivoAJpegDataUrl(archivo);
+
+      const res = await fetch("/api/merch/solicitudes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          campus,
+          area,
+          integrante_id: i.id,
+          tipo: fd.get("tipo"),
+          talla: fd.get("talla"),
+          cantidad: Number(fd.get("cantidad") || 1),
+          metodo_pago: fd.get("metodo_pago"),
+          comprobante,
+        }),
+      });
+      const json = await res.json();
+      if (!json.ok) { setErrorMerch(json.error); return; }
+      setPidiendoMerch(null);
+    } catch (e) {
+      setErrorMerch(e instanceof Error ? e.message : "No se pudo enviar la solicitud.");
+    } finally {
+      setEnviandoMerch(false);
+    }
+  }
+
+  async function resolverSolicitud(id: number, estado: "Aprobada" | "Rechazada" | "Entregada") {
+    setResolviendoId(id);
+    const res = await fetch(`/api/merch/solicitudes/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ estado }),
+    });
+    const json = await res.json();
+    setResolviendoId(null);
+    if (!json.ok) { setErrorMerch(json.error); return; }
+    await cargarSolicitudesMerch(campus);
+  }
+
+  async function verComprobante(id: number) {
+    const res = await fetch(`/api/merch/solicitudes/${id}/foto`);
+    const json = await res.json();
+    if (!json.ok) { setErrorMerch(json.error); return; }
+    setComprobanteVisto({ id, url: json.data.url });
+  }
 
   useEffect(() => {
     cargarFicha(area, servicio, fechaFicha);
@@ -474,6 +600,72 @@ export default function EquiposPage() {
         </select>
       </div>
 
+      {area === "Merch" && (
+        <div className="tarjeta stack" style={{ marginBottom: 16 }}>
+          <span className="label">Solicitudes de polera / polerón</span>
+          {errorMerch && <p className="aviso">{errorMerch}</p>}
+          {!solicitudesMerch && <p className="muted">Cargando…</p>}
+          {solicitudesMerch && solicitudesMerch.length === 0 && (
+            <p className="muted">No hay solicitudes.</p>
+          )}
+          {solicitudesMerch?.map((s) => (
+            <div key={s.id} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <div className="eco-row">
+                <div>
+                  <b>{s.tipo} {s.talla} × {s.cantidad}</b>
+                  <small>{s.area} · pidió {s.solicitante} · {s.metodo_pago}</small>
+                  {s.nota && <small>Nota: {s.nota}</small>}
+                </div>
+                <span className={`eco-badge ${s.estado === "Aprobada" || s.estado === "Entregada" ? "ok" : s.estado === "Rechazada" ? "bad" : "warn"}`}>
+                  {s.estado}
+                </span>
+              </div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {s.comprobante_url && (
+                  <button type="button" className="boton-secundario" onClick={() => verComprobante(s.id)}>
+                    Ver comprobante
+                  </button>
+                )}
+                {s.estado === "Pendiente" && (
+                  <>
+                    <button
+                      type="button"
+                      className="boton-secundario"
+                      disabled={resolviendoId === s.id}
+                      onClick={() => resolverSolicitud(s.id, "Rechazada")}
+                    >
+                      Rechazar
+                    </button>
+                    <button
+                      type="button"
+                      className="boton"
+                      disabled={resolviendoId === s.id}
+                      onClick={() => resolverSolicitud(s.id, "Aprobada")}
+                    >
+                      {resolviendoId === s.id ? "…" : "Aprobar"}
+                    </button>
+                  </>
+                )}
+                {s.estado === "Aprobada" && (
+                  <button
+                    type="button"
+                    className="boton"
+                    disabled={resolviendoId === s.id}
+                    onClick={() => resolverSolicitud(s.id, "Entregada")}
+                  >
+                    {resolviendoId === s.id ? "…" : "Marcar entregada"}
+                  </button>
+                )}
+              </div>
+              {comprobanteVisto?.id === s.id && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={comprobanteVisto.url} alt="Comprobante de pago" style={{ maxWidth: "100%", borderRadius: 8 }} />
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="eco-cards" style={{ marginBottom: 16 }}>
         <div className="eco-card"><span>Integrantes</span><b>{activos.length}</b></div>
         <div className="eco-card"><span>Años en la iglesia (prom.)</span><b>{promIglesia ?? "—"}</b></div>
@@ -650,6 +842,12 @@ export default function EquiposPage() {
               <button className="boton-secundario" onClick={() => setEditando(editando?.id === i.id ? null : i)}>
                 {editando?.id === i.id ? "Cerrar" : "Editar"}
               </button>
+              <button
+                className="boton-secundario"
+                onClick={() => { setErrorMerch(null); setPidiendoMerch(pidiendoMerch === i.id ? null : i.id); }}
+              >
+                {pidiendoMerch === i.id ? "Cerrar" : "Pedir polera/polerón"}
+              </button>
               {!bajasPendientes.has(i.id) && (
                 <button className="boton-peligro" onClick={() => setPidiendoBaja(pidiendoBaja === i.id ? null : i.id)}>
                   Solicitar baja
@@ -661,6 +859,48 @@ export default function EquiposPage() {
             <p className="muted" style={{ fontSize: "0.78rem", margin: "-6px 0 10px" }}>
               Solicitud de baja pendiente de aprobación.
             </p>
+          )}
+          {pidiendoMerch === i.id && (
+            <form
+              className="tarjeta"
+              style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 10 }}
+              action={(fd) => pedirMerch(i, fd)}
+            >
+              {errorMerch && <p className="aviso">{errorMerch}</p>}
+              <div style={{ display: "flex", gap: 10 }}>
+                <div className="campo" style={{ flex: 1 }}>
+                  <label>Prenda</label>
+                  <select name="tipo" defaultValue="Polera">
+                    <option value="Polera">Polera</option>
+                    <option value="Polerón">Polerón</option>
+                  </select>
+                </div>
+                <div className="campo" style={{ flex: 1 }}>
+                  <label>Talla</label>
+                  <select name="talla" defaultValue={i.talla_polera ?? i.talla_poleron ?? "M"}>
+                    {TALLAS.map((t) => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+                <div className="campo" style={{ width: 80 }}>
+                  <label>Cant.</label>
+                  <input name="cantidad" type="number" min={1} max={50} defaultValue={1} />
+                </div>
+              </div>
+              <div className="campo">
+                <label>Cómo se pagó</label>
+                <select name="metodo_pago" defaultValue="Efectivo">
+                  <option value="Efectivo">Efectivo</option>
+                  <option value="Transferencia">Transferencia</option>
+                </select>
+              </div>
+              <div className="campo">
+                <label>Comprobante de pago (foto, opcional)</label>
+                <input name="comprobante" type="file" accept="image/*" capture="environment" />
+              </div>
+              <button className="boton" type="submit" disabled={enviandoMerch}>
+                {enviandoMerch ? "Enviando…" : "Enviar solicitud a Merch"}
+              </button>
+            </form>
           )}
           {pidiendoBaja === i.id && (
             <form

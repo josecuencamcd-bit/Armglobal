@@ -955,6 +955,7 @@ export type Database = {
           estado: string
           id: number
           integrante_id: number | null
+          metodo_pago: string
           nota: string | null
           resuelto_en: string | null
           resuelto_por: string | null
@@ -972,6 +973,7 @@ export type Database = {
           estado?: string
           id?: never
           integrante_id?: number | null
+          metodo_pago: string
           nota?: string | null
           resuelto_en?: string | null
           resuelto_por?: string | null
@@ -989,6 +991,7 @@ export type Database = {
           estado?: string
           id?: never
           integrante_id?: number | null
+          metodo_pago?: string
           nota?: string | null
           resuelto_en?: string | null
           resuelto_por?: string | null
