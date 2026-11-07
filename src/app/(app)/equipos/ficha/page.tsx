@@ -18,6 +18,28 @@ type Ficha = {
   encargado: string | null;
 };
 
+type Cabecera = {
+  lider_voluntariado: string | null;
+  stand_merch: string | null;
+  stand_aplc: string | null;
+} | null;
+
+type DatosCabecera = {
+  cabecera: Cabecera;
+  administradoresCampus: string[];
+  pastoresCampus: string[];
+  horario: string;
+  // Automático desde la planilla técnica en vivo (o fallback manual si no
+  // respondió) — ver /api/ficha-cabecera.
+  predicador: string;
+  siembra: string;
+  despedida: string;
+  productorGeneral: string;
+  encargadosTecnicos: string;
+  productorEncuentro: string;
+  deTecnica: boolean;
+};
+
 const SERVICIOS = ["Jueves 8pm", "Domingo 11am", "Domingo 6pm"] as const;
 
 /** Orden de las áreas en el documento combinado — misma prioridad que trae
@@ -27,6 +49,16 @@ const SERVICIOS = ["Jueves 8pm", "Domingo 11am", "Domingo 6pm"] as const;
 const ORDEN_AREAS = [
   "Administración", "Voluntariado", "Conexión", "Stand de Oración",
   "Kids", "Tweens", "Worship", "Técnica", "Merch",
+];
+
+/** Campos que siguen siendo manuales — Predicador/Siembra/Producción ya se
+ * copian solos desde la planilla técnica (ver /api/ficha-cabecera). Stand
+ * Merch/APLC quedan manuales hasta que esos equipos tengan su propia área
+ * con ficha, como ya tiene Voluntariado. */
+const CAMPOS_MANUALES: { key: keyof NonNullable<Cabecera>; label: string }[] = [
+  { key: "lider_voluntariado", label: "Líderes de Voluntarios" },
+  { key: "stand_merch", label: "Stand AR Merch" },
+  { key: "stand_aplc", label: "Stand APLC" },
 ];
 
 function fechaLegible(iso: string): string {
@@ -46,25 +78,41 @@ function FichaCompletaInner() {
     searchParams.get("fecha") || proximaFecha(ENCUENTRO_DE_SERVICIO[SERVICIOS[0]])
   );
   const [ficha, setFicha] = useState<Ficha[] | null>(null);
+  const [datosCabecera, setDatosCabecera] = useState<DatosCabecera | null>(null);
   const [cargando, setCargando] = useState(false);
   const [generandoImagen, setGenerandoImagen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [editando, setEditando] = useState(false);
+  const [form, setForm] = useState<Record<string, string>>({});
+  const [guardando, setGuardando] = useState(false);
   const visorRef = useRef<HTMLDivElement>(null);
 
-  const cargarFicha = useCallback(async (serv: string, f: string) => {
+  const cargarFicha = useCallback(async (serv: string, f: string, c: string) => {
     setCargando(true);
-    const res = await fetch(`/api/fichas-servicio?servicio=${encodeURIComponent(serv)}&fecha=${encodeURIComponent(f)}`);
-    const json = await res.json();
+    const [resFicha, resCab] = await Promise.all([
+      fetch(`/api/fichas-servicio?servicio=${encodeURIComponent(serv)}&fecha=${encodeURIComponent(f)}`),
+      fetch(`/api/ficha-cabecera?servicio=${encodeURIComponent(serv)}&fecha=${encodeURIComponent(f)}&campus=${encodeURIComponent(c)}`),
+    ]);
+    const [jsonFicha, jsonCab] = await Promise.all([resFicha.json(), resCab.json()]);
     setCargando(false);
-    if (!json.ok) { setError(json.error); return; }
-    setFicha(json.data);
+    if (!jsonFicha.ok) { setError(jsonFicha.error); return; }
+    if (!jsonCab.ok) { setError(jsonCab.error); return; }
+    setFicha(jsonFicha.data);
+    setDatosCabecera(jsonCab.data);
+    const c2 = jsonCab.data.cabecera ?? {};
+    setForm({
+      lider_voluntariado: c2.lider_voluntariado ?? "",
+      stand_merch: c2.stand_merch ?? "",
+      stand_aplc: c2.stand_aplc ?? "",
+    });
+    setError(null);
   }, []);
 
   useEffect(() => {
-    cargarFicha(servicio, fecha);
+    cargarFicha(servicio, fecha, campus);
     router.replace(`/equipos/ficha?servicio=${encodeURIComponent(servicio)}&fecha=${encodeURIComponent(fecha)}`, { scroll: false });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [servicio, fecha, cargarFicha]);
+  }, [servicio, fecha, campus, cargarFicha]);
 
   const porArea = useMemo(() => {
     const grupos = new Map<string, Map<string, { encargado: string; nombres: string[] }>>();
@@ -90,6 +138,21 @@ function FichaCompletaInner() {
       puestos: [...grupos.get(area)!.entries()].map(([puesto, g]) => ({ puesto, ...g })),
     }));
   }, [ficha]);
+
+  async function guardarCabecera() {
+    setGuardando(true);
+    setError(null);
+    const res = await fetch("/api/ficha-cabecera", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ servicio, fecha, ...form }),
+    });
+    const json = await res.json();
+    setGuardando(false);
+    if (!json.ok) { setError(json.error); return; }
+    setEditando(false);
+    await cargarFicha(servicio, fecha, campus);
+  }
 
   async function descargarImagen() {
     if (!visorRef.current) return;
@@ -119,6 +182,9 @@ function FichaCompletaInner() {
       setGenerandoImagen(false);
     }
   }
+
+  const c = datosCabecera;
+  const vacio = (v: string | null | undefined) => (v && v.trim() ? v : "—");
 
   return (
     <div className="contenedor">
@@ -153,11 +219,11 @@ function FichaCompletaInner() {
       {error && <p className="aviso">{error}</p>}
       {cargando && <p className="muted">Cargando…</p>}
 
-      {!cargando && porArea.length === 0 && (
+      {!cargando && porArea.length === 0 && c?.administradoresCampus.length === 0 && (
         <p className="muted">Sin puestos cargados para {servicio} · {fechaLegible(fecha)} en ninguna área todavía.</p>
       )}
 
-      {porArea.length > 0 && (
+      {!cargando && (porArea.length > 0 || c) && (
         <>
           <div
             ref={visorRef}
@@ -171,6 +237,18 @@ function FichaCompletaInner() {
               <div style={{ fontSize: 13, color: "#555", marginTop: 2 }}>ARM Global · {campus}</div>
               <div style={{ fontSize: 13, marginTop: 6 }}><strong>{servicio}</strong> · {fechaLegible(fecha)}</div>
             </div>
+
+            <div style={{ fontSize: 12, marginBottom: 16, lineHeight: 1.7 }}>
+              <div><b>Fecha:</b> {fechaLegible(fecha)} &nbsp; <b>Horario:</b> {c?.horario || "—"}</div>
+              <div><b>Pastores:</b> {c && c.pastoresCampus.length > 0 ? c.pastoresCampus.join(" y ") : "—"}</div>
+              <div><b>Administradores de Campus:</b> {c && c.administradoresCampus.length > 0 ? c.administradoresCampus.join(" - ") : "—"}</div>
+              <div><b>Líderes de Voluntarios:</b> {vacio(c?.cabecera?.lider_voluntariado)}</div>
+            </div>
+            {c && !c.deTecnica && (
+              <div style={{ fontSize: 11, color: "#b45309", marginBottom: 10 }}>
+                No se pudo leer la planilla técnica — Predicador/Siembra/Producción quedan en lo último guardado manual.
+              </div>
+            )}
 
             {porArea.map(({ area, puestos }) => (
               <div key={area} style={{ marginBottom: 18 }}>
@@ -196,14 +274,56 @@ function FichaCompletaInner() {
               </div>
             ))}
 
-            <div style={{ fontSize: 10, color: "#aaa", textAlign: "center", marginTop: 8 }}>
+            <div style={{ borderTop: "2px solid #1a1a1a", paddingTop: 10, marginTop: 4, fontSize: 12, lineHeight: 1.8 }}>
+              <div><b>Predicador:</b> {vacio(c?.predicador)}</div>
+              <div><b>Siembra, Info y Despedida:</b> Siembra: {vacio(c?.siembra)} — Despedida: {vacio(c?.despedida)}</div>
+              <div style={{ marginTop: 6 }}><b>Producción</b></div>
+              <div>Productor General: {vacio(c?.productorGeneral)}</div>
+              <div>Encargados Técnicos de Campus: {vacio(c?.encargadosTecnicos)}</div>
+              <div>Productor Responsable del Encuentro: {vacio(c?.productorEncuentro)}</div>
+              <div style={{ marginTop: 6 }}>Stand AR Merch: {vacio(c?.cabecera?.stand_merch)}</div>
+              <div>Stand APLC: {vacio(c?.cabecera?.stand_aplc)}</div>
+            </div>
+
+            <div style={{ fontSize: 10, color: "#aaa", textAlign: "center", marginTop: 16 }}>
               Generado desde la app · {new Date().toLocaleDateString("es-CL")}
             </div>
           </div>
 
-          <button className="boton" style={{ marginTop: 14 }} onClick={descargarImagen} disabled={generandoImagen}>
-            {generandoImagen ? "Generando…" : "Descargar / compartir imagen"}
-          </button>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14 }}>
+            <button className="boton" onClick={descargarImagen} disabled={generandoImagen}>
+              {generandoImagen ? "Generando…" : "Descargar / compartir imagen"}
+            </button>
+            <button
+              type="button"
+              className="boton-secundario"
+              style={{ width: "auto", padding: "0 14px" }}
+              onClick={() => setEditando((v) => !v)}
+            >
+              {editando ? "Cerrar edición" : "Editar líder de voluntariado / stands"}
+            </button>
+          </div>
+
+          {editando && (
+            <section className="tarjeta stack" style={{ marginTop: 14 }}>
+              <p className="muted" style={{ margin: 0, fontSize: "0.82rem" }}>
+                Predicador, Siembra y Producción ya se copian solos desde la planilla técnica — esto es lo que queda manual.
+              </p>
+              {CAMPOS_MANUALES.map((campo) => (
+                <div className="campo" key={campo.key}>
+                  <label>{campo.label}</label>
+                  <input
+                    value={form[campo.key] ?? ""}
+                    onChange={(e) => setForm((f) => ({ ...f, [campo.key]: e.target.value }))}
+                    placeholder={campo.key === "lider_voluntariado" ? "Nombre y nombre" : undefined}
+                  />
+                </div>
+              ))}
+              <button type="button" className="boton" onClick={guardarCabecera} disabled={guardando}>
+                {guardando ? "Guardando…" : "Guardar"}
+              </button>
+            </section>
+          )}
         </>
       )}
     </div>

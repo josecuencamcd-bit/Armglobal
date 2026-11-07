@@ -470,6 +470,54 @@ export type Database = {
         }
         Relationships: []
       }
+      ficha_cabecera: {
+        Row: {
+          actualizado: string
+          encargados_tecnicos: string | null
+          fecha: string
+          id: number
+          lider_voluntariado: string | null
+          por: string | null
+          predicador: string | null
+          productor_general: string | null
+          productor_responsable: string | null
+          servicio: string
+          siembra: string | null
+          stand_aplc: string | null
+          stand_merch: string | null
+        }
+        Insert: {
+          actualizado?: string
+          encargados_tecnicos?: string | null
+          fecha: string
+          id?: never
+          lider_voluntariado?: string | null
+          por?: string | null
+          predicador?: string | null
+          productor_general?: string | null
+          productor_responsable?: string | null
+          servicio: string
+          siembra?: string | null
+          stand_aplc?: string | null
+          stand_merch?: string | null
+        }
+        Update: {
+          actualizado?: string
+          encargados_tecnicos?: string | null
+          fecha?: string
+          id?: never
+          lider_voluntariado?: string | null
+          por?: string | null
+          predicador?: string | null
+          productor_general?: string | null
+          productor_responsable?: string | null
+          servicio?: string
+          siembra?: string | null
+          stand_aplc?: string | null
+          stand_merch?: string | null
+        }
+        Relationships: []
+      }
       fichas_servicio: {
         Row: {
           actualizado: string
