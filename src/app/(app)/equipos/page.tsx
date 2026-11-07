@@ -82,6 +82,10 @@ export default function EquiposPage() {
   const [error, setError] = useState<string | null>(null);
   const [mostrarForm, setMostrarForm] = useState(false);
   const [guardando, setGuardando] = useState(false);
+  const [nombreNuevo, setNombreNuevo] = useState("");
+  const [resultadosBusqueda, setResultadosBusqueda] = useState<{ id: number; nombre: string; area: string }[]>([]);
+  const [buscandoPersona, setBuscandoPersona] = useState(false);
+  const [vinculando, setVinculando] = useState(false);
   const [editando, setEditando] = useState<Integrante | null>(null);
   const [guardandoEdit, setGuardandoEdit] = useState(false);
   const [bajasPendientes, setBajasPendientes] = useState<Set<number>>(new Set());
@@ -102,7 +106,7 @@ export default function EquiposPage() {
   const [selectorAbierto, setSelectorAbierto] = useState(false);
   const [otroEquipoAbierto, setOtroEquipoAbierto] = useState(false);
   const [otroEquipoArea, setOtroEquipoArea] = useState<(typeof AREAS)[number]>(AREAS[0]);
-  const [otroEquipoLista, setOtroEquipoLista] = useState<Integrante[] | null>(null);
+  const [otroEquipoLista, setOtroEquipoLista] = useState<PersonaDisponible[] | null>(null);
   const [cargandoOtroEquipo, setCargandoOtroEquipo] = useState(false);
 
   const [mostrarVistaPrevia, setMostrarVistaPrevia] = useState(false);
@@ -206,7 +210,7 @@ export default function EquiposPage() {
   useEffect(() => {
     if (!otroEquipoAbierto) return;
     setCargandoOtroEquipo(true);
-    fetch(`/api/integrantes?campus=${encodeURIComponent(campus)}&area=${encodeURIComponent(otroEquipoArea)}`)
+    fetch(`/api/integrantes/roster-equipo?campus=${encodeURIComponent(campus)}&area=${encodeURIComponent(otroEquipoArea)}`)
       .then((r) => r.json())
       .then((j) => setOtroEquipoLista(j.ok ? j.data : []))
       .catch(() => setOtroEquipoLista([]))
@@ -316,6 +320,38 @@ export default function EquiposPage() {
     await cargarFicha(area, servicio, fechaFicha);
   }
 
+  // Buscador cruzado al escribir el nombre en "Agregar integrante": si la
+  // persona ya existe en otro equipo, se ofrece vincularla (equipo_extra)
+  // en vez de crear un duplicado — pedido explícito de José Miguel.
+  useEffect(() => {
+    if (!mostrarForm || nombreNuevo.trim().length < 2) { setResultadosBusqueda([]); return; }
+    const t = setTimeout(() => {
+      setBuscandoPersona(true);
+      fetch(`/api/integrantes/buscar?campus=${encodeURIComponent(campus)}&q=${encodeURIComponent(nombreNuevo.trim())}&excluirArea=${encodeURIComponent(area)}`)
+        .then((r) => r.json())
+        .then((j) => setResultadosBusqueda(j.ok ? j.data : []))
+        .catch(() => setResultadosBusqueda([]))
+        .finally(() => setBuscandoPersona(false));
+    }, 350);
+    return () => clearTimeout(t);
+  }, [mostrarForm, nombreNuevo, campus, area]);
+
+  async function vincularExistente(persona: { id: number; nombre: string }) {
+    setVinculando(true);
+    const res = await fetch(`/api/integrantes/${persona.id}/equipo-extra`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ area }),
+    });
+    const json = await res.json();
+    setVinculando(false);
+    if (!json.ok) { setError(json.error); return; }
+    setMostrarForm(false);
+    setNombreNuevo("");
+    setResultadosBusqueda([]);
+    await cargar(campus, area);
+  }
+
   async function crear(fd: FormData) {
     setGuardando(true);
     const res = await fetch("/api/integrantes", {
@@ -337,6 +373,8 @@ export default function EquiposPage() {
     setGuardando(false);
     if (!json.ok) { setError(json.error); return; }
     setMostrarForm(false);
+    setNombreNuevo("");
+    setResultadosBusqueda([]);
     await cargar(campus, area);
   }
 
@@ -462,7 +500,15 @@ export default function EquiposPage() {
         </div>
       )}
 
-      <button className="boton" style={{ marginBottom: 16 }} onClick={() => setMostrarForm((v) => !v)}>
+      <button
+        className="boton"
+        style={{ marginBottom: 16 }}
+        onClick={() => {
+          setMostrarForm((v) => !v);
+          setNombreNuevo("");
+          setResultadosBusqueda([]);
+        }}
+      >
         {mostrarForm ? "Cerrar" : "Agregar integrante"}
       </button>
 
@@ -470,7 +516,38 @@ export default function EquiposPage() {
         <form className="tarjeta" action={(fd) => crear(fd)} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <div className="campo">
             <label>Nombre</label>
-            <input name="nombre" required />
+            <input
+              name="nombre"
+              required
+              value={nombreNuevo}
+              onChange={(e) => setNombreNuevo(e.target.value)}
+              placeholder="Escribe el nombre — si ya existe en otro equipo, aparece abajo"
+              autoComplete="off"
+            />
+            {buscandoPersona && <p className="muted" style={{ fontSize: "0.78rem", marginTop: 4 }}>Buscando…</p>}
+            {!buscandoPersona && resultadosBusqueda.length > 0 && (
+              <div className="tarjeta" style={{ marginTop: 8, padding: 10, display: "flex", flexDirection: "column", gap: 4 }}>
+                <p className="muted" style={{ fontSize: "0.78rem", margin: 0 }}>
+                  Ya existe en otro equipo — toca para agregarla a {area} también, sin duplicarla:
+                </p>
+                {resultadosBusqueda.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    className="fila"
+                    style={{
+                      justifyContent: "flex-start", width: "100%", background: "none",
+                      border: "none", borderBottom: "1px solid var(--line)", font: "inherit",
+                      color: "inherit", cursor: "pointer", textAlign: "left",
+                    }}
+                    disabled={vinculando}
+                    onClick={() => vincularExistente(p)}
+                  >
+                    {p.nombre} <span className="muted" style={{ fontSize: "0.75rem", marginLeft: 6 }}>({p.area})</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           <div className="campo">
             <label>Teléfono</label>
@@ -772,7 +849,6 @@ export default function EquiposPage() {
                     </select>
                     {cargandoOtroEquipo && <p className="muted" style={{ fontSize: "0.8rem" }}>Cargando…</p>}
                     {!cargandoOtroEquipo && (otroEquipoLista ?? [])
-                      .filter((p) => p.estado !== "Baja")
                       .map((p) => (
                         <button
                           key={p.id}
