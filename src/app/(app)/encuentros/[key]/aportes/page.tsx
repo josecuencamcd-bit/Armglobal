@@ -77,6 +77,34 @@ export default function AportesEncuentroPage() {
   const porMetodo = METODOS.map((m) => ({ metodo: m, total: aportes.filter((a) => a.metodo === m).reduce((s, a) => s + a.monto, 0) }));
   const total = aportes.reduce((s, a) => s + a.monto, 0);
 
+  /** Mismo patrón que compartir() de /encuentros/[key] (navigator.share con
+   * fallback a copiar al portapapeles) — acá con el resumen de Aportes en
+   * vez de asistencia, igual que el reporte que armaba la app vieja. */
+  function compartir() {
+    const L: string[] = [];
+    L.push(`Reporte de Aportes · Campus ${campus}`, "");
+    L.push(`*Encuentro:* ${encuentro}`);
+    L.push(`*Fecha:* ${fechaCL(fecha)}`);
+    if (estado?.responsable) L.push(`*Responsable:* ${estado.responsable}`);
+    L.push("", "*Por categoría*");
+    porCategoria.forEach((c) => L.push(`- ${c.categoria}: ${peso(c.total)}`));
+    L.push("", "*Por forma de pago*");
+    porMetodo.forEach((m) => L.push(`- ${m.metodo}: ${peso(m.total)}`));
+    L.push("", `*Total general:* ${peso(total)} (${aportes.length} aporte${aportes.length === 1 ? "" : "s"})`);
+    if (aportes.length > 0) {
+      L.push("", "*Detalle*");
+      aportes.forEach((a) => L.push(`- ${a.nombre}: ${peso(a.monto)} (${a.categoria} · ${a.metodo})`));
+    }
+    const texto = L.join("\n");
+
+    if (navigator.share) {
+      navigator.share({ title: "Reporte de Aportes", text: texto }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(texto);
+      alert("Resumen copiado al portapapeles.");
+    }
+  }
+
   return (
     <div className="contenedor" style={{ paddingTop: 24 }}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 2 }}>
@@ -173,6 +201,14 @@ export default function AportesEncuentroPage() {
           </span>
         </div>
       ))}
+
+      <button
+        className="boton"
+        style={{ width: "100%", marginTop: 16, background: "var(--ok)" }}
+        onClick={compartir}
+      >
+        Compartir reporte de aportes
+      </button>
     </div>
   );
 }
