@@ -515,15 +515,20 @@ export default function EquiposPage() {
       {mostrarForm && (
         <form className="tarjeta" action={(fd) => crear(fd)} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <div className="campo">
-            <label>Nombre</label>
-            <input
-              name="nombre"
-              required
-              value={nombreNuevo}
-              onChange={(e) => setNombreNuevo(e.target.value)}
-              placeholder="Escribe el nombre — si ya existe en otro equipo, aparece abajo"
-              autoComplete="off"
-            />
+            <div className="buscador">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <input
+                name="nombre"
+                required
+                value={nombreNuevo}
+                onChange={(e) => setNombreNuevo(e.target.value)}
+                placeholder="Buscar"
+                autoComplete="off"
+              />
+            </div>
             {buscandoPersona && <p className="muted" style={{ fontSize: "0.78rem", marginTop: 4 }}>Buscando…</p>}
             {!buscandoPersona && resultadosBusqueda.length > 0 && (
               <div className="tarjeta" style={{ marginTop: 8, padding: 10, display: "flex", flexDirection: "column", gap: 4 }}>
