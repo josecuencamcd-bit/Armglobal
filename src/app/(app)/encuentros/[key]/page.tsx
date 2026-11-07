@@ -129,7 +129,7 @@ export default function EncuentroPage() {
     const mias = (ja.data as { correo: string; estado: string; vence: string | null }[])
       .filter((a) => a.correo === jp.data.correo);
     setAutorizado(mias.some((a) => a.estado === "Autorizada" && a.vence && new Date(a.vence) > new Date()));
-    setSolicitudPendiente(mias.some((a) => a.estado === "Pendiente"));
+    setSolicitudPendiente(mias.some((a) => a.estado === "Pendiente Pastor" || a.estado === "Pendiente Admin"));
   }, [key]);
 
   useEffect(() => {
