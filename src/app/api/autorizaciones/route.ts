@@ -68,6 +68,7 @@ export async function POST(req: Request) {
       const destinatarios = [...(pastores ?? []), ...(admins ?? [])]
         .map((p) => p.correo)
         .filter((c): c is string => !!c);
+      console.log("[autorizaciones] destinatarios:", destinatarios);
       await avisarAdmins({
         destinatarios,
         asunto: `Reabrir encuentro: ${args.data.encuentro} · ${args.data.campus}`,
@@ -80,8 +81,9 @@ export async function POST(req: Request) {
         ],
         nota: "Pastor: revísala y da el Ok en Soporte > Reabrir encuentros. Soporte: puedes aprobarla directo si hace falta, sin esperar al Pastor.",
       });
-    } catch {
+    } catch (eCorreo) {
       // un correo que falla no debe tumbar la solicitud ya guardada
+      console.error("[autorizaciones] error enviando aviso:", eCorreo);
     }
 
     return ok(data, 201);

@@ -16,6 +16,20 @@ const FROM = "armglobal <onboarding@resend.dev>";
 export const APP_URL = "https://armglobal-gnmj.vercel.app";
 const LOGO_URL = `${APP_URL}/icon-512.png`;
 
+/** El SDK de Resend NO lanza una excepción cuando el envío falla del lado
+ * de su API (p. ej. "solo puedes mandar a tu propio correo en modo
+ * prueba") — devuelve { data: null, error }. Todas las funciones de acá
+ * pasaban ese resultado tal cual, así que un rechazo de Resend quedaba
+ * completamente silencioso (ni el try/catch de quien llama lo agarraba).
+ * Esta envoltura lo convierte en una excepción real. */
+async function enviar(
+  payload: Parameters<typeof resend.emails.send>[0]
+): Promise<Awaited<ReturnType<typeof resend.emails.send>>> {
+  const r = await resend.emails.send(payload);
+  if (r.error) throw new Error(`Resend: ${r.error.message ?? r.error.name ?? "error desconocido"}`);
+  return r;
+}
+
 function layout(opts: {
   etiqueta?: string;
   titulo: string;
@@ -76,7 +90,7 @@ function layout(opts: {
 /** Reemplaza api_olvide/api_restablecer de Code.gs: un código de 6 dígitos
  * que la persona escribe en la misma pantalla de login, no un link. */
 export async function enviarCodigoRecuperarClave(correo: string, codigo: string) {
-  return resend.emails.send({
+  return enviar({
     from: FROM,
     to: correo,
     subject: "Tu código para recuperar la clave — armglobal",
@@ -96,7 +110,7 @@ export async function enviarCodigoRecuperarClave(correo: string, codigo: string)
  * solicitante — no al admin). Si fue aprobada ya puede entrar con la clave
  * que eligió al pedir el acceso; no hace falta un link de recuperación. */
 export async function avisarResultadoAcceso(correo: string, nombre: string, aprobado: boolean) {
-  return resend.emails.send({
+  return enviar({
     from: FROM,
     to: correo,
     subject: aprobado ? "Tu acceso fue aprobado — armglobal" : "Tu solicitud de acceso — armglobal",
@@ -123,7 +137,7 @@ export async function avisarAdmins(opts: {
 }) {
   const destinatarios = opts.destinatarios.filter(Boolean);
   if (!destinatarios.length) return;
-  return resend.emails.send({
+  return enviar({
     from: FROM,
     to: destinatarios,
     subject: opts.asunto,
@@ -152,7 +166,7 @@ export async function enviarReporte(destinatario: string, asunto: string, titulo
     .split("\n")
     .map((l) => l.replace(/\*(.+?)\*/g, "<b>$1</b>") || "&nbsp;")
     .join("<br>");
-  return resend.emails.send({
+  return enviar({
     from: FROM,
     to: destinatario,
     subject: asunto,
@@ -182,7 +196,7 @@ export async function enviarCumpleanos(destinatarios: string[], asunto: string, 
   for (let i = 0; i < destinatarios.length; i += TANDA) {
     const tanda = destinatarios.slice(i, i + TANDA);
     try {
-      await resend.emails.send({ from: FROM, to: FROM, bcc: tanda, subject: asunto, html, text });
+      await enviar({ from: FROM, to: FROM, bcc: tanda, subject: asunto, html, text });
       enviados += tanda.length;
     } catch {
       // una tanda que falla no debe perder las demás
