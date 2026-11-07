@@ -16,6 +16,9 @@ export const AREAS = [
   "Kids", "Tweens", "Técnica", "Worship", "Conexión", "Voluntariado",
   "Stand de Oración", "Merch", "Amor por la Casa",
 ] as const;
+/** Mismo enum `merch_talla_t` que en Postgres — talla de polera/polerón en
+ * el perfil de cada integrante, sin importar su área (no solo Merch). */
+export const TALLAS = ["XS", "S", "M", "L", "XL", "XXL"] as const;
 export const ENCUENTROS: Record<string, string[]> = {
   "Punta Arenas": ["Jueves PM", "Domingo AM", "Domingo PM", "Evento Especial"],
   "Puerto Natales": ["Domingo AM"],

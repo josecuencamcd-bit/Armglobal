@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import Link from "next/link";
-import { AREAS, proximaFecha } from "@/lib/sesiones";
+import { AREAS, TALLAS, proximaFecha } from "@/lib/sesiones";
 import { useCampus } from "@/lib/campus-context";
 import { VolverAdministracion } from "@/lib/volver-admin";
 import { AREAS_DISPONIBILIDAD, ENCUENTRO_DE_SERVICIO } from "@/lib/disponibilidad";
@@ -20,6 +20,8 @@ type Integrante = {
   anos_servicio: number | null;
   rol_servicio: string | null;
   profesion: string | null;
+  talla_polera: string | null;
+  talla_poleron: string | null;
   /** Equipos además del principal (Camino 2) — alguien que sirve en más de
    * un equipo y responde la encuesta de disponibilidad por cada uno. */
   equipos_extra: string[];
@@ -372,6 +374,8 @@ export default function EquiposPage() {
         anos_iglesia: fd.get("anos_iglesia") ? Number(fd.get("anos_iglesia")) : undefined,
         anos_servicio: fd.get("anos_servicio") ? Number(fd.get("anos_servicio")) : undefined,
         rol_servicio: fd.get("rol_servicio") || undefined,
+        talla_polera: fd.get("talla_polera") || undefined,
+        talla_poleron: fd.get("talla_poleron") || undefined,
       }),
     });
     const json = await res.json();
@@ -398,6 +402,8 @@ export default function EquiposPage() {
         anos_iglesia: fd.get("anos_iglesia") ? Number(fd.get("anos_iglesia")) : undefined,
         anos_servicio: fd.get("anos_servicio") ? Number(fd.get("anos_servicio")) : undefined,
         rol_servicio: fd.get("rol_servicio") || undefined,
+        talla_polera: fd.get("talla_polera") || undefined,
+        talla_poleron: fd.get("talla_poleron") || undefined,
         equipos_extra: fd.getAll("equipos_extra"),
       }),
     });
@@ -585,6 +591,22 @@ export default function EquiposPage() {
             <label>Qué hace / rol de servicio (opcional)</label>
             <input name="rol_servicio" placeholder="Ej: Sonido, Cámaras, Bienvenida…" />
           </div>
+          <div style={{ display: "flex", gap: 10 }}>
+            <div className="campo" style={{ flex: 1 }}>
+              <label>Talla polera</label>
+              <select name="talla_polera" defaultValue="">
+                <option value="">—</option>
+                {TALLAS.map((t) => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+            <div className="campo" style={{ flex: 1 }}>
+              <label>Talla polerón</label>
+              <select name="talla_poleron" defaultValue="">
+                <option value="">—</option>
+                {TALLAS.map((t) => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+          </div>
           <button className="boton" type="submit" disabled={guardando}>
             {guardando ? "Guardando…" : "Agregar"}
           </button>
@@ -600,6 +622,8 @@ export default function EquiposPage() {
           i.rol_servicio,
           `${i.anos_servicio ?? 0} ${i.anos_servicio === 1 ? "año" : "años"} sirviendo`,
           `${i.anos_iglesia ?? 0} ${i.anos_iglesia === 1 ? "año" : "años"} en la iglesia`,
+          i.talla_polera ? `Polera ${i.talla_polera}` : null,
+          i.talla_poleron ? `Polerón ${i.talla_poleron}` : null,
         ].filter(Boolean).join(" · ");
         return (
         <div key={i.id}>
@@ -711,6 +735,22 @@ export default function EquiposPage() {
               <div className="campo">
                 <label>Qué hace / rol de servicio (opcional)</label>
                 <input name="rol_servicio" defaultValue={i.rol_servicio ?? ""} placeholder="Ej: Sonido, Cámaras, Bienvenida…" />
+              </div>
+              <div style={{ display: "flex", gap: 10 }}>
+                <div className="campo" style={{ flex: 1 }}>
+                  <label>Talla polera</label>
+                  <select name="talla_polera" defaultValue={i.talla_polera ?? ""}>
+                    <option value="">—</option>
+                    {TALLAS.map((t) => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+                <div className="campo" style={{ flex: 1 }}>
+                  <label>Talla polerón</label>
+                  <select name="talla_poleron" defaultValue={i.talla_poleron ?? ""}>
+                    <option value="">—</option>
+                    {TALLAS.map((t) => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
               </div>
               <button className="boton" type="submit" disabled={guardandoEdit}>
                 {guardandoEdit ? "Guardando…" : "Guardar cambios"}

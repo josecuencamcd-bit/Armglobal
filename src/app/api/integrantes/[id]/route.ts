@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { ok, fail, fromSupabaseError, parseBody } from "@/lib/api-helpers";
-import { AREAS } from "@/lib/sesiones";
+import { AREAS, TALLAS } from "@/lib/sesiones";
 import { z } from "zod";
 
 const PatchSchema = z
@@ -15,6 +15,8 @@ const PatchSchema = z
     rol_servicio: z.string().trim().max(60).optional(),
     profesion: z.string().trim().max(120).optional(),
     estado: z.string().trim().max(40).optional(),
+    talla_polera: z.enum(TALLAS, { error: () => "Talla no válida." }).optional(),
+    talla_poleron: z.enum(TALLAS, { error: () => "Talla no válida." }).optional(),
     // Camino 2: equipos además del principal (ver integrante_equipos_extra)
     // — para alguien que sirve en más de un equipo y responde la encuesta
     // de disponibilidad por cada uno. No viaja a la tabla `integrantes`;

@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ok, fail, fromSupabaseError, parseBody } from "@/lib/api-helpers";
-import { CAMPUS, AREAS } from "@/lib/sesiones";
+import { CAMPUS, AREAS, TALLAS } from "@/lib/sesiones";
 import { identidadActuante } from "@/lib/identidad";
 import { esFin } from "@/lib/visibilidad-modulos";
 import { z } from "zod";
@@ -25,6 +25,8 @@ const IntegranteSchema = z.object({
   rol_servicio: z.string().trim().max(60).optional(),
   profesion: z.string().trim().max(120).optional(),
   estado: z.string().trim().max(40).default("Activo"),
+  talla_polera: z.enum(TALLAS, { error: () => "Talla no válida." }).optional(),
+  talla_poleron: z.enum(TALLAS, { error: () => "Talla no válida." }).optional(),
 });
 
 export async function GET(req: Request) {
