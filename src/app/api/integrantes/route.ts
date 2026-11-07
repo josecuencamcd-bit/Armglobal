@@ -1,7 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { ok, fail, fromSupabaseError, parseBody } from "@/lib/api-helpers";
 import { CAMPUS, AREAS } from "@/lib/sesiones";
 import { identidadActuante } from "@/lib/identidad";
+import { esFin } from "@/lib/visibilidad-modulos";
 import { z } from "zod";
 
 /**
@@ -31,32 +33,74 @@ export async function GET(req: Request) {
   const area = AREAS.find((a) => a === searchParams.get("area"));
 
   const supabase = await createClient();
-  let query = supabase.from("integrantes").select("*").order("nombre", { ascending: true });
-  if (campus) query = query.eq("campus", campus);
-  if (area) query = query.eq("area", area);
 
-  const { data, error } = await query;
-  if (error) return fromSupabaseError(error);
+  // Sin área: comportamiento original, acotado por RLS de sesión tal cual
+  // (hoy ningún llamador del front pide esto, pero se mantiene por si acaso).
+  if (!area) {
+    let query = supabase.from("integrantes").select("*").order("nombre", { ascending: true });
+    if (campus) query = query.eq("campus", campus);
+    const { data, error } = await query;
+    if (error) return fromSupabaseError(error);
+    return ok((data ?? []).map((i) => ({ ...i, equipos_extra: [] as string[], es_extra: false })));
+  }
 
-  // Camino 2 (disponibilidad por más de un equipo): adjunta los equipos
-  // adicionales de cada integrante listado, para que "Mi equipo" los
-  // muestre y los pueda editar — ver integrante_equipos_extra.
-  const ids = (data ?? []).map((i) => i.id);
+  const identidad = await identidadActuante(supabase);
+  if (!identidad) return fail("No autenticado.", 401);
+  const autorizado =
+    esFin(identidad.perfil) || identidad.perfil.areas.includes(area) || identidad.perfil.sirve.includes(area);
+  if (!autorizado) return fail("No tienes permiso para ver este equipo.", 403);
+
+  // La lista de "Mi equipo" debe traer tanto a quienes tienen esta área
+  // como principal como a quienes la tienen como equipo adicional (Camino
+  // 2 + vínculo desde "Agregar integrante" → /equipo-extra) — por eso usa
+  // el cliente admin (la RLS de sesión solo deja ver el área principal
+  // propia) con el chequeo de permiso ya hecho arriba.
+  const admin = createAdminClient();
+  let primariaQ = admin.from("integrantes").select("*").eq("area", area);
+  if (campus) primariaQ = primariaQ.eq("campus", campus);
+  let extraLinksQ = admin.from("integrante_equipos_extra").select("integrante_id").eq("area", area);
+  if (campus) extraLinksQ = extraLinksQ.eq("campus", campus);
+
+  const [{ data: primarios, error: errP }, { data: extraLinks, error: errE }] = await Promise.all([
+    primariaQ,
+    extraLinksQ,
+  ]);
+  if (errP) return fromSupabaseError(errP);
+  if (errE) return fromSupabaseError(errE);
+
+  const idsExtra = (extraLinks ?? []).map((e) => e.integrante_id);
+  let extras: NonNullable<typeof primarios> = [];
+  if (idsExtra.length > 0) {
+    let extraQ = admin.from("integrantes").select("*").in("id", idsExtra);
+    if (campus) extraQ = extraQ.eq("campus", campus);
+    const { data, error } = await extraQ;
+    if (error) return fromSupabaseError(error);
+    extras = data ?? [];
+  }
+
+  const combinadosMap = new Map<number, (typeof primarios extends (infer R)[] ? R : never) & { es_extra: boolean }>();
+  for (const p of primarios ?? []) combinadosMap.set(p.id, { ...p, es_extra: false });
+  for (const e of extras) if (!combinadosMap.has(e.id)) combinadosMap.set(e.id, { ...e, es_extra: true });
+  const combinados = [...combinadosMap.values()].sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+
+  // Camino 2 (disponibilidad por más de un equipo): adjunta TODOS los
+  // equipos adicionales de cada integrante listado, para que "Mi equipo"
+  // los muestre y los pueda editar.
+  const ids = combinados.map((i) => i.id);
   let porId = new Map<number, string[]>();
   if (ids.length > 0) {
-    const { data: extra, error: errExtra } = await supabase
+    const { data: extraTodos, error: errExtraTodos } = await admin
       .from("integrante_equipos_extra")
       .select("integrante_id, area")
       .in("integrante_id", ids);
-    if (errExtra) return fromSupabaseError(errExtra);
-    porId = new Map();
-    for (const e of extra ?? []) {
+    if (errExtraTodos) return fromSupabaseError(errExtraTodos);
+    for (const e of extraTodos ?? []) {
       porId.set(e.integrante_id, [...(porId.get(e.integrante_id) ?? []), e.area]);
     }
   }
-  const conExtra = (data ?? []).map((i) => ({ ...i, equipos_extra: porId.get(i.id) ?? [] }));
+  const final = combinados.map((i) => ({ ...i, equipos_extra: porId.get(i.id) ?? [] }));
 
-  return ok(conExtra);
+  return ok(final);
 }
 
 export async function POST(req: Request) {

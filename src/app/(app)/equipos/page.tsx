@@ -22,6 +22,10 @@ type Integrante = {
   /** Equipos además del principal (Camino 2) — alguien que sirve en más de
    * un equipo y responde la encuesta de disponibilidad por cada uno. */
   equipos_extra: string[];
+  /** true cuando esta área NO es su equipo principal — está acá porque un
+   * líder lo vinculó desde "Agregar integrante" (equipo-extra) o desde la
+   * edición de otro integrante. Su área principal sigue siendo otra. */
+  es_extra?: boolean;
 };
 
 /** Días que faltan para el próximo cumpleaños (0 = hoy), igual criterio
@@ -600,7 +604,17 @@ export default function EquiposPage() {
         <div key={i.id}>
           <div className="fila">
             <div>
-              <div>{i.nombre}</div>
+              <div>
+                {i.nombre}
+                {i.es_extra && (
+                  <span
+                    className="chip"
+                    style={{ marginLeft: 8, fontSize: "0.72rem", padding: "2px 8px", minHeight: "auto", verticalAlign: "middle" }}
+                  >
+                    Equipo adicional · principal: {i.area}
+                  </span>
+                )}
+              </div>
               <div className="muted" style={{ fontSize: "0.78rem" }}>{sub}</div>
               {(i.telefono || i.correo) && <div className="muted" style={{ fontSize: "0.76rem" }}>{i.telefono || i.correo}</div>}
               {i.equipos_extra.length > 0 && (
