@@ -1,5 +1,5 @@
 import { CAMPUS, ENCUENTROS, lunesDe, proximaFecha } from "@/lib/sesiones";
-import { FONDO_AREAS } from "@/lib/visibilidad-modulos";
+import { FONDO_AREAS, type Area } from "@/lib/visibilidad-modulos";
 
 /**
  * Constantes/helpers de la encuesta pública de disponibilidad (Task 3 del
@@ -14,7 +14,15 @@ import { FONDO_AREAS } from "@/lib/visibilidad-modulos";
  */
 
 export const CAMPUS_DISPONIBILIDAD = CAMPUS;
-export const AREAS_DISPONIBILIDAD = FONDO_AREAS;
+/** Equipos que la encuesta de disponibilidad ofrece como opción. Son los 6
+ * equipos con fondo propio (FONDO_AREAS) más Stand de Oración, Merch y
+ * Amor por la Casa — equipos autoservicio sin fondo propio, pero que
+ * también arman turnos semanales y necesitan la encuesta. Lista
+ * independiente de FONDO_AREAS a propósito: agregar un equipo acá no le da
+ * acceso a fondos. */
+export const AREAS_DISPONIBILIDAD: Area[] = [
+  ...FONDO_AREAS, "Stand de Oración", "Merch", "Amor por la Casa",
+];
 
 /** Valor especial guardado en `encuentros` cuando la persona marca que no
  * tiene disponibilidad esta semana — se guarda solo, sin combinarse con

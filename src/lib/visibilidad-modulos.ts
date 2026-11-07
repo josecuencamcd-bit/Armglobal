@@ -1,7 +1,7 @@
 import type { Database } from "./supabase/types";
 
 type Rol = Database["public"]["Enums"]["rol_t"];
-type Area = Database["public"]["Enums"]["area_t"];
+export type Area = Database["public"]["Enums"]["area_t"];
 
 export const FONDO_AREAS: Area[] = ["Kids", "Tweens", "Técnica", "Worship", "Conexión", "Voluntariado"];
 
