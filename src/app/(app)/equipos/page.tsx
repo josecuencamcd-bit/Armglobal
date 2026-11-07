@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
+import Link from "next/link";
 import { AREAS, proximaFecha } from "@/lib/sesiones";
 import { useCampus } from "@/lib/campus-context";
 import { VolverAdministracion } from "@/lib/volver-admin";
@@ -966,6 +967,14 @@ export default function EquiposPage() {
           >
             {generandoImagen ? "Generando…" : "Descargar / compartir imagen"}
           </button>
+          <p style={{ marginTop: 10 }}>
+            <Link
+              href={`/equipos/ficha?servicio=${encodeURIComponent(servicio)}&fecha=${encodeURIComponent(fechaFicha)}`}
+              style={{ color: "var(--accent)", fontSize: "0.9rem" }}
+            >
+              Ver ficha completa (todas las áreas) →
+            </Link>
+          </p>
         </div>
       )}
 
