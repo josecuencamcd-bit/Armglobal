@@ -6,6 +6,7 @@ import { AREAS, TALLAS, proximaFecha } from "@/lib/sesiones";
 import { useCampus } from "@/lib/campus-context";
 import { VolverAdministracion } from "@/lib/volver-admin";
 import { AREAS_DISPONIBILIDAD, ENCUENTRO_DE_SERVICIO } from "@/lib/disponibilidad";
+import MerchInventario from "./merch-inventario";
 
 type Integrante = {
   id: number;
@@ -665,6 +666,8 @@ export default function EquiposPage() {
           ))}
         </div>
       )}
+
+      {area === "Merch" && <MerchInventario campus={campus} />}
 
       <div className="eco-cards" style={{ marginBottom: 16 }}>
         <div className="eco-card"><span>Integrantes</span><b>{activos.length}</b></div>

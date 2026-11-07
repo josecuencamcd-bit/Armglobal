@@ -18,6 +18,32 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
 
   const supabase = await createClient();
   const identidad = await identidadActuante(supabase);
+  if (!identidad) return fail("No autenticado.", 401);
+
+  // Marcar "Entregada" rebaja el inventario de verdad (merch_registrar_movimiento,
+  // tipo_mov="Entrega") ANTES de tocar la solicitud — si no hay stock suficiente,
+  // la solicitud se queda como estaba en vez de quedar "Entregada" mintiendo
+  // sobre un inventario que no existe.
+  if (parsedBody.data.estado === "Entregada") {
+    const { data: solicitud, error: errGet } = await supabase
+      .from("merch_solicitudes")
+      .select("campus, tipo, talla, cantidad")
+      .eq("id", Number(params.id))
+      .maybeSingle();
+    if (errGet) return fromSupabaseError(errGet);
+    if (!solicitud) return fail("No tienes permiso, o la solicitud no existe.", 403);
+
+    const { error: errMov } = await supabase.rpc("merch_registrar_movimiento", {
+      p_campus: solicitud.campus,
+      p_tipo: solicitud.tipo,
+      p_talla: solicitud.talla,
+      p_cantidad: solicitud.cantidad,
+      p_tipo_mov: "Entrega",
+      p_nota: `Solicitud #${params.id}`,
+      p_por: identidad.perfil.correo,
+    });
+    if (errMov) return fromSupabaseError(errMov);
+  }
 
   const { data, error, count } = await supabase
     .from("merch_solicitudes")

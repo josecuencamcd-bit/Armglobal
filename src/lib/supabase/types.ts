@@ -1549,6 +1549,34 @@ export type Database = {
         }
         Returns: boolean
       }
+      merch_registrar_movimiento: {
+        Args: {
+          p_campus: Database["public"]["Enums"]["campus_t"]
+          p_cantidad: number
+          p_nota: string
+          p_por: string
+          p_talla: Database["public"]["Enums"]["merch_talla_t"]
+          p_tipo: string
+          p_tipo_mov: string
+        }
+        Returns: {
+          articulo_id: number
+          campus: Database["public"]["Enums"]["campus_t"]
+          cantidad: number
+          creado_en: string
+          fecha: string
+          id: number
+          nota: string | null
+          por: string | null
+          tipo_mov: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "merch_movimientos"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       reunion_me_invitan: { Args: { p_invitados: Json }; Returns: boolean }
     }
     Enums: {
