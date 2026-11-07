@@ -11,6 +11,7 @@ const ICONO_POR_CLAVE: Record<string, string> = {
   turnos: "turnos", fondos: "fondo", reportes: "finanzas", fechas: "turnos",
   equipo: "equipo", asistencia: "asistencia", fondo: "fondo", visitas: "visitas",
   solicitudes: "bajas", equipostats: "actividad", reporte: "asistencia", aportes: "aportes",
+  amor: "fondo",
 };
 
 /**

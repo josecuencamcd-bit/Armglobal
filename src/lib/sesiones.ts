@@ -22,7 +22,13 @@ export const EVENTOS = [
   "Encuentro de Jóvenes",
 ];
 export const MODALIDADES = ["Presencial", "Virtual"] as const;
+// Se mantiene el enum completo (coincide con categoria_aporte_t en Postgres
+// y con datos históricos) para que lo que ya lee los 4 valores siga
+// funcionando. "Amor por la Casa" pasó a ser anual, no por encuentro, así
+// que el formulario de Aportes de un encuentro usa CATEGORIAS_ENCUENTRO
+// (sin ella) — ver /amor-por-la-casa para su propio registro y total.
 export const CATEGORIAS = ["Ofrenda", "Siembra Especial", "Diezmo", "Amor por la Casa"] as const;
+export const CATEGORIAS_ENCUENTRO = ["Ofrenda", "Siembra Especial", "Diezmo"] as const;
 export const METODOS = ["Tarjeta", "Efectivo", "Transferencia"] as const;
 /** Fondos de equipo (Fondo Voluntariado) y gastos de campus — mismos enums de Code.gs. */
 export const METODOS_FONDO = ["Efectivo", "Transferencia"] as const;
@@ -120,6 +126,10 @@ export function claveSesion(a: ArgsEncuentro): string {
   return [a.campus, a.encuentro, a.evento ?? "", a.fecha].join("|");
 }
 
+/** Solo la usa /api/sesiones/[key]/aportes (aportes de un encuentro
+ * puntual) — por eso categoria queda acotada a CATEGORIAS_ENCUENTRO: "Amor
+ * por la Casa" ya no se registra por encuentro, tiene su propia pantalla
+ * (/amor-por-la-casa) con su propio endpoint y su propia validación. */
 export const AporteSchema = z.object({
   nombre: z.string().trim().min(1, "Falta el nombre.").max(60),
   monto: z
@@ -128,7 +138,7 @@ export const AporteSchema = z.object({
       message: "Monto no válido.",
     })
     .transform((n) => Math.floor(n)),
-  categoria: z.enum(CATEGORIAS, { error: () => "Categoría no válida." }),
+  categoria: z.enum(CATEGORIAS_ENCUENTRO, { error: () => "Categoría no válida." }),
   metodo: z.enum(METODOS, { error: () => "Forma de pago no válida." }),
 });
 

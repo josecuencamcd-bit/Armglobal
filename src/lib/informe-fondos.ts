@@ -29,9 +29,17 @@ export function pctCambio(actual: number, anterior: number): number {
 }
 
 /** ingresosCampus_: ingresos del campus en un mes, sacados de los aportes
- * registrados en los encuentros (tabla `aportes`, no `fondos_equipo`). */
+ * registrados en los encuentros (tabla `aportes`, no `fondos_equipo`).
+ * "Amor por la Casa" se excluye a propósito: es un registro anual, no
+ * mensual, y tiene su propio total aparte (ver /amor-por-la-casa) — antes
+ * se colaba acá y mezclaba un ingreso de una vez al año con el saldo
+ * corriente de ofrenda/diezmo/siembra. */
 export async function ingresosCampus(db: DB, campus: Campus, mes: string) {
-  const { data, error } = await db.from("aportes").select("fecha, monto, categoria, metodo").eq("campus", campus);
+  const { data, error } = await db
+    .from("aportes")
+    .select("fecha, monto, categoria, metodo")
+    .eq("campus", campus)
+    .neq("categoria", "Amor por la Casa");
   if (error) throw error;
   const cat: Record<string, number> = {};
   const met: Record<string, number> = {};

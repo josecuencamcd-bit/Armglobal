@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { CATEGORIAS, METODOS } from "@/lib/sesiones";
+import { CATEGORIAS, CATEGORIAS_ENCUENTRO, METODOS } from "@/lib/sesiones";
 
 type Aporte = { id: string; nombre: string; monto: number; categoria: string; metodo: string };
 type Estado = { key: string; responsable: string; finalizado: boolean; aportes: Aporte[] };
@@ -29,7 +29,7 @@ export default function AportesEncuentroPage() {
   const [error, setError] = useState<string | null>(null);
   const [nombre, setNombre] = useState("");
   const [monto, setMonto] = useState("");
-  const [categoria, setCategoria] = useState<string>(CATEGORIAS[0]);
+  const [categoria, setCategoria] = useState<string>(CATEGORIAS_ENCUENTRO[0]);
   const [guardando, setGuardando] = useState<string | null>(null);
 
   const cargar = useCallback(async () => {
@@ -120,7 +120,7 @@ export default function AportesEncuentroPage() {
           <div className="campo">
             <label>Categoría</label>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8 }}>
-              {CATEGORIAS.map((c) => (
+              {CATEGORIAS_ENCUENTRO.map((c) => (
                 <button
                   key={c}
                   type="button"

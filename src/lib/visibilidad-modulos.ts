@@ -165,6 +165,10 @@ export function adminSubnav(p: PerfilVisibilidad, campus: "Punta Arenas" | "Puer
     { clave: "equipostats", label: "Estadísticas", href: "/estadisticas", ok: esFin(p) && esLider(p) && !esPanorama(p) },
     { clave: "reporte", label: "Reporte", href: "/encuentros", ok: !esPastorC(p) && esFin(p) },
     { clave: "aportes", label: "Aportes", href: "/encuentros/aportes", ok: !esPastorC(p) && esFin(p) },
+    // Aporte anual, separado de los Aportes de un encuentro puntual — mismo
+    // gate que "aportes"/"reporte" (Pastor/Pastor de campus lo ve en
+    // Reportes → el informe mensual ya lo trae aparte).
+    { clave: "amor", label: "Amor por la Casa", href: "/amor-por-la-casa", ok: esFin(p) },
   ];
   return items.filter((x) => x.ok);
 }
