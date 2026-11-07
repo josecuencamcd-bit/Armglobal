@@ -63,7 +63,13 @@ export function modulosVisibles(p: PerfilVisibilidad): Set<string> {
   const t = new Set<string>(["inicio"]);
   if (esPanorama(p)) { t.add("panorama"); t.add("stats"); }
   if (esFin(p)) { t.add("aportes"); t.add("reporte"); }
-  if (esLider(p) && !esFin(p)) { t.add("equipo"); t.add("asistencia"); }
+  // Antes se excluía a quien además fuera esFin() (Administrador/Ministro/
+  // Pastor), asumiendo que ese rol siempre reemplaza el liderazgo de un
+  // equipo propio — pero alguien puede ser Líder de un área (areas no
+  // vacío) Y Administrador/Admin app a la vez (p. ej. el admin de la app
+  // que también lidera Voluntariado): a esa persona sí hay que mostrarle
+  // su equipo suelto en el menú, no solo escondido dentro de Administración.
+  if (esLider(p)) { t.add("equipo"); t.add("asistencia"); }
   if (esConex(p) && !esFin(p)) t.add("visitas");
   if (tiene(p, "Admin app")) t.add("solicitudes");
   if (fondosMios(p).length && !esFin(p)) t.add("fondo");
