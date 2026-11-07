@@ -1,17 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { ok, fromSupabaseError, parseBody } from "@/lib/api-helpers";
-import { CAMPUS } from "@/lib/sesiones";
+import { CAMPUS, lunesDe } from "@/lib/sesiones";
 import { identidadActuante } from "@/lib/identidad";
 import { z } from "zod";
 
-/** lunesDe_: lunes ISO de la semana que contiene esa fecha. */
-function lunesDe(fechaISO: string): string {
-  const [y, m, d] = fechaISO.slice(0, 10).split("-").map(Number);
-  const dt = new Date(Date.UTC(y, m - 1, d, 12));
-  const dow = (dt.getUTCDay() + 6) % 7;
-  dt.setUTCDate(dt.getUTCDate() - dow);
-  return dt.toISOString().slice(0, 10);
-}
 function sumaDias(fechaISO: string, n: number): string {
   const [y, m, d] = fechaISO.split("-").map(Number);
   return new Date(Date.UTC(y, m - 1, d + n, 12)).toISOString().slice(0, 10);

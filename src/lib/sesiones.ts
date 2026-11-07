@@ -73,6 +73,18 @@ export function equiposVigentes(): string[] {
   return hoy() >= CAMBIO_ROLES ? EQUIPOS_NUEVOS : EQUIPOS_ANT;
 }
 
+/** lunesDe_: lunes ISO de la semana que contiene esa fecha — misma semana
+ * que usa la tabla `turnos` (ver /api/turnos). Compartida acá para que
+ * sesiones-db.ts pueda ubicar el turno de administradores de la semana de
+ * un encuentro sin duplicar la lógica. */
+export function lunesDe(fechaISO: string): string {
+  const [y, m, d] = fechaISO.slice(0, 10).split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d, 12));
+  const dow = (dt.getUTCDay() + 6) % 7;
+  dt.setUTCDate(dt.getUTCDate() - dow);
+  return dt.toISOString().slice(0, 10);
+}
+
 const fechaISO = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Fecha no válida.");
 
 export const ArgsSchema = z
@@ -132,8 +144,14 @@ export const SetCampoBodySchema = z.object({
  * devuelve el valor normalizado a guardar, o lanza con el mismo mensaje. */
 export function validarCampo(campo: string, valor: string | number): string | number {
   if (campo === "responsable") {
-    if (!EQUIPOS.includes(String(valor))) throw new Error("Responsable no válido.");
-    return String(valor);
+    // Antes solo aceptaba una de las 4 parejas fijas de EQUIPOS. Ahora el
+    // valor puede venir de los administradores asignados en Turnos esa
+    // semana (uno o varios nombres reales, unidos con " y "), así que se
+    // valida como texto libre — igual que predicador/mensaje — en vez de
+    // contra esa lista cerrada.
+    const v = String(valor ?? "").trim().slice(0, 200);
+    if (!v) throw new Error("Responsable no válido.");
+    return v;
   }
   if (campo === "modalidad") {
     if (!MODALIDADES.includes(String(valor) as (typeof MODALIDADES)[number])) {

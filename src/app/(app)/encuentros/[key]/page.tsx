@@ -27,6 +27,11 @@ type Sesion = {
 type Estado = {
   key: string;
   responsable: string;
+  // Administradores asignados en Turnos para la semana de este encuentro —
+  // si viene vacío, el Responsable se elige de la lista tradicional de
+  // equipos (una sola opción); si no, se precarga con estos nombres y se
+  // pueden marcar/desmarcar varios.
+  turnoAsignado: string[];
   finalizado: boolean;
   sesion: Sesion | null;
   asistencia: { area: string; cantidad: number }[];
@@ -242,15 +247,24 @@ export default function EncuentroPage() {
       {estado && (
         <>
           <Seccion titulo="Responsable">
-            <div className="campo">
-              <select
-                value={estado.sesion?.responsable ?? estado.responsable}
+            {estado.turnoAsignado.length > 0 ? (
+              <ResponsableTurno
+                turno={estado.turnoAsignado}
+                valor={estado.sesion?.responsable ?? estado.responsable}
                 disabled={guardando || (estado.finalizado && !autorizado)}
-                onChange={(e) => setCampo("responsable", e.target.value)}
-              >
-                {equiposVigentes().map((eq) => <option key={eq} value={eq}>{eq}</option>)}
-              </select>
-            </div>
+                onToggle={(nombres) => setCampo("responsable", nombres.join(" y "))}
+              />
+            ) : (
+              <div className="campo">
+                <select
+                  value={estado.sesion?.responsable ?? estado.responsable}
+                  disabled={guardando || (estado.finalizado && !autorizado)}
+                  onChange={(e) => setCampo("responsable", e.target.value)}
+                >
+                  {equiposVigentes().map((eq) => <option key={eq} value={eq}>{eq}</option>)}
+                </select>
+              </div>
+            )}
           </Seccion>
 
           <Seccion titulo="Datos del reporte">
@@ -495,6 +509,48 @@ export default function EncuentroPage() {
           </p>
         </>
       )}
+    </div>
+  );
+}
+
+/**
+ * Responsable precargado desde Turnos: muestra como chips a los
+ * administradores que el pastor de campus asignó para la semana de este
+ * encuentro, todos marcados por defecto (así llega "como ya definido" sin
+ * que nadie tenga que elegir). Si hay un cambio de última hora, se tocan
+ * para marcar/desmarcar — el orden del guardado sigue siempre el de
+ * `turno` para que no "salte" al tocar distintos nombres.
+ */
+function ResponsableTurno({
+  turno, valor, disabled, onToggle,
+}: { turno: string[]; valor: string; disabled?: boolean; onToggle: (nombres: string[]) => void }) {
+  const seleccionados = new Set(valor.split(" y ").map((n) => n.trim()).filter(Boolean));
+  return (
+    <div>
+      <p className="muted" style={{ margin: "0 0 8px", fontSize: "0.78rem" }}>
+        Precargado desde Turnos — toca para ajustar.
+      </p>
+      <div className="chips">
+        {turno.map((nombre) => {
+          const activo = seleccionados.has(nombre);
+          return (
+            <button
+              key={nombre}
+              type="button"
+              className="chip"
+              aria-pressed={activo}
+              disabled={disabled}
+              onClick={() => {
+                const siguiente = new Set(seleccionados);
+                if (activo) siguiente.delete(nombre); else siguiente.add(nombre);
+                onToggle(turno.filter((n) => siguiente.has(n)));
+              }}
+            >
+              {nombre}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
