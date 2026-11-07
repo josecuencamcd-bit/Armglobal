@@ -69,8 +69,8 @@ export function encuentrosSemana(campus: (typeof CAMPUS)[number]): EncuentroSema
 }
 
 /** Semana (lunes ISO) que identifica esta ronda de la encuesta para ese
- * campus — misma noción que usa `turnos`, para que todo quede agrupado por
- * semana real. */
+ * campus — misma noción que usa `administracion_semanal`, para que todo
+ * quede agrupado por semana real. */
 export function semanaDe(campus: (typeof CAMPUS)[number]): string {
   const primeraFecha = encuentrosSemana(campus)[0]?.fecha;
   return lunesDe(primeraFecha ?? new Date().toISOString().slice(0, 10));

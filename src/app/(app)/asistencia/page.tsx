@@ -9,7 +9,7 @@ import { VolverAdministracion } from "@/lib/volver-admin";
 
 type Fila = { id: number; integrante_id: number; nombre: string; estado: string | null; observacion: string | null; respuesta: string | null };
 type Integrante = { id: number; nombre: string; rol_servicio: string | null };
-type Turno = { administradores: string[]; lideres: string[] } | null;
+type Administracion = { administradores: string[]; lideres: string[] } | null;
 type Datos = {
   fecha: string;
   campus: string;
@@ -19,7 +19,7 @@ type Datos = {
   nota: string;
   filas: Fila[];
   integrantes: Integrante[];
-  turno: Turno;
+  administracion: Administracion;
   faltantes: string[];
 };
 type Perfil = { nombre: string; roles: string[]; areas: string[]; campus: string | null };
@@ -30,7 +30,7 @@ function hoyISO() {
 const ES_FINANZAS = ["Pastor principal", "Pastor de campus", "Pastor", "Ministro", "Administrador", "Admin app"];
 
 /** vAsistencia: el líder marca quién vino/no vino en cada encuentro, ve
- * quién está de turno, escribe la nota y finaliza — equivalente a
+ * quién administra, escribe la nota y finaliza — equivalente a
  * api_ecoAsistencia/Programar/Marcar/Nota/Finalizar de la app vieja. */
 export default function AsistenciaPage() {
   return (
@@ -230,14 +230,14 @@ function AsistenciaContenido() {
             <p className="aviso">Solo el líder del área marca la asistencia. Aquí la puedes ver.</p>
           ) : null}
 
-          {datos.turno && (
+          {datos.administracion && (
             <div className="tarjeta">
-              <p className="muted" style={{ margin: "0 0 8px", fontSize: "0.78rem", textTransform: "uppercase" }}>De turno en este encuentro</p>
-              {datos.turno.administradores.length > 0 && (
-                <p style={{ margin: "2px 0" }}><b>Administradores de campus</b><br /><span className="muted">{datos.turno.administradores.join(", ")}</span></p>
+              <p className="muted" style={{ margin: "0 0 8px", fontSize: "0.78rem", textTransform: "uppercase" }}>Administración de este encuentro</p>
+              {datos.administracion.administradores.length > 0 && (
+                <p style={{ margin: "2px 0" }}><b>Administradores de campus</b><br /><span className="muted">{datos.administracion.administradores.join(", ")}</span></p>
               )}
-              {datos.turno.lideres.length > 0 && (
-                <p style={{ margin: "2px 0" }}><b>Lideran el equipo hoy</b><br /><span className="muted">{datos.turno.lideres.join(", ")}</span></p>
+              {datos.administracion.lideres.length > 0 && (
+                <p style={{ margin: "2px 0" }}><b>Lideran el equipo hoy</b><br /><span className="muted">{datos.administracion.lideres.join(", ")}</span></p>
               )}
             </div>
           )}

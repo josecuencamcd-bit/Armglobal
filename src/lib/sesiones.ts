@@ -80,9 +80,9 @@ export function equiposVigentes(): string[] {
 }
 
 /** lunesDe_: lunes ISO de la semana que contiene esa fecha — misma semana
- * que usa la tabla `turnos` (ver /api/turnos). Compartida acá para que
- * sesiones-db.ts pueda ubicar el turno de administradores de la semana de
- * un encuentro sin duplicar la lógica. */
+ * que usa la tabla `administracion_semanal` (ver /api/administracion-semanal).
+ * Compartida acá para que sesiones-db.ts pueda ubicar a los administradores
+ * de la semana de un encuentro sin duplicar la lógica. */
 export function lunesDe(fechaISO: string): string {
   const [y, m, d] = fechaISO.slice(0, 10).split("-").map(Number);
   const dt = new Date(Date.UTC(y, m - 1, d, 12));
@@ -155,8 +155,8 @@ export const SetCampoBodySchema = z.object({
 export function validarCampo(campo: string, valor: string | number): string | number {
   if (campo === "responsable") {
     // Antes solo aceptaba una de las 4 parejas fijas de EQUIPOS. Ahora el
-    // valor puede venir de los administradores asignados en Turnos esa
-    // semana (uno o varios nombres reales, unidos con " y "), así que se
+    // valor puede venir de los administradores asignados en Administración
+    // semanal esa semana (uno o varios nombres reales, unidos con " y "), así que se
     // valida como texto libre — igual que predicador/mensaje — en vez de
     // contra esa lista cerrada.
     const v = String(valor ?? "").trim().slice(0, 200);

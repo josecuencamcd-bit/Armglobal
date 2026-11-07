@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      administracion_semanal: {
+        Row: {
+          actualizado: string
+          campus: Database["public"]["Enums"]["campus_t"]
+          correos: string[] | null
+          nombres: string[] | null
+          por: string | null
+          semana: string
+        }
+        Insert: {
+          actualizado?: string
+          campus: Database["public"]["Enums"]["campus_t"]
+          correos?: string[] | null
+          nombres?: string[] | null
+          por?: string | null
+          semana: string
+        }
+        Update: {
+          actualizado?: string
+          campus?: Database["public"]["Enums"]["campus_t"]
+          correos?: string[] | null
+          nombres?: string[] | null
+          por?: string | null
+          semana?: string
+        }
+        Relationships: []
+      }
       aportes: {
         Row: {
           campus: Database["public"]["Enums"]["campus_t"]
@@ -744,6 +771,8 @@ export type Database = {
           nombre: string
           profesion: string | null
           rol_servicio: string | null
+          talla_polera: Database["public"]["Enums"]["merch_talla_t"] | null
+          talla_poleron: Database["public"]["Enums"]["merch_talla_t"] | null
           telefono: string | null
         }
         Insert: {
@@ -760,6 +789,8 @@ export type Database = {
           nombre: string
           profesion?: string | null
           rol_servicio?: string | null
+          talla_polera?: Database["public"]["Enums"]["merch_talla_t"] | null
+          talla_poleron?: Database["public"]["Enums"]["merch_talla_t"] | null
           telefono?: string | null
         }
         Update: {
@@ -776,9 +807,147 @@ export type Database = {
           nombre?: string
           profesion?: string | null
           rol_servicio?: string | null
+          talla_polera?: Database["public"]["Enums"]["merch_talla_t"] | null
+          talla_poleron?: Database["public"]["Enums"]["merch_talla_t"] | null
           telefono?: string | null
         }
         Relationships: []
+      }
+      merch_articulos: {
+        Row: {
+          actualizado_en: string
+          campus: Database["public"]["Enums"]["campus_t"]
+          creado_en: string
+          id: number
+          stock: number
+          talla: Database["public"]["Enums"]["merch_talla_t"]
+          tipo: string
+        }
+        Insert: {
+          actualizado_en?: string
+          campus: Database["public"]["Enums"]["campus_t"]
+          creado_en?: string
+          id?: never
+          stock?: number
+          talla: Database["public"]["Enums"]["merch_talla_t"]
+          tipo: string
+        }
+        Update: {
+          actualizado_en?: string
+          campus?: Database["public"]["Enums"]["campus_t"]
+          creado_en?: string
+          id?: never
+          stock?: number
+          talla?: Database["public"]["Enums"]["merch_talla_t"]
+          tipo?: string
+        }
+        Relationships: []
+      }
+      merch_movimientos: {
+        Row: {
+          articulo_id: number
+          campus: Database["public"]["Enums"]["campus_t"]
+          cantidad: number
+          creado_en: string
+          fecha: string
+          id: number
+          nota: string | null
+          por: string | null
+          tipo_mov: string
+        }
+        Insert: {
+          articulo_id: number
+          campus: Database["public"]["Enums"]["campus_t"]
+          cantidad: number
+          creado_en?: string
+          fecha?: string
+          id?: never
+          nota?: string | null
+          por?: string | null
+          tipo_mov: string
+        }
+        Update: {
+          articulo_id?: number
+          campus?: Database["public"]["Enums"]["campus_t"]
+          cantidad?: number
+          creado_en?: string
+          fecha?: string
+          id?: never
+          nota?: string | null
+          por?: string | null
+          tipo_mov?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "merch_movimientos_articulo_id_fkey"
+            columns: ["articulo_id"]
+            isOneToOne: false
+            referencedRelation: "merch_articulos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      merch_solicitudes: {
+        Row: {
+          area: Database["public"]["Enums"]["area_t"]
+          campus: Database["public"]["Enums"]["campus_t"]
+          cantidad: number
+          comprobante_url: string | null
+          correo_solicitante: string | null
+          creado_en: string
+          estado: string
+          id: number
+          integrante_id: number | null
+          nota: string | null
+          resuelto_en: string | null
+          resuelto_por: string | null
+          solicitante: string
+          talla: Database["public"]["Enums"]["merch_talla_t"]
+          tipo: string
+        }
+        Insert: {
+          area: Database["public"]["Enums"]["area_t"]
+          campus: Database["public"]["Enums"]["campus_t"]
+          cantidad: number
+          comprobante_url?: string | null
+          correo_solicitante?: string | null
+          creado_en?: string
+          estado?: string
+          id?: never
+          integrante_id?: number | null
+          nota?: string | null
+          resuelto_en?: string | null
+          resuelto_por?: string | null
+          solicitante: string
+          talla: Database["public"]["Enums"]["merch_talla_t"]
+          tipo: string
+        }
+        Update: {
+          area?: Database["public"]["Enums"]["area_t"]
+          campus?: Database["public"]["Enums"]["campus_t"]
+          cantidad?: number
+          comprobante_url?: string | null
+          correo_solicitante?: string | null
+          creado_en?: string
+          estado?: string
+          id?: never
+          integrante_id?: number | null
+          nota?: string | null
+          resuelto_en?: string | null
+          resuelto_por?: string | null
+          solicitante?: string
+          talla?: Database["public"]["Enums"]["merch_talla_t"]
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "merch_solicitudes_integrante_id_fkey"
+            columns: ["integrante_id"]
+            isOneToOne: false
+            referencedRelation: "integrantes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       nombres_modulo: {
         Row: {
@@ -1170,33 +1339,6 @@ export type Database = {
           },
         ]
       }
-      turnos: {
-        Row: {
-          actualizado: string
-          campus: Database["public"]["Enums"]["campus_t"]
-          correos: string[] | null
-          nombres: string[] | null
-          por: string | null
-          semana: string
-        }
-        Insert: {
-          actualizado?: string
-          campus: Database["public"]["Enums"]["campus_t"]
-          correos?: string[] | null
-          nombres?: string[] | null
-          por?: string | null
-          semana: string
-        }
-        Update: {
-          actualizado?: string
-          campus?: Database["public"]["Enums"]["campus_t"]
-          correos?: string[] | null
-          nombres?: string[] | null
-          por?: string | null
-          semana?: string
-        }
-        Relationships: []
-      }
       visitas: {
         Row: {
           actualizado_en: string | null
@@ -1359,6 +1501,7 @@ export type Database = {
         | "Voluntariado"
         | "Stand de Oración"
         | "Campus"
+        | "Merch"
       campus_t: "Punta Arenas" | "Puerto Natales"
       categoria_aporte_t:
         | "Ofrenda"
@@ -1372,6 +1515,7 @@ export type Database = {
         | "Agendado"
         | "Reunido"
         | "Sin respuesta"
+      merch_talla_t: "XS" | "S" | "M" | "L" | "XL" | "XXL"
       metodo_pago_t: "Tarjeta" | "Efectivo" | "Transferencia"
       modalidad_t: "Presencial" | "Virtual"
       rol_t:
@@ -1519,6 +1663,7 @@ export const Constants = {
         "Voluntariado",
         "Stand de Oración",
         "Campus",
+        "Merch",
       ],
       campus_t: ["Punta Arenas", "Puerto Natales"],
       categoria_aporte_t: [
@@ -1535,6 +1680,7 @@ export const Constants = {
         "Reunido",
         "Sin respuesta",
       ],
+      merch_talla_t: ["XS", "S", "M", "L", "XL", "XXL"],
       metodo_pago_t: ["Tarjeta", "Efectivo", "Transferencia"],
       modalidad_t: ["Presencial", "Virtual"],
       rol_t: [

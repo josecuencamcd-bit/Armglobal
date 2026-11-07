@@ -24,12 +24,9 @@ function semanasDelMes(mes: string): string[] {
 }
 
 /**
- * api_turnoLista / api_turnoGuardar: calendario mensual de quién administra
- * cada campus semana a semana — decide a quién le llega la alerta de
- * encuentro pendiente. Antes solo devolvía la lista plana de `turnos`
- * guardados (sin armar las semanas del mes ni el directorio de personas
- * para elegir) — la pantalla tenía que fabricar un input de texto libre en
- * vez de los chips reales de la app vieja.
+ * Calendario mensual de quién administra cada campus semana a semana —
+ * decide a quién le llega la alerta de encuentro pendiente, y alimenta el
+ * recuadro "Administradores de Campus" de la ficha de servicio.
  */
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -39,8 +36,8 @@ export async function GET(req: Request) {
   const campus = CAMPUS.find((c) => c === searchParams.get("campus")) ?? CAMPUS[0];
 
   const supabase = await createClient();
-  const [{ data: turnos, error: e1 }, { data: perfiles, error: e2 }] = await Promise.all([
-    supabase.from("turnos").select("*").eq("campus", campus),
+  const [{ data: administracion, error: e1 }, { data: perfiles, error: e2 }] = await Promise.all([
+    supabase.from("administracion_semanal").select("*").eq("campus", campus),
     // Mismo alcance que /api/reuniones/directorio: RLS decide qué perfiles
     // ve este usuario (su propio campus, o todos si su rol lo permite).
     supabase.from("perfiles").select("correo, nombre, bloqueado").eq("bloqueado", false),
@@ -48,7 +45,7 @@ export async function GET(req: Request) {
   if (e1) return fromSupabaseError(e1);
   if (e2) return fromSupabaseError(e2);
 
-  const mapa = new Map((turnos ?? []).map((t) => [t.semana, t]));
+  const mapa = new Map((administracion ?? []).map((t) => [t.semana, t]));
   const personas = (perfiles ?? [])
     .map((p) => ({ correo: p.correo, nombre: p.nombre }))
     .sort((a, b) => a.nombre.localeCompare(b.nombre));
@@ -77,7 +74,7 @@ export async function POST(req: Request) {
   const semana = lunesDe(parsedBody.data.semana);
 
   const { data, error } = await supabase
-    .from("turnos")
+    .from("administracion_semanal")
     .upsert({
       ...parsedBody.data,
       semana,

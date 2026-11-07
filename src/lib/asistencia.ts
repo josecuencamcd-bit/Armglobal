@@ -57,11 +57,11 @@ export function nombreParecido(a: string, b: string): boolean {
   return na.slice(1).some((t) => nb.slice(1).some((x) => x === t || x.startsWith(t) || t.startsWith(x)));
 }
 
-/** fichaTurno_: quién está de turno ese día según la ficha (administradores
+/** fichaTurno_: quién administra ese día según la ficha (administradores
  * de campus, y en Voluntariado quién lidera el equipo) — a partir de
  * fichas_servicio, que ahora el líder carga a mano en "Mi equipo" en vez de
  * sincronizarse sola desde una hoja externa. */
-export async function fichaTurno(supabase: SupabaseClient<Database>, campus: string, area: string, fecha: string) {
+export async function fichaAdministracion(supabase: SupabaseClient<Database>, campus: string, area: string, fecha: string) {
   if (campus !== "Punta Arenas") return null;
   const { data } = await supabase.from("fichas_servicio").select("area, puesto, nombre").eq("fecha", fecha);
   const administradores = new Set<string>();

@@ -15,10 +15,10 @@ export const MODULOS: Modulo[] = [
   { key: "fondos", label: "Fondo de equipo", href: "/fondos", icon: "fondo", listo: true },
   { key: "finanzas", label: "Reporte", href: "/encuentros", icon: "asistencia", listo: true },
   { key: "equipos", label: "Mi equipo", href: "/equipos", icon: "equipo", listo: true },
-  { key: "turnos", label: "Turnos", href: "/turnos", icon: "turnos", listo: true },
+  { key: "administracion-semanal", label: "Administración semanal", href: "/administracion-semanal", icon: "administracionSemanal", listo: true },
   // Solo tiene sentido en Puerto Natales (no tiene encuentro todos los
   // domingos) — la propia pantalla/API ya filtra por campus/rol.
-  { key: "fechas-encuentro", label: "Fechas de encuentro", href: "/fechas-encuentro", icon: "turnos", listo: true },
+  { key: "fechas-encuentro", label: "Fechas de encuentro", href: "/fechas-encuentro", icon: "administracionSemanal", listo: true },
   { key: "visitas", label: "Conexión", href: "/visitas", icon: "visitas", listo: true },
   { key: "perfiles", label: "Perfiles", href: "/perfiles", icon: "perfiles", listo: true },
   { key: "reuniones", label: "Reuniones", href: "/reuniones", icon: "reuniones", listo: true },
@@ -35,7 +35,7 @@ export const MODULOS: Modulo[] = [
   { key: "aportes", label: "Aportes", href: "/encuentros/aportes", icon: "aportes", listo: true },
   // Única puerta para Ministro/Administrador a Mi equipo/Asistencia/Fondo
   // de equipo/Conexión/Bajas/Estadísticas/Reporte/Aportes (esFin() los
-  // saca del menú normal) — y para Pastor/Pastor de campus, a Turnos/
-  // Fondos/Reportes/Fechas de encuentro.
+  // saca del menú normal) — y para Pastor/Pastor de campus, a Administración
+  // semanal/Fondos/Reportes/Fechas de encuentro.
   { key: "administracion", label: "Administración", href: "/administracion", icon: "administracion", listo: true },
 ];

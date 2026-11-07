@@ -14,13 +14,13 @@ const TILES: { key: string; label: string; icon: string; href?: string }[] = [
   { key: "perfiles", label: "Perfiles", icon: "perfiles", href: "/perfiles" },
   { key: "fondos", label: "Fondos", icon: "fondo", href: "/fondos" },
   { key: "cumpleanos", label: "Cumpleaños", icon: "cumples", href: "/cumpleanos" },
-  { key: "turnos", label: "Turnos", icon: "turnos", href: "/turnos" },
+  { key: "administracion-semanal", label: "Administración semanal", icon: "administracionSemanal", href: "/administracion-semanal" },
   { key: "nombres", label: "Nombres", icon: "perfiles", href: "/soporte/nombres" },
   { key: "actividad", label: "Actividad", icon: "actividad", href: "/actividad" },
 ];
 
 /** Soporte: mismo menú de la app vieja (grilla Accesos/Perfiles/Fondos/
- * Cumpleaños/Turnos/Nombres), mostrando UNA sección a la vez — igual que
+ * Cumpleaños/Administración semanal/Nombres), mostrando UNA sección a la vez — igual que
  * vSoporte() (tabsPorRol + dispatch), no todas juntas. "Accesos" es la
  * única que se resuelve en esta misma pantalla (solicitudes de acceso +
  * reaperturas, que no tienen otro lugar en el nav); el resto de los tiles

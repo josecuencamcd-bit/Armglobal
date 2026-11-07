@@ -27,11 +27,11 @@ type Sesion = {
 type Estado = {
   key: string;
   responsable: string;
-  // Administradores asignados en Turnos para la semana de este encuentro —
-  // si viene vacío, el Responsable se elige de la lista tradicional de
-  // equipos (una sola opción); si no, se precarga con estos nombres y se
-  // pueden marcar/desmarcar varios.
-  turnoAsignado: string[];
+  // Administradores asignados en Administración semanal para la semana de
+  // este encuentro — si viene vacío, el Responsable se elige de la lista
+  // tradicional de equipos (una sola opción); si no, se precarga con estos
+  // nombres y se pueden marcar/desmarcar varios.
+  administracionAsignada: string[];
   finalizado: boolean;
   sesion: Sesion | null;
   asistencia: { area: string; cantidad: number }[];
@@ -46,8 +46,8 @@ function fechaCL(iso: string) {
 
 /**
  * Reporte de un encuentro: datos del reporte, asistencia/voluntarios por
- * área (con +/-), aceptaron a Jesús (presencial y online), líderes/adm. de
- * turno y aportes — equivalente a la vista principal del módulo Encuentros
+ * área (con +/-), aceptaron a Jesús (presencial y online), líderes/adm.
+ * de campus y aportes — equivalente a la vista principal del módulo Encuentros
  * del HTML embebido de Code.gs (api_estado / api_setCampo).
  */
 export default function EncuentroPage() {
@@ -177,7 +177,7 @@ export default function EncuentroPage() {
 
   /** buildReport() de app.html: el resumen que se compartía por WhatsApp —
    * fecha, modalidad, predicador/mensaje, aceptaron a Jesús, desglose por
-   * área de asistencia y de voluntarios, online, líderes y adm. de turno.
+   * área de asistencia y de voluntarios, online, líderes y adm. de campus.
    * Antes solo se compartía asistencia/voluntarios/total. */
   function compartir() {
     if (!estado) return;
@@ -247,9 +247,9 @@ export default function EncuentroPage() {
       {estado && (
         <>
           <Seccion titulo="Responsable">
-            {estado.turnoAsignado.length > 0 ? (
-              <ResponsableTurno
-                turno={estado.turnoAsignado}
+            {estado.administracionAsignada.length > 0 ? (
+              <ResponsableAdministracion
+                administracion={estado.administracionAsignada}
                 valor={estado.sesion?.responsable ?? estado.responsable}
                 disabled={guardando || (estado.finalizado && !autorizado)}
                 onToggle={(nombres) => setCampo("responsable", nombres.join(" y "))}
@@ -514,24 +514,24 @@ export default function EncuentroPage() {
 }
 
 /**
- * Responsable precargado desde Turnos: muestra como chips a los
- * administradores que el pastor de campus asignó para la semana de este
- * encuentro, todos marcados por defecto (así llega "como ya definido" sin
- * que nadie tenga que elegir). Si hay un cambio de última hora, se tocan
- * para marcar/desmarcar — el orden del guardado sigue siempre el de
- * `turno` para que no "salte" al tocar distintos nombres.
+ * Responsable precargado desde Administración semanal: muestra como chips a
+ * los administradores que el pastor de campus asignó para la semana de
+ * este encuentro, todos marcados por defecto (así llega "como ya definido"
+ * sin que nadie tenga que elegir). Si hay un cambio de última hora, se
+ * tocan para marcar/desmarcar — el orden del guardado sigue siempre el de
+ * `administracion` para que no "salte" al tocar distintos nombres.
  */
-function ResponsableTurno({
-  turno, valor, disabled, onToggle,
-}: { turno: string[]; valor: string; disabled?: boolean; onToggle: (nombres: string[]) => void }) {
+function ResponsableAdministracion({
+  administracion, valor, disabled, onToggle,
+}: { administracion: string[]; valor: string; disabled?: boolean; onToggle: (nombres: string[]) => void }) {
   const seleccionados = new Set(valor.split(" y ").map((n) => n.trim()).filter(Boolean));
   return (
     <div>
       <p className="muted" style={{ margin: "0 0 8px", fontSize: "0.78rem" }}>
-        Precargado desde Turnos — toca para ajustar.
+        Precargado desde Administración semanal — toca para ajustar.
       </p>
       <div className="chips">
-        {turno.map((nombre) => {
+        {administracion.map((nombre) => {
           const activo = seleccionados.has(nombre);
           return (
             <button
@@ -543,7 +543,7 @@ function ResponsableTurno({
               onClick={() => {
                 const siguiente = new Set(seleccionados);
                 if (activo) siguiente.delete(nombre); else siguiente.add(nombre);
-                onToggle(turno.filter((n) => siguiente.has(n)));
+                onToggle(administracion.filter((n) => siguiente.has(n)));
               }}
             >
               {nombre}

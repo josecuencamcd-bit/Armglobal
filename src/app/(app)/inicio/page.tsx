@@ -9,13 +9,13 @@ import { GraficoLinea, peso } from "@/lib/grafico-linea";
 import { Icono } from "@/lib/iconos";
 
 /** Reemplaza vInicio() de Code.gs: solo el panel (tarjetas de ingresos,
- * fondo, tu equipo, pendientes, turno, cumpleaños) — la app vieja no tenía
+ * fondo, tu equipo, pendientes, administración semanal, cumpleaños) — la app vieja no tenía
  * una grilla de botones acá, la navegación es por la barra inferior
  * (Inicio + hasta 4 accesos según rol + "Más"). */
 const TIPOS_AYUDA = ["Algo no funciona", "No entiendo cómo usarlo", "Falta un dato", "Otro"];
 
 /** Lunes ISO de la semana que contiene `fecha` (mismo criterio que
- * lunesDe_ en Code.gs / turnos/page.tsx). */
+ * lunesDe_ en Code.gs / administracion-semanal/page.tsx). */
 function lunesDe(fecha: Date): string {
   const d = new Date(fecha);
   const dia = (d.getDay() + 6) % 7; // 0 = lunes
@@ -23,7 +23,7 @@ function lunesDe(fecha: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-type MiTurno = { semana: string; campus: string };
+type MiAdministracion = { semana: string; campus: string };
 type Avisos = {
   encuentros: { campus: string; encuentro: string; fecha: string; key: string }[];
   notas: { campus: string; area: string; fecha: string; key: string }[];
@@ -54,7 +54,7 @@ export default function InicioPage() {
   const [nombre, setNombre] = useState("");
   const { campusActivo } = useCampus();
   const [perfil, setPerfil] = useState<PerfilVisibilidad | null>(null);
-  const [miTurno, setMiTurno] = useState<MiTurno | null | undefined>(undefined);
+  const [miAdministracion, setMiAdministracion] = useState<MiAdministracion | null | undefined>(undefined);
   const [avisos, setAvisos] = useState<Avisos | null>(null);
   const [resumen, setResumen] = useState<Resumen | null>(null);
   const [resumenLider, setResumenLider] = useState<ResumenLider | null>(null);
@@ -90,13 +90,13 @@ export default function InicioPage() {
   useEffect(() => {
     let cancelado = false;
     (async () => {
-      const res = await fetch("/api/turnos/mios");
+      const res = await fetch("/api/administracion-semanal/mias");
       const json = await res.json();
       if (cancelado) return;
-      if (!json.ok) { setMiTurno(null); return; }
+      if (!json.ok) { setMiAdministracion(null); return; }
       const semanaActual = lunesDe(new Date());
-      const match = (json.data as MiTurno[]).find((t) => t.semana === semanaActual && t.campus === campusActivo);
-      setMiTurno(match ?? null);
+      const match = (json.data as MiAdministracion[]).find((t) => t.semana === semanaActual && t.campus === campusActivo);
+      setMiAdministracion(match ?? null);
     })();
     return () => {
       cancelado = true;
@@ -336,12 +336,12 @@ export default function InicioPage() {
         </div>
       )}
 
-      {miTurno && (
-        <div className="sirves" style={{ marginBottom: 16, cursor: "pointer" }} onClick={() => router.push("/turnos")}>
+      {miAdministracion && (
+        <div className="sirves" style={{ marginBottom: 16, cursor: "pointer" }} onClick={() => router.push("/administracion-semanal")}>
           <span className="ic"><Icono id="asistencia" size={20} /></span>
           <div>
-            <b>Esta semana sirves</b>
-            <span>Te toca turno en {miTurno.campus}</span>
+            <b>Esta semana administras</b>
+            <span>Te toca administrar en {miAdministracion.campus}</span>
           </div>
         </div>
       )}

@@ -1,12 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
 import { ok, fail, fromSupabaseError } from "@/lib/api-helpers";
 import { identidadActuante } from "@/lib/identidad";
-import { ctxAsistencia, claveNota, campusValido, areaValida, fichaTurno, fichaFaltantes } from "@/lib/asistencia";
+import { ctxAsistencia, claveNota, campusValido, areaValida, fichaAdministracion, fichaFaltantes } from "@/lib/asistencia";
 
 /**
  * api_ecoAsistencia/asistenciaDe_: la asistencia de un área en un día — a
  * quién se programó, quién vino/no vino/avisó, la nota del encuentro, si ya
- * se finalizó, y (solo Punta Arenas) quién está de turno según la ficha y
+ * se finalizó, y (solo Punta Arenas) quién administra según la ficha y
  * qué nombres de la ficha no están registrados en Mi equipo.
  */
 export async function GET(req: Request) {
@@ -42,8 +42,8 @@ export async function GET(req: Request) {
     if (eNota) throw eNota;
 
     const nombresIntegrantes = (integrantes ?? []).map((p) => p.nombre);
-    const [turno, faltantes] = await Promise.all([
-      fichaTurno(supabase, campus, area, fecha),
+    const [administracion, faltantes] = await Promise.all([
+      fichaAdministracion(supabase, campus, area, fecha),
       fichaFaltantes(supabase, campus, area, fecha, nombresIntegrantes),
     ]);
 
@@ -56,7 +56,7 @@ export async function GET(req: Request) {
       nota: nota?.nota ?? "",
       filas: filas ?? [],
       integrantes: integrantes ?? [],
-      turno,
+      administracion,
       faltantes,
     });
   } catch (e) {

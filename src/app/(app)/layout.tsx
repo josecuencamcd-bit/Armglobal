@@ -19,7 +19,7 @@ const MODULO_APP_A_CLAVE: Record<string, string> = Object.fromEntries(
 
 /** Ícono por clave de ADMIN_SUBNAV, igual que el mapa usado en /administracion. */
 const ICONO_POR_CLAVE_ADMIN: Record<string, string> = {
-  turnos: "turnos", fondos: "fondo", reportes: "finanzas", fechas: "turnos",
+  "administracion-semanal": "administracionSemanal", fondos: "fondo", reportes: "finanzas", fechas: "administracionSemanal",
   equipo: "equipo", asistencia: "asistencia", fondo: "fondo", visitas: "visitas",
   solicitudes: "bajas", equipostats: "actividad", reporte: "asistencia", aportes: "aportes",
   amor: "fondo",
@@ -113,12 +113,13 @@ function Shell({ children, impersonando }: { children: React.ReactNode; imperson
   // lista vieja (CLAVE_A_MODULO_APP) se filtran por su rol + lo que un
   // Admin app haya activado/desactivado para ella en /perfiles. Los que no
   // tienen equivalente ahí NUNCA van sueltos en el nav global ni en "Más":
-  // "turnos"/"fechas-encuentro" solo se abren DESDE Administración
-  // (ADMIN_SUBNAV, exclusivo de Pastor/Pastor de campus); "perfiles"/
-  // "actividad" solo se abren DESDE Soporte (su propia grilla de tiles).
-  // Antes, al no tener claveVieja, el filtro de abajo los dejaba SIEMPRE
-  // visibles para cualquier rol — ese bypass era el "menú con mil botones".
-  const SOLO_DESDE_OTRA_PANTALLA = new Set(["turnos", "fechas-encuentro", "perfiles", "actividad"]);
+  // "administracion-semanal"/"fechas-encuentro" solo se abren DESDE
+  // Administración (ADMIN_SUBNAV, exclusivo de Pastor/Pastor de campus);
+  // "perfiles"/"actividad" solo se abren DESDE Soporte (su propia grilla
+  // de tiles). Antes, al no tener claveVieja, el filtro de abajo los
+  // dejaba SIEMPRE visibles para cualquier rol — ese bypass era el "menú
+  // con mil botones".
+  const SOLO_DESDE_OTRA_PANTALLA = new Set(["administracion-semanal", "fechas-encuentro", "perfiles", "actividad"]);
   const visibles = perfil
     ? modulosVisibles({ roles: perfil.roles, areas: perfil.areas, sirve: perfil.sirve, modulos_on: perfil.modulos_on, modulos_off: perfil.modulos_off })
     : null;

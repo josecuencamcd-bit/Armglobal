@@ -18,7 +18,7 @@ function fechaCL(iso: string) {
  * Amor por la Casa: aporte anual (una vez al año), separado a propósito de
  * los Aportes de un encuentro — su propio registro y su propio total, sin
  * mezclarse con el informe mensual de ofrenda/diezmo/siembra. Mismo patrón
- * de navegación que Turnos (por mes) pero por año.
+ * de navegación que Administración semanal (por mes) pero por año.
  */
 export default function AmorPorLaCasaPage() {
   const { campusActivo, puedeElegir, elegirCampus } = useCampus();

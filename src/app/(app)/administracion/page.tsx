@@ -8,7 +8,7 @@ import { useCampus } from "@/lib/campus-context";
 import { adminSubnav, type PerfilVisibilidad } from "@/lib/visibilidad-modulos";
 
 const ICONO_POR_CLAVE: Record<string, string> = {
-  turnos: "turnos", fondos: "fondo", reportes: "finanzas", fechas: "turnos",
+  "administracion-semanal": "administracionSemanal", fondos: "fondo", reportes: "finanzas", fechas: "administracionSemanal",
   equipo: "equipo", asistencia: "asistencia", fondo: "fondo", visitas: "visitas",
   solicitudes: "bajas", equipostats: "actividad", reporte: "asistencia", aportes: "aportes",
   amor: "fondo",
@@ -20,7 +20,7 @@ const ICONO_POR_CLAVE: Record<string, string> = {
  * app vieja. Para Ministro/Administrador es la única forma de llegar a Mi
  * equipo/Asistencia/Fondo de equipo/Conexión/Bajas/Estadísticas/Reporte/
  * Aportes (su rol los saca del menú normal); para Pastor/Pastor de campus,
- * a Turnos/Fondos/Reportes/Fechas de encuentro. El campus es el mismo
+ * a Administración semanal/Fondos/Reportes/Fechas de encuentro. El campus es el mismo
  * selector global del header (acá no se elige aparte, como en la vieja).
  */
 export default function AdministracionPage() {

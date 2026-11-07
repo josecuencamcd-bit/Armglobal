@@ -4,13 +4,14 @@ import { type ArgsEncuentro, claveSesion, equiposVigentes, lunesDe } from "./ses
 
 type DB = SupabaseClient<Database>;
 
-/** Administradores que el pastor de campus asignó en Turnos para la semana
- * de este encuentro (puede ser ninguno). Alimenta el campo Responsable:
- * si hay alguien asignado, el reporte viene precargado con esos nombres en
- * vez de depender de que alguien elija una de las parejas fijas. */
-async function turnoDeLaSemana(db: DB, campus: ArgsEncuentro["campus"], fecha: string): Promise<string[]> {
+/** Administradores que el pastor de campus asignó en Administración
+ * semanal para la semana de este encuentro (puede ser ninguno). Alimenta
+ * el campo Responsable: si hay alguien asignado, el reporte viene
+ * precargado con esos nombres en vez de depender de que alguien elija una
+ * de las parejas fijas. */
+async function administracionDeLaSemana(db: DB, campus: ArgsEncuentro["campus"], fecha: string): Promise<string[]> {
   const { data, error } = await db
-    .from("turnos")
+    .from("administracion_semanal")
     .select("nombres")
     .eq("campus", campus)
     .eq("semana", lunesDe(fecha))
@@ -19,8 +20,8 @@ async function turnoDeLaSemana(db: DB, campus: ArgsEncuentro["campus"], fecha: s
   return data?.nombres ?? [];
 }
 
-function responsablePorDefecto(turnoNombres: string[]): string {
-  return turnoNombres.length ? turnoNombres.join(" y ") : equiposVigentes()[0];
+function responsablePorDefecto(administracionNombres: string[]): string {
+  return administracionNombres.length ? administracionNombres.join(" y ") : equiposVigentes()[0];
 }
 
 /** api_estado: solo lee. Si la sesión no existe todavía, no la crea — igual
@@ -28,21 +29,22 @@ function responsablePorDefecto(turnoNombres: string[]): string {
  * la hoja hasta que alguien escribe algo. */
 export async function leerSesion(db: DB, args: ArgsEncuentro) {
   const key = claveSesion(args);
-  const [{ data: sesion, error: e1 }, { data: asistencia, error: e2 }, { data: voluntarios, error: e3 }, { data: aportes, error: e4 }, turnoAsignado] =
+  const [{ data: sesion, error: e1 }, { data: asistencia, error: e2 }, { data: voluntarios, error: e3 }, { data: aportes, error: e4 }, administracionAsignada] =
     await Promise.all([
       db.from("sesiones").select("*").eq("key", key).maybeSingle(),
       db.from("sesion_asistencia").select("area, cantidad").eq("sesion_key", key),
       db.from("sesion_voluntarios").select("area, cantidad").eq("sesion_key", key),
       db.from("aportes").select("*").eq("sesion_key", key).order("creado_en", { ascending: true }),
-      turnoDeLaSemana(db, args.campus, args.fecha),
+      administracionDeLaSemana(db, args.campus, args.fecha),
     ]);
   for (const e of [e1, e2, e3, e4]) if (e) throw e;
   return {
     key,
-    responsable: sesion?.responsable ?? responsablePorDefecto(turnoAsignado),
-    // Nombres asignados en Turnos esa semana — si viene vacío, la pantalla
-    // cae a la lista tradicional de equipos para elegir una sola opción.
-    turnoAsignado,
+    responsable: sesion?.responsable ?? responsablePorDefecto(administracionAsignada),
+    // Nombres asignados en Administración semanal esa semana — si viene
+    // vacío, la pantalla cae a la lista tradicional de equipos para elegir
+    // una sola opción.
+    administracionAsignada,
     finalizado: sesion?.finalizado ?? false,
     sesion,
     asistencia: asistencia ?? [],
@@ -59,7 +61,7 @@ export async function leerSesion(db: DB, args: ArgsEncuentro) {
  * la ruta lo traduce a 403. */
 export async function asegurarSesion(db: DB, args: ArgsEncuentro) {
   const key = claveSesion(args);
-  const turnoAsignado = await turnoDeLaSemana(db, args.campus, args.fecha);
+  const administracionAsignada = await administracionDeLaSemana(db, args.campus, args.fecha);
   const { error } = await db.from("sesiones").upsert(
     {
       key,
@@ -67,7 +69,7 @@ export async function asegurarSesion(db: DB, args: ArgsEncuentro) {
       encuentro: args.encuentro,
       evento: args.evento || null,
       fecha: args.fecha,
-      responsable: responsablePorDefecto(turnoAsignado),
+      responsable: responsablePorDefecto(administracionAsignada),
     },
     { onConflict: "key", ignoreDuplicates: true }
   );

@@ -147,13 +147,13 @@ export const CLAVE_A_MODULO_APP: Record<string, string> = {
  * para Ministro/Administrador, "Administración" es la ÚNICA puerta a Mi
  * equipo/Asistencia/Fondo de equipo/Conexión/Bajas/Estadísticas/Reporte/
  * Aportes (esFin() los saca del menú normal). Para Pastor/Pastor de
- * campus es la puerta a Turnos/Fondos/Reportes/Fechas de encuentro. El
- * campus en esta migración ya es el `campusActivo` global (el selector
- * del header), no uno propio de esta pantalla.
+ * campus es la puerta a Administración semanal/Fondos/Reportes/Fechas de
+ * encuentro. El campus en esta migración ya es el `campusActivo` global
+ * (el selector del header), no uno propio de esta pantalla.
  */
 export function adminSubnav(p: PerfilVisibilidad, campus: "Punta Arenas" | "Puerto Natales"): { clave: string; label: string; href: string }[] {
   const items: { clave: string; label: string; href: string; ok: boolean }[] = [
-    { clave: "turnos", label: "Turnos", href: "/turnos", ok: esPastorC(p) },
+    { clave: "administracion-semanal", label: "Administración semanal", href: "/administracion-semanal", ok: esPastorC(p) },
     { clave: "fondos", label: "Fondos", href: "/fondos", ok: esPastorC(p) },
     { clave: "reportes", label: "Reportes", href: "/finanzas", ok: esPastorC(p) },
     { clave: "fechas", label: "Fechas de encuentro", href: "/fechas-encuentro", ok: esPastorC(p) && campus === "Puerto Natales" },

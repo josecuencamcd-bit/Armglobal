@@ -24,12 +24,12 @@ function fechaCorta(iso: string) {
   return `${d}/${m}`;
 }
 
-/** Módulo Turnos: calendario mensual de quién administra cada campus,
- * semana a semana — puerto 1:1 de vTurnos() del client.js viejo. Antes era
- * una sola semana suelta con un input de texto libre separado por comas;
- * ahora navega mes a mes (como la vieja) y elige personas reales del
- * directorio con chips, no texto escrito a mano. */
-export default function TurnosPage() {
+/** Módulo Administración semanal: calendario mensual de quién administra
+ * cada campus, semana a semana — puerto 1:1 de vTurnos() del client.js
+ * viejo. Antes era una sola semana suelta con un input de texto libre
+ * separado por comas; ahora navega mes a mes (como la vieja) y elige
+ * personas reales del directorio con chips, no texto escrito a mano. */
+export default function AdministracionSemanalPage() {
   const { campusActivo, puedeElegir, elegirCampus } = useCampus();
   const [mes, setMes] = useState(new Date().toISOString().slice(0, 7));
   const [datos, setDatos] = useState<Datos | null>(null);
@@ -38,7 +38,7 @@ export default function TurnosPage() {
   const [guardando, setGuardando] = useState<string | null>(null);
 
   const cargar = useCallback(async () => {
-    const res = await fetch(`/api/turnos?mes=${mes}&campus=${encodeURIComponent(campusActivo)}`);
+    const res = await fetch(`/api/administracion-semanal?mes=${mes}&campus=${encodeURIComponent(campusActivo)}`);
     const json = await res.json();
     if (!json.ok) { setError(json.error); return; }
     setDatos(json.data);
@@ -62,7 +62,7 @@ export default function TurnosPage() {
 
   async function guardar(semana: string) {
     setGuardando(semana);
-    const res = await fetch("/api/turnos", {
+    const res = await fetch("/api/administracion-semanal", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ semana, campus: campusActivo, correos: seleccion[semana] ?? [] }),
@@ -79,7 +79,7 @@ export default function TurnosPage() {
     <div className="contenedor" style={{ paddingTop: 24 }}>
       <VolverAdministracion />
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
-        <h1 className="titulo" style={{ fontSize: "1.3rem" }}>Turnos</h1>
+        <h1 className="titulo" style={{ fontSize: "1.3rem" }}>Administración semanal</h1>
         <span className="muted" style={{ fontSize: "0.82rem" }}>
           {campusActivo}
           {puedeElegir && (
