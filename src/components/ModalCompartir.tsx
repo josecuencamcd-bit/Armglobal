@@ -101,12 +101,14 @@ export default function ModalCompartir({ abierto, onCerrar, titulo, mensajeInici
         onClick={(e) => e.stopPropagation()}
       >
         <p className="muted" style={{ letterSpacing: 1, fontSize: "0.72rem", margin: "0 0 8px" }}>MENSAJE PARA WHATSAPP</p>
-        <textarea
-          value={mensaje}
-          onChange={(e) => setMensaje(e.target.value)}
-          rows={10}
-          style={{ width: "100%", resize: "vertical", fontFamily: "inherit", fontSize: "0.85rem" }}
-        />
+        <div className="campo" style={{ marginBottom: 0 }}>
+          <textarea
+            value={mensaje}
+            onChange={(e) => setMensaje(e.target.value)}
+            rows={10}
+            style={{ width: "100%", resize: "vertical", fontFamily: "inherit", fontSize: "0.85rem" }}
+          />
+        </div>
 
         <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
           <button type="button" className="boton-secundario" style={{ flex: 1 }} onClick={onCerrar}>Cerrar</button>

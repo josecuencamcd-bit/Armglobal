@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { CATEGORIAS, CATEGORIAS_ENCUENTRO, METODOS } from "@/lib/sesiones";
+import { CATEGORIAS_ENCUENTRO, METODOS } from "@/lib/sesiones";
 import ModalCompartir from "@/components/ModalCompartir";
 
 type Aporte = { id: string; nombre: string; monto: number; categoria: string; metodo: string };
@@ -75,7 +75,7 @@ export default function AportesEncuentroPage() {
 
   const [campus, encuentro, , fecha] = decodeURIComponent(key).split("|");
   const aportes = estado?.aportes ?? [];
-  const porCategoria = CATEGORIAS.map((c) => ({ categoria: c, total: aportes.filter((a) => a.categoria === c).reduce((s, a) => s + a.monto, 0) }));
+  const porCategoria = CATEGORIAS_ENCUENTRO.map((c) => ({ categoria: c, total: aportes.filter((a) => a.categoria === c).reduce((s, a) => s + a.monto, 0) }));
   const porMetodo = METODOS.map((m) => ({ metodo: m, total: aportes.filter((a) => a.metodo === m).reduce((s, a) => s + a.monto, 0) }));
   const total = aportes.reduce((s, a) => s + a.monto, 0);
 
