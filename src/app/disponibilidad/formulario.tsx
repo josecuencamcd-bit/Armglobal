@@ -8,18 +8,25 @@ type Contexto = { campus: string[]; areas: string[]; semana: string; encuentros:
 
 const SIN_DISPONIBILIDAD = "Sin Disponibilidad";
 
+/** Por ahora Puerto Natales todavía no tiene voluntarios propios — lo
+ * cubren voluntarios de Punta Arenas que José Miguel asigna internamente
+ * (pendiente: una pestaña de campus en el perfil del voluntario para eso).
+ * Mientras tanto la encuesta pública es solo para Punta Arenas, con
+ * disponibilidad abierta, sin pedir elegir campus. */
+const CAMPUS_ENCUESTA = "Punta Arenas";
+
 /**
  * Formulario público de disponibilidad — replica el formato de la encuesta
  * nativa de WhatsApp que el equipo ya usa ("Disponibilidad de servicio ✨",
  * opciones "Día DD/MM/AA hora [emoji]" + "Sin Disponibilidad 😟"), pero la
  * respuesta cae directo en `disponibilidad` vía /api/disponibilidad.
  *
- * Flujo: campus → equipo → nombre (de la nómina real, no texto libre) →
+ * Flujo: equipo → nombre (de la nómina real, no texto libre) →
  * disponibilidad de la semana → enviar.
  */
 export default function DisponibilidadForm() {
-  const [paso, setPaso] = useState<"campus" | "area" | "nombre" | "disponibilidad" | "listo">("campus");
-  const [campus, setCampus] = useState<string | null>(null);
+  const [paso, setPaso] = useState<"area" | "nombre" | "disponibilidad" | "listo">("area");
+  const campus = CAMPUS_ENCUESTA;
   const [area, setArea] = useState<string | null>(null);
   const [integrante, setIntegrante] = useState<Integrante | null>(null);
   const [seleccion, setSeleccion] = useState<Set<string>>(new Set());
@@ -30,26 +37,11 @@ export default function DisponibilidadForm() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/disponibilidad/contexto")
+    fetch(`/api/disponibilidad/contexto?campus=${encodeURIComponent(campus)}`)
       .then((r) => r.json())
       .then((j) => j.ok && setContexto(j.data))
       .catch(() => {});
-  }, []);
-
-  async function elegirCampus(c: string) {
-    setCampus(c);
-    setError(null);
-    setCargando(true);
-    const res = await fetch(`/api/disponibilidad/contexto?campus=${encodeURIComponent(c)}`);
-    const json = await res.json();
-    setCargando(false);
-    if (!json.ok) {
-      setError(json.error);
-      return;
-    }
-    setContexto(json.data);
-    setPaso("area");
-  }
+  }, [campus]);
 
   async function elegirArea(a: string) {
     if (!campus) return;
@@ -128,22 +120,8 @@ export default function DisponibilidadForm() {
 
       {error && <p className="aviso">{error}</p>}
 
-      {paso === "campus" && (
-        <div className="tarjeta">
-          <p style={{ margin: "0 0 12px", fontSize: "0.9rem" }}>¿En qué campus sirves?</p>
-          <div className="chips">
-            {(contexto?.campus ?? ["Punta Arenas", "Puerto Natales"]).map((c) => (
-              <button key={c} type="button" className="chip" disabled={cargando} onClick={() => elegirCampus(c)}>
-                {c}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
       {paso === "area" && (
         <div className="tarjeta">
-          <p className="muted" style={{ margin: "0 0 10px", fontSize: "0.8rem" }}>{campus}</p>
           <p style={{ margin: "0 0 12px", fontSize: "0.9rem" }}>¿En qué equipo sirves?</p>
           <div className="chips">
             {(contexto?.areas ?? []).map((a) => (
@@ -152,11 +130,6 @@ export default function DisponibilidadForm() {
               </button>
             ))}
           </div>
-          <p className="muted" style={{ marginTop: 14 }}>
-            <a href="#" onClick={(e) => { e.preventDefault(); volver("campus"); }} style={{ color: "var(--accent)" }}>
-              ← Cambiar campus
-            </a>
-          </p>
         </div>
       )}
 
