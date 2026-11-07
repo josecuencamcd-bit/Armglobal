@@ -838,18 +838,27 @@ export default function EquiposPage() {
                 <div className="muted" style={{ fontSize: "0.76rem" }}>También sirve en: {i.equipos_extra.join(", ")}</div>
               )}
             </div>
-            <span style={{ display: "flex", gap: 8 }}>
-              <button className="boton-secundario" onClick={() => setEditando(editando?.id === i.id ? null : i)}>
+            <span style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <button
+                className="boton-secundario"
+                style={{ width: "auto", padding: "0 14px" }}
+                onClick={() => setEditando(editando?.id === i.id ? null : i)}
+              >
                 {editando?.id === i.id ? "Cerrar" : "Editar"}
               </button>
               <button
                 className="boton-secundario"
+                style={{ width: "auto", padding: "0 14px" }}
                 onClick={() => { setErrorMerch(null); setPidiendoMerch(pidiendoMerch === i.id ? null : i.id); }}
               >
                 {pidiendoMerch === i.id ? "Cerrar" : "Pedir polera/polerón"}
               </button>
               {!bajasPendientes.has(i.id) && (
-                <button className="boton-peligro" onClick={() => setPidiendoBaja(pidiendoBaja === i.id ? null : i.id)}>
+                <button
+                  className="boton-peligro"
+                  style={{ width: "auto" }}
+                  onClick={() => setPidiendoBaja(pidiendoBaja === i.id ? null : i.id)}
+                >
                   Solicitar baja
                 </button>
               )}
