@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { ASIS_IDS, VOL_IDS, MODALIDADES, equiposVigentes } from "@/lib/sesiones";
 import { fotoAJpegDataUrl } from "@/lib/fotos-cliente";
+import ModalCompartir from "@/components/ModalCompartir";
 
 type Foto = { path: string; url: string };
 
@@ -57,6 +58,7 @@ export default function EncuentroPage() {
   const [estado, setEstado] = useState<Estado | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
+  const [compartiendo, setCompartiendo] = useState(false);
 
   // Autorización para modificar un encuentro finalizado (api_autPedir /
   // auth_autorizado): si tengo una solicitud "Autorizada" y vigente para
@@ -178,9 +180,11 @@ export default function EncuentroPage() {
   /** buildReport() de app.html: el resumen que se compartía por WhatsApp —
    * fecha, modalidad, predicador/mensaje, aceptaron a Jesús, desglose por
    * área de asistencia y de voluntarios, online, líderes y adm. de campus.
-   * Antes solo se compartía asistencia/voluntarios/total. */
-  function compartir() {
-    if (!estado) return;
+   * Ahora se muestra en ModalCompartir (mensaje editable + Cerrar/Copiar +
+   * PDF/Excel/correo), igual que la app vieja — antes era navigator.share
+   * directo con fallback a portapapeles. */
+  function textoReporte() {
+    if (!estado) return "";
     const s = estado.sesion;
     const asis = (id: string) => estado.asistencia.find((a) => a.area === id)?.cantidad ?? 0;
     const bebes = asis("bebes") + asis("papas");
@@ -207,14 +211,7 @@ export default function EncuentroPage() {
     L.push("", "_*Online*_", `Aceptaron a Jesús: ${s?.on_acepto ?? 0}`, `Espectadores a la vez: ${s?.on_espect ?? 0}`, "");
     L.push(`*Líderes de voluntarios*: ${(s?.lideres ?? "").trim()}`, "");
     L.push(`*Adm. de Campus*: ${(s?.adm ?? "").trim()}`);
-    const texto = L.join("\n");
-
-    if (navigator.share) {
-      navigator.share({ title: "Reporte", text: texto }).catch(() => {});
-    } else {
-      navigator.clipboard.writeText(texto);
-      alert("Resumen copiado al portapapeles.");
-    }
+    return L.join("\n");
   }
 
   if (!estado && !error) return <div className="contenedor">Cargando…</div>;
@@ -439,7 +436,7 @@ export default function EncuentroPage() {
                 flex: 1, background: "var(--ok)", color: "#06281c", border: "none", fontWeight: 700,
                 borderRadius: 10, padding: "12px 6px", cursor: "pointer", fontSize: "0.85rem",
               }}
-              onClick={compartir}
+              onClick={() => setCompartiendo(true)}
             >
               Compartir
             </button>
@@ -509,6 +506,14 @@ export default function EncuentroPage() {
           </p>
         </>
       )}
+
+      <ModalCompartir
+        abierto={compartiendo}
+        onCerrar={() => setCompartiendo(false)}
+        titulo="Reporte Encuentro"
+        mensajeInicial={textoReporte()}
+        nombreArchivo={`encuentro-${key ? decodeURIComponent(key).split("|")[0] : ""}-${key ? decodeURIComponent(key).split("|")[3] : ""}`}
+      />
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { CATEGORIAS, CATEGORIAS_ENCUENTRO, METODOS } from "@/lib/sesiones";
+import ModalCompartir from "@/components/ModalCompartir";
 
 type Aporte = { id: string; nombre: string; monto: number; categoria: string; metodo: string };
 type Estado = { key: string; responsable: string; finalizado: boolean; aportes: Aporte[] };
@@ -31,6 +32,7 @@ export default function AportesEncuentroPage() {
   const [monto, setMonto] = useState("");
   const [categoria, setCategoria] = useState<string>(CATEGORIAS_ENCUENTRO[0]);
   const [guardando, setGuardando] = useState<string | null>(null);
+  const [compartiendo, setCompartiendo] = useState(false);
 
   const cargar = useCallback(async () => {
     const res = await fetch(`/api/sesiones/${key}`);
@@ -77,10 +79,10 @@ export default function AportesEncuentroPage() {
   const porMetodo = METODOS.map((m) => ({ metodo: m, total: aportes.filter((a) => a.metodo === m).reduce((s, a) => s + a.monto, 0) }));
   const total = aportes.reduce((s, a) => s + a.monto, 0);
 
-  /** Mismo patrón que compartir() de /encuentros/[key] (navigator.share con
-   * fallback a copiar al portapapeles) — acá con el resumen de Aportes en
-   * vez de asistencia, igual que el reporte que armaba la app vieja. */
-  function compartir() {
+  /** Mismo texto que antes armaba compartir() — ahora se pasa al modal
+   * ModalCompartir, que replica la ventana de la app vieja (mensaje
+   * editable + Cerrar/Copiar mensaje + PDF/Excel/correo). */
+  function textoReporte() {
     const L: string[] = [];
     L.push(`Reporte de Aportes · Campus ${campus}`, "");
     L.push(`*Encuentro:* ${encuentro}`);
@@ -95,14 +97,7 @@ export default function AportesEncuentroPage() {
       L.push("", "*Detalle*");
       aportes.forEach((a) => L.push(`- ${a.nombre}: ${peso(a.monto)} (${a.categoria} · ${a.metodo})`));
     }
-    const texto = L.join("\n");
-
-    if (navigator.share) {
-      navigator.share({ title: "Reporte de Aportes", text: texto }).catch(() => {});
-    } else {
-      navigator.clipboard.writeText(texto);
-      alert("Resumen copiado al portapapeles.");
-    }
+    return L.join("\n");
   }
 
   return (
@@ -205,10 +200,18 @@ export default function AportesEncuentroPage() {
       <button
         className="boton"
         style={{ width: "100%", marginTop: 16, background: "var(--ok)" }}
-        onClick={compartir}
+        onClick={() => setCompartiendo(true)}
       >
         Compartir reporte de aportes
       </button>
+
+      <ModalCompartir
+        abierto={compartiendo}
+        onCerrar={() => setCompartiendo(false)}
+        titulo="Reporte de Aportes"
+        mensajeInicial={textoReporte()}
+        nombreArchivo={`aportes-${campus}-${fecha}`}
+      />
     </div>
   );
 }

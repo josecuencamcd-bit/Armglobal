@@ -138,6 +138,40 @@ export async function avisarAdmins(opts: {
   });
 }
 
+/** Botón "PDF, Excel o correo" → "Enviar por correo" del modal de
+ * Compartir: manda el mismo texto que se ve en el cuadro de WhatsApp,
+ * como HTML preformateado (los *asteriscos* pasan a negrita) y también
+ * en texto plano. */
+export async function enviarReporte(destinatario: string, asunto: string, titulo: string, texto: string) {
+  const esc = (t: string) =>
+    String(t ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+  const cuerpo = esc(texto)
+    .split("\n")
+    .map((l) => l.replace(/\*(.+?)\*/g, "<b>$1</b>") || "&nbsp;")
+    .join("<br>");
+  return resend.emails.send({
+    from: FROM,
+    to: destinatario,
+    subject: asunto,
+    html: `<div style="background:#f4f4f4;padding:20px 10px;font-family:Arial,Helvetica,sans-serif">
+  <div style="max-width:520px;margin:0 auto;background:#fff;border-radius:14px;overflow:hidden">
+    <div style="background:#111;padding:14px 18px">
+      <img src="${LOGO_URL}" width="36" height="36" alt="armglobal" style="display:block;border:0">
+    </div>
+    <div style="padding:22px">
+      <div style="font-size:12px;letter-spacing:1px;color:#b45309;font-weight:bold">REPORTE</div>
+      <div style="font-size:20px;font-weight:bold;color:#111;margin:6px 0 14px">${esc(titulo)}</div>
+      <div style="font-size:14px;color:#222;line-height:1.6">${cuerpo}</div>
+    </div>
+  </div>
+</div>`,
+    text: texto,
+  });
+}
+
 /** Reemplaza cumpleEnviar_ (la parte de envío masivo): manda el saludo de
  * cumpleaños a toda la congregación en tandas de 50 por BCC (mismo límite
  * que usaba MailApp.sendEmail en Code.gs). Devuelve cuántos destinatarios
