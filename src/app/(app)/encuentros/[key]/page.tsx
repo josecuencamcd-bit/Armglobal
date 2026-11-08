@@ -597,6 +597,24 @@ function Seccion({ titulo, badge, children }: { titulo: string; badge?: number; 
 }
 
 function Stepper({ label, valor, disabled, onChange }: { label: string; valor: number; disabled?: boolean; onChange: (v: number) => void }) {
+  // El número del centro ahora también se puede tocar y escribir directo
+  // (antes solo se podía sumar de a uno con los botones − / +). Mientras
+  // se está editando se muestra el texto que el usuario va tecleando;
+  // al salir del campo (blur) o apretar Enter se redondea y se guarda.
+  const [editando, setEditando] = useState(false);
+  const [texto, setTexto] = useState(String(valor));
+
+  useEffect(() => {
+    if (!editando) setTexto(String(valor));
+  }, [valor, editando]);
+
+  function confirmar() {
+    const n = Math.max(0, Math.round(Number(texto.replace(",", ".")) || 0));
+    setEditando(false);
+    if (n !== valor) onChange(n);
+    else setTexto(String(valor));
+  }
+
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 0" }}>
       <span style={{ fontSize: "0.9rem" }}>{label}</span>
@@ -612,7 +630,22 @@ function Stepper({ label, valor, disabled, onChange }: { label: string; valor: n
         >
           −
         </button>
-        <span className="num" style={{ width: 24, textAlign: "center", fontWeight: 600 }}>{valor}</span>
+        <input
+          className="num"
+          type="text"
+          inputMode="numeric"
+          disabled={disabled}
+          value={texto}
+          onFocus={(e) => { setEditando(true); e.target.select(); }}
+          onChange={(e) => setTexto(e.target.value.replace(/[^\d]/g, ""))}
+          onBlur={confirmar}
+          onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
+          style={{
+            width: 36, textAlign: "center", fontWeight: 600, background: "transparent",
+            border: "none", borderBottom: "1px solid var(--line)", color: "var(--ink)", fontSize: "1rem",
+            padding: "2px 0", fontFamily: "inherit",
+          }}
+        />
         <button
           type="button"
           disabled={disabled}
