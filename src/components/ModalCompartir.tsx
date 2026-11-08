@@ -41,11 +41,7 @@ export default function ModalCompartir({ abierto, onCerrar, titulo, mensajeInici
 
   function copiar() {
     navigator.clipboard.writeText(mensaje);
-    if (navigator.share) {
-      navigator.share({ title: titulo, text: mensaje }).catch(() => {});
-    } else {
-      setResultado("Mensaje copiado al portapapeles.");
-    }
+    setResultado("Mensaje copiado al portapapeles.");
   }
 
   // El mismo texto editable, convertido a filas "Etiqueta; Valor" para el

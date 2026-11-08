@@ -135,15 +135,15 @@ export default function AportesEncuentroPage() {
     L.push(`Reporte de Aportes · Campus ${campus}`, "");
     L.push(`*Encuentro:* ${encuentro}`);
     L.push(`*Fecha:* ${fechaCL(fecha)}`);
-    if (estado?.responsable) L.push(`*Responsable:* ${estado.responsable}`);
-    L.push("", "*Por categoría*");
-    porCategoria.forEach((c) => L.push(`- ${c.categoria}: ${peso(c.total)}`));
-    L.push("", "*Por forma de pago*");
-    porMetodo.forEach((m) => L.push(`- ${m.metodo}: ${peso(m.total)}`));
-    L.push("", `*Total general:* ${peso(total)} (${aportes.length} aporte${aportes.length === 1 ? "" : "s"})`);
+    L.push(`*Responsable:* ${estado?.responsable ?? ""}`);
+    L.push("", "*Formas de Sembrar*");
+    porCategoria.forEach((c) => L.push(`- ${c.categoria} 🟰 ${peso(c.total)}`));
+    L.push("", "*Total De Siembra*");
+    porMetodo.forEach((m) => L.push(`- ${m.metodo} 🟰 ${peso(m.total)}`));
+    L.push("", `*Total* 🟰 ${peso(total)}`);
     if (aportes.length > 0) {
       L.push("", "*Detalle*");
-      aportes.forEach((a) => L.push(`- ${a.nombre}: ${peso(a.monto)} (${a.categoria} · ${a.metodo})`));
+      aportes.forEach((a) => L.push(`- ${a.nombre}: ${peso(a.monto)}  ${a.categoria}`));
     }
     return L.join("\n");
   }
