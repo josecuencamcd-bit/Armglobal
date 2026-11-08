@@ -2,7 +2,8 @@ import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ok, fail, fromSupabaseError, parseBody } from "@/lib/api-helpers";
-import { ArgsSchema, CAMPUS, claveSesion } from "@/lib/sesiones";
+import { ArgsSchema, CAMPUS } from "@/lib/sesiones";
+import { asegurarSesion } from "@/lib/sesiones-db";
 import { identidadActuante } from "@/lib/identidad";
 import { avisarAdmins } from "@/lib/email";
 import { z } from "zod";
@@ -43,12 +44,19 @@ export async function POST(req: Request) {
     if (!identidad) return fail("No autenticado.", 401);
     const perfil = identidad.perfil;
 
+    // autorizaciones_encuentro.sesion_key tiene FK a sesiones(key) — si el
+    // encuentro nunca se tocó, esa fila todavía no existe y el insert de
+    // abajo falla con 409 (foreign key violation). asegurarSesion() es el
+    // mismo upsert (ignoreDuplicates) que usa /api/sesiones/[key] antes de
+    // escribir en sus tablas hijas (sesion_asistencia, sesion_voluntarios).
+    const sesionKey = await asegurarSesion(supabase, args.data);
+
     const { data, error } = await supabase
       .from("autorizaciones_encuentro")
       .insert({
         correo: perfil.correo,
         nombre: perfil.nombre,
-        sesion_key: claveSesion(args.data),
+        sesion_key: sesionKey,
         campus: args.data.campus,
         encuentro: args.data.encuentro,
         fecha: args.data.fecha,
