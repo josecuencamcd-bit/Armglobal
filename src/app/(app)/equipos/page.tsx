@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo, useRef } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef, type CSSProperties } from "react";
 import Link from "next/link";
 import { AREAS, TALLAS, proximaFecha } from "@/lib/sesiones";
 import { useCampus } from "@/lib/campus-context";
@@ -872,9 +872,12 @@ export default function EquiposPage() {
           i.talla_polera ? `Polera ${i.talla_polera}` : null,
           i.talla_poleron ? `Polerón ${i.talla_poleron}` : null,
         ].filter(Boolean).join(" · ");
+        const botonCompacto: CSSProperties = {
+          width: "auto", padding: "7px 12px", fontSize: "0.8rem", fontWeight: 500,
+        };
         return (
         <div key={i.id}>
-          <div className="fila">
+          <div className="fila" style={{ flexDirection: "column", alignItems: "stretch", gap: 8 }}>
             <div>
               <div>
                 {i.nombre}
@@ -893,28 +896,28 @@ export default function EquiposPage() {
                 <div className="muted" style={{ fontSize: "0.76rem" }}>También sirve en: {i.equipos_extra.join(", ")}</div>
               )}
             </div>
-            <span style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <span style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
               <button
                 className="boton-secundario"
-                style={{ width: "auto", padding: "0 14px" }}
+                style={botonCompacto}
                 onClick={() => setEditando(editando?.id === i.id ? null : i)}
               >
                 {editando?.id === i.id ? "Cerrar" : "Editar"}
               </button>
               <button
                 className="boton-secundario"
-                style={{ width: "auto", padding: "0 14px" }}
+                style={botonCompacto}
                 onClick={() => { setErrorMerch(null); setPidiendoMerch(pidiendoMerch === i.id ? null : i.id); }}
               >
-                {pidiendoMerch === i.id ? "Cerrar" : "Pedir polera/polerón"}
+                {pidiendoMerch === i.id ? "Cerrar" : "Pedir polera"}
               </button>
               {!bajasPendientes.has(i.id) && (
                 <button
                   className="boton-peligro"
-                  style={{ width: "auto" }}
+                  style={botonCompacto}
                   onClick={() => setPidiendoBaja(pidiendoBaja === i.id ? null : i.id)}
                 >
-                  Solicitar baja
+                  Dar de baja
                 </button>
               )}
             </span>

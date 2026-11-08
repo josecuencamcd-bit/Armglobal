@@ -53,6 +53,31 @@ const ORDEN_AREAS = [
   "Kids", "Tweens", "Worship", "Técnica", "Merch", "Amor por la Casa",
 ];
 
+/** Un color de banda por área — igual idea que la ficha en papel (cada
+ * área con su propio color para distinguirlas de un vistazo). Si aparece
+ * un área nueva que no está en el mapa, cicla por la paleta de respaldo. */
+const COLOR_AREA: Record<string, string> = {
+  "Administración": "#d6d6d6",
+  "Voluntariado": "#b7dfb0",
+  "Conexión": "#b7dfb0",
+  "Stand de Oración": "#f0c9a0",
+  "Kids": "#f6d98a",
+  "Tweens": "#9db3e8",
+  "Worship": "#cdb0e6",
+  "Técnica": "#e8aeae",
+  "Merch": "#c3c3e8",
+  "Amor por la Casa": "#e6cccc",
+};
+const PALETA_RESPALDO = ["#b7dfb0", "#a6d4ec", "#9fd6cc", "#f6d98a", "#9db3e8", "#cdb0e6", "#e8aeae", "#d6d6d6"];
+function colorDeArea(area: string, idx: number): string {
+  return COLOR_AREA[area] ?? PALETA_RESPALDO[idx % PALETA_RESPALDO.length];
+}
+function pares<T>(arr: T[], n: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < arr.length || out.length === 0; i += n) out.push(arr.slice(i, i + n));
+  return out;
+}
+
 /** Campos que siguen siendo manuales — Predicador/Siembra/Producción ya se
  * copian solos desde la planilla técnica (ver /api/ficha-cabecera). Stand
  * Merch/APLC quedan manuales hasta que esos equipos tengan su propia área
@@ -200,6 +225,47 @@ function FichaCompletaInner() {
     }
   }
 
+  /** Arma la ficha como texto plano (mismo orden que el visor) y abre
+   * WhatsApp con el mensaje precargado — wa.me funciona igual en el
+   * celular (abre la app) que en el PC (abre WhatsApp Web), sin pedir
+   * permiso de compartir archivos como el botón de la imagen. */
+  function compartirWhatsApp() {
+    const c = datosCabecera;
+    const val = (v: string | null | undefined) => (v && v.trim() ? v : "—");
+    const lineas: string[] = [];
+    lineas.push(`*FICHA DE SERVICIO*`);
+    lineas.push(`ARM Global · ${campus}`);
+    lineas.push(`${servicio} · ${fechaLegible(fecha)}`);
+    if (c?.cabecera?.cerrada) lineas.push(`🔒 CERRADA${c.cabecera.cerrada_por ? ` · ${c.cabecera.cerrada_por}` : ""}`);
+    lineas.push("");
+    lineas.push(`*Horario:* ${c?.horario || "—"}`);
+    lineas.push(`*Pastores:* ${c && c.pastoresCampus.length > 0 ? c.pastoresCampus.join(" y ") : "—"}`);
+    lineas.push(`*Administradores de Campus:* ${c && c.administradoresCampus.length > 0 ? c.administradoresCampus.join(" - ") : "—"}`);
+    lineas.push(`*Líderes de Voluntarios:* ${val(c?.cabecera?.lider_voluntariado)}`);
+
+    for (const { area, puestos } of porArea) {
+      lineas.push("");
+      lineas.push(`*${area.toUpperCase()}*`);
+      const encargadoArea = puestos.find((p) => p.encargado)?.encargado;
+      if (encargadoArea) lineas.push(`Encargado: ${encargadoArea}`);
+      for (const p of puestos) {
+        lineas.push(`- ${p.puesto}: ${p.nombres.length > 0 ? p.nombres.join(", ") : "— sin asignar —"}`);
+      }
+    }
+
+    lineas.push("");
+    lineas.push(`*Predicador:* ${val(c?.predicador)}`);
+    lineas.push(`*Siembra, Info y Despedida:* ${val(c?.siembra)} / ${val(c?.despedida)}`);
+    lineas.push(`*Producción*`);
+    lineas.push(`Productor General: ${val(c?.productorGeneral)}`);
+    lineas.push(`Encargados Técnicos de Campus: ${val(c?.encargadosTecnicos)}`);
+    lineas.push(`Productor Responsable del Encuentro: ${val(c?.productorEncuentro)}`);
+    lineas.push(`Stand AR Merch: ${val(c?.cabecera?.stand_merch)}`);
+    lineas.push(`Stand APLC: ${val(c?.cabecera?.stand_aplc)}`);
+
+    window.open(`https://wa.me/?text=${encodeURIComponent(lineas.join("\n"))}`, "_blank");
+  }
+
   const c = datosCabecera;
   const vacio = (v: string | null | undefined) => (v && v.trim() ? v : "—");
 
@@ -245,69 +311,104 @@ function FichaCompletaInner() {
           <div
             ref={visorRef}
             style={{
-              background: "#ffffff", color: "#1a1a1a", padding: "24px 22px", borderRadius: 10,
-              border: "1px solid #e2e2e2", maxWidth: 520, fontFamily: "Arial, Helvetica, sans-serif",
+              background: "#ffffff", color: "#1a1a1a", maxWidth: 680,
+              fontFamily: "Arial, Helvetica, sans-serif", fontSize: 12,
+              border: "2px solid #1a1a1a", borderRadius: 6, overflow: "hidden",
             }}
           >
-            <div style={{ textAlign: "center", borderBottom: "3px solid #1a1a1a", paddingBottom: 10, marginBottom: 16 }}>
-              <div style={{ fontSize: 19, fontWeight: 700, letterSpacing: 0.5 }}>FICHA DE SERVICIO</div>
-              <div style={{ fontSize: 13, color: "#555", marginTop: 2 }}>ARM Global · {campus}</div>
-              <div style={{ fontSize: 13, marginTop: 6 }}><strong>{servicio}</strong> · {fechaLegible(fecha)}</div>
-              {c?.cabecera?.cerrada && (
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#b91c1c", marginTop: 6, letterSpacing: 0.5 }}>
-                  🔒 CERRADA{c.cabecera.cerrada_por ? ` · ${c.cabecera.cerrada_por}` : ""}
+            {/* Encabezado — franja con el nombre del documento + logo, igual que la ficha en papel */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px", borderBottom: "2px solid #1a1a1a" }}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: 0.4 }}>
+                  VOLUNTARIOS CAMPUS {campus.toUpperCase()}
                 </div>
-              )}
+                <div style={{ fontSize: 11, color: "#555", marginTop: 1 }}>Campus {campus}</div>
+                <div style={{ fontSize: 11, color: "#555", marginTop: 1 }}>{servicio}</div>
+              </div>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/icon-512.png" alt="arm global" style={{ height: 34, width: "auto", borderRadius: 4 }} />
             </div>
 
-            <div style={{ fontSize: 12, marginBottom: 16, lineHeight: 1.7 }}>
-              <div><b>Fecha:</b> {fechaLegible(fecha)} &nbsp; <b>Horario:</b> {c?.horario || "—"}</div>
-              <div><b>Pastores:</b> {c && c.pastoresCampus.length > 0 ? c.pastoresCampus.join(" y ") : "—"}</div>
-              <div><b>Administradores de Campus:</b> {c && c.administradoresCampus.length > 0 ? c.administradoresCampus.join(" - ") : "—"}</div>
-              <div><b>Líderes de Voluntarios:</b> {vacio(c?.cabecera?.lider_voluntariado)}</div>
+            {c?.cabecera?.cerrada && (
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#b91c1c", textAlign: "center", padding: "4px 0", borderBottom: "1px solid #1a1a1a" }}>
+                🔒 CERRADA{c.cabecera.cerrada_por ? ` · ${c.cabecera.cerrada_por}` : ""}
+              </div>
+            )}
+
+            {/* Datos del encuentro */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", borderBottom: "2px solid #1a1a1a" }}>
+              <div style={{ padding: "6px 12px", borderRight: "1px solid #1a1a1a" }}><b>Fecha:</b> {fechaLegible(fecha)}</div>
+              <div style={{ padding: "6px 12px" }}><b>Horario:</b> {c?.horario || "—"}</div>
+              <div style={{ padding: "6px 12px", borderTop: "1px solid #1a1a1a", borderRight: "1px solid #1a1a1a", gridColumn: "1 / 2" }}>
+                <b>Pastores:</b> {c && c.pastoresCampus.length > 0 ? c.pastoresCampus.join(" y ") : "—"}
+              </div>
+              <div style={{ padding: "6px 12px", borderTop: "1px solid #1a1a1a" }}>
+                <b>Líderes de Voluntarios:</b> {vacio(c?.cabecera?.lider_voluntariado)}
+              </div>
+              <div style={{ padding: "6px 12px", borderTop: "1px solid #1a1a1a", gridColumn: "1 / -1" }}>
+                <b>Administradores de Campus:</b> {c && c.administradoresCampus.length > 0 ? c.administradoresCampus.join(" - ") : "—"}
+              </div>
             </div>
             {c && !c.deTecnica && (
-              <div style={{ fontSize: 11, color: "#b45309", marginBottom: 10 }}>
+              <div style={{ fontSize: 11, color: "#b45309", padding: "6px 12px", borderBottom: "1px solid #1a1a1a" }}>
                 No se pudo leer la planilla técnica — Predicador/Siembra/Producción quedan en lo último guardado manual.
               </div>
             )}
 
-            {porArea.map(({ area, puestos }) => (
-              <div key={area} style={{ marginBottom: 18 }}>
-                <div
-                  style={{
-                    fontSize: 13, fontWeight: 700, color: "#fff", background: "#1a1a1a",
-                    padding: "4px 10px", borderRadius: 4, marginBottom: 8, textTransform: "uppercase",
-                  }}
-                >
-                  {area}
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {puestos.map((g) => (
-                    <div key={g.puesto} style={{ borderBottom: "1px solid #eee", paddingBottom: 6 }}>
-                      <div style={{ fontSize: 13, fontWeight: 600 }}>{g.puesto}</div>
-                      {g.encargado && <div style={{ fontSize: 11, color: "#777" }}>Encargado: {g.encargado}</div>}
-                      <div style={{ fontSize: 13, color: "#333", marginTop: 2 }}>
-                        {g.nombres.length > 0 ? g.nombres.join(" · ") : "— sin asignar —"}
-                      </div>
+            {/* Áreas — banda de color + tabla de puestos, igual que la ficha en papel */}
+            {porArea.map(({ area, puestos }, idx) => {
+              const color = colorDeArea(area, idx);
+              const encargadoArea = puestos.find((p) => p.encargado)?.encargado || "—";
+              const filas = puestos.flatMap((p) =>
+                pares(p.nombres, 2).map((par) => ({ puesto: p.puesto, par }))
+              );
+              return (
+                <div key={area}>
+                  <div style={{ background: color, fontWeight: 700, fontSize: 12, textAlign: "center", padding: "4px 10px", textTransform: "uppercase", borderTop: "1px solid #1a1a1a", borderBottom: "1px solid #1a1a1a" }}>
+                    {area}
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr 1fr" }}>
+                    <div style={{ gridColumn: "1 / -1", padding: "4px 12px", background: `${color}66`, borderBottom: "1px solid #1a1a1a", fontWeight: 600 }}>
+                      ENCARGADO DE ÁREA: <span style={{ fontWeight: 400 }}>{encargadoArea}</span>
                     </div>
-                  ))}
+                    {filas.length === 0 && (
+                      <div style={{ gridColumn: "1 / -1", padding: "4px 12px", color: "#777", borderBottom: "1px solid #ddd" }}>
+                        — sin puestos cargados —
+                      </div>
+                    )}
+                    {filas.map((f, i) => (
+                      <div key={`${f.puesto}-${i}`} style={{ display: "contents" }}>
+                        <div style={{ padding: "4px 12px", fontWeight: 600, background: `${color}33`, borderBottom: "1px solid #ddd", borderRight: "1px solid #ddd" }}>
+                          {f.puesto}
+                        </div>
+                        <div style={{ padding: "4px 12px", borderBottom: "1px solid #ddd", borderRight: "1px solid #ddd" }}>{f.par[0] ?? ""}</div>
+                        <div style={{ padding: "4px 12px", borderBottom: "1px solid #ddd" }}>{f.par[1] ?? ""}</div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
 
-            <div style={{ borderTop: "2px solid #1a1a1a", paddingTop: 10, marginTop: 4, fontSize: 12, lineHeight: 1.8 }}>
-              <div><b>Predicador:</b> {vacio(c?.predicador)}</div>
-              <div><b>Siembra, Info y Despedida:</b> Siembra: {vacio(c?.siembra)} — Despedida: {vacio(c?.despedida)}</div>
-              <div style={{ marginTop: 6 }}><b>Producción</b></div>
-              <div>Productor General: {vacio(c?.productorGeneral)}</div>
-              <div>Encargados Técnicos de Campus: {vacio(c?.encargadosTecnicos)}</div>
-              <div>Productor Responsable del Encuentro: {vacio(c?.productorEncuentro)}</div>
-              <div style={{ marginTop: 6 }}>Stand AR Merch: {vacio(c?.cabecera?.stand_merch)}</div>
-              <div>Stand APLC: {vacio(c?.cabecera?.stand_aplc)}</div>
+            {/* Pie — predicador/siembra y producción, lado a lado como en la ficha en papel */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", borderTop: "2px solid #1a1a1a" }}>
+              <div style={{ padding: "8px 12px", borderRight: "1px solid #1a1a1a", lineHeight: 1.7 }}>
+                <div><b>Predicador:</b> {vacio(c?.predicador)}</div>
+                <div><b>Siembra, Info y Despedida:</b> {vacio(c?.siembra)} / {vacio(c?.despedida)}</div>
+              </div>
+              <div style={{ padding: "8px 12px", lineHeight: 1.7 }}>
+                <div style={{ fontWeight: 700, marginBottom: 2 }}>Producción</div>
+                <div>Productor General: {vacio(c?.productorGeneral)}</div>
+                <div>Encargados Técnicos de Campus: {vacio(c?.encargadosTecnicos)}</div>
+                <div>Productor Responsable del Encuentro: {vacio(c?.productorEncuentro)}</div>
+              </div>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", borderTop: "1px solid #1a1a1a" }}>
+              <div style={{ padding: "6px 12px", borderRight: "1px solid #1a1a1a" }}><b>Stand AR Merch:</b> {vacio(c?.cabecera?.stand_merch)}</div>
+              <div style={{ padding: "6px 12px" }}><b>Stand APLC:</b> {vacio(c?.cabecera?.stand_aplc)}</div>
             </div>
 
-            <div style={{ fontSize: 10, color: "#aaa", textAlign: "center", marginTop: 16 }}>
+            <div style={{ fontSize: 10, color: "#aaa", textAlign: "center", padding: "8px 0", borderTop: "1px solid #1a1a1a" }}>
               Generado desde la app · {new Date().toLocaleDateString("es-CL")}
             </div>
           </div>
@@ -315,6 +416,14 @@ function FichaCompletaInner() {
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14 }}>
             <button className="boton" onClick={descargarImagen} disabled={generandoImagen}>
               {generandoImagen ? "Generando…" : "Descargar / compartir imagen"}
+            </button>
+            <button
+              type="button"
+              className="boton-secundario"
+              style={{ width: "auto", padding: "0 14px", borderColor: "#25D366", color: "#1a9e4f" }}
+              onClick={compartirWhatsApp}
+            >
+              Compartir por WhatsApp
             </button>
             <button
               type="button"
