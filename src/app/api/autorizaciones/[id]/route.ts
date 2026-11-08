@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ok, fail, fromSupabaseError, parseBody } from "@/lib/api-helpers";
@@ -110,23 +111,26 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     });
 
     if (aprobar) {
-      try {
-        const admin = createAdminClient();
-        const { data: admins } = await admin.from("perfiles").select("correo").contains("roles", ["Admin app"]);
-        await avisarAdmins({
-          destinatarios: (admins ?? []).map((a) => a.correo).filter((c): c is string => !!c),
-          asunto: `Falta tu paso final: ${data?.encuentro} · ${data?.campus}`,
-          titulo: "El Pastor ya dio el Ok — falta tu aprobación",
-          datos: [
-            ["Encuentro", `${data?.encuentro} · ${data?.campus}`],
-            ["Fecha", data?.fecha ?? ""],
-            ["Pastor", perfilActuante.nombre],
-          ],
-          nota: "Apruébala en Soporte > Reabrir encuentros para que quede habilitada.",
-        });
-      } catch {
-        // un correo que falla no debe tumbar la aprobación ya guardada
-      }
+      after(async () => {
+        try {
+          const admin = createAdminClient();
+          const { data: admins } = await admin.from("perfiles").select("correo").contains("roles", ["Admin app"]);
+          await avisarAdmins({
+            destinatarios: (admins ?? []).map((a) => a.correo).filter((c): c is string => !!c),
+            asunto: `Falta tu paso final: ${data?.encuentro} · ${data?.campus}`,
+            titulo: "El Pastor ya dio el Ok — falta tu aprobación",
+            datos: [
+              ["Encuentro", `${data?.encuentro} · ${data?.campus}`],
+              ["Fecha", data?.fecha ?? ""],
+              ["Pastor", perfilActuante.nombre],
+            ],
+            nota: "Apruébala en Soporte > Reabrir encuentros para que quede habilitada.",
+          });
+        } catch (eCorreo) {
+          // un correo que falla no debe tumbar la aprobación ya guardada
+          console.error("[autorizaciones/id] error enviando aviso:", eCorreo);
+        }
+      });
     }
 
     return ok(data);

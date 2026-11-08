@@ -72,19 +72,24 @@ export default function AportesEncuentroPage() {
   async function pedirAutorizacion() {
     if (!motivo.trim()) { setError("Cuéntanos el motivo para pedir autorización."); return; }
     setEnviandoMotivo(true);
-    const [c, e, ev, f] = decodeURIComponent(key).split("|");
-    const res = await fetch("/api/autorizaciones", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ campus: c, encuentro: e, evento: ev, fecha: f, motivo: motivo.trim() }),
-    });
-    const json = await res.json();
-    setEnviandoMotivo(false);
-    if (!json.ok) { setError(json.error); return; }
-    setPidiendo(false);
-    setMotivo("");
-    setError(null);
-    await cargarAutorizacion();
+    try {
+      const [c, e, ev, f] = decodeURIComponent(key).split("|");
+      const res = await fetch("/api/autorizaciones", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ campus: c, encuentro: e, evento: ev, fecha: f, motivo: motivo.trim() }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!json || !json.ok) { setError(json?.error || "No se pudo enviar la solicitud. Intenta de nuevo."); return; }
+      setPidiendo(false);
+      setMotivo("");
+      setError(null);
+      await cargarAutorizacion();
+    } catch {
+      setError("No se pudo enviar la solicitud — revisa tu conexión e intenta de nuevo.");
+    } finally {
+      setEnviandoMotivo(false);
+    }
   }
 
   async function guardarComo(metodo: string) {

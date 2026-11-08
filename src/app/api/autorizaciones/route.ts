@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ok, fail, fromSupabaseError, parseBody } from "@/lib/api-helpers";
@@ -59,32 +60,37 @@ export async function POST(req: Request) {
       .single();
     if (error) throw error;
 
-    try {
-      const admin = createAdminClient();
-      const [{ data: pastores }, { data: admins }] = await Promise.all([
-        admin.from("perfiles").select("correo").overlaps("roles", ROLES_PASTOR as unknown as string[]).or(`campus.eq.${args.data.campus},campus.is.null`),
-        admin.from("perfiles").select("correo").contains("roles", ["Admin app"]),
-      ]);
-      const destinatarios = [...(pastores ?? []), ...(admins ?? [])]
-        .map((p) => p.correo)
-        .filter((c): c is string => !!c);
-      console.log("[autorizaciones] destinatarios:", destinatarios);
-      await avisarAdmins({
-        destinatarios,
-        asunto: `Reabrir encuentro: ${args.data.encuentro} · ${args.data.campus}`,
-        titulo: "Pide autorización para modificar un encuentro",
-        datos: [
-          ["Quién pide", perfil.nombre],
-          ["Encuentro", `${args.data.encuentro} · ${args.data.campus}`],
-          ["Fecha", args.data.fecha],
-          ["Motivo", parsedBody.data.motivo],
-        ],
-        nota: "Pastor: revísala y da el Ok en Soporte > Reabrir encuentros. Soporte: puedes aprobarla directo si hace falta, sin esperar al Pastor.",
-      });
-    } catch (eCorreo) {
-      // un correo que falla no debe tumbar la solicitud ya guardada
-      console.error("[autorizaciones] error enviando aviso:", eCorreo);
-    }
+    // El correo se manda después de responder (next/server after) — así un
+    // Resend lento o caído nunca retrasa ni cuelga la respuesta al botón
+    // "Enviar solicitud" del cliente (la solicitud ya quedó guardada arriba).
+    after(async () => {
+      try {
+        const admin = createAdminClient();
+        const [{ data: pastores }, { data: admins }] = await Promise.all([
+          admin.from("perfiles").select("correo").overlaps("roles", ROLES_PASTOR as unknown as string[]).or(`campus.eq.${args.data.campus},campus.is.null`),
+          admin.from("perfiles").select("correo").contains("roles", ["Admin app"]),
+        ]);
+        const destinatarios = [...(pastores ?? []), ...(admins ?? [])]
+          .map((p) => p.correo)
+          .filter((c): c is string => !!c);
+        console.log("[autorizaciones] destinatarios:", destinatarios);
+        await avisarAdmins({
+          destinatarios,
+          asunto: `Reabrir encuentro: ${args.data.encuentro} · ${args.data.campus}`,
+          titulo: "Pide autorización para modificar un encuentro",
+          datos: [
+            ["Quién pide", perfil.nombre],
+            ["Encuentro", `${args.data.encuentro} · ${args.data.campus}`],
+            ["Fecha", args.data.fecha],
+            ["Motivo", parsedBody.data.motivo],
+          ],
+          nota: "Pastor: revísala y da el Ok en Soporte > Reabrir encuentros. Soporte: puedes aprobarla directo si hace falta, sin esperar al Pastor.",
+        });
+      } catch (eCorreo) {
+        // un correo que falla no debe tumbar la solicitud ya guardada
+        console.error("[autorizaciones] error enviando aviso:", eCorreo);
+      }
+    });
 
     return ok(data, 201);
   } catch (e) {
