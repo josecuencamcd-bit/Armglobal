@@ -152,6 +152,35 @@ export async function avisarAdmins(opts: {
   });
 }
 
+/** Avisa a un integrante (no necesariamente tiene cuenta en la app — por
+ * eso es un correo directo, no un avisarAdmins) que su líder le asignó una
+ * actividad puntual en "Asignación de actividades". */
+export async function avisarActividad(opts: {
+  correo: string;
+  nombre: string;
+  actividad: string;
+  area: string;
+  campus: string;
+  fechaLimite: string;
+  asignadoPor: string;
+}) {
+  return enviar({
+    from: FROM,
+    to: opts.correo,
+    subject: `Nueva actividad en ${opts.area} — armglobal`,
+    html: layout({
+      etiqueta: "ASIGNACIÓN DE ACTIVIDADES",
+      titulo: `Hola ${opts.nombre}, tienes una actividad nueva`,
+      parrafos: [opts.actividad],
+      datos: [
+        ["Equipo", `${opts.area} · ${opts.campus}`],
+        ["Fecha límite", opts.fechaLimite],
+        ["Asignada por", opts.asignadoPor],
+      ],
+    }),
+  });
+}
+
 /** Botón "PDF, Excel o correo" → "Enviar por correo" del modal de
  * Compartir: manda el mismo texto que se ve en el cuadro de WhatsApp,
  * como HTML preformateado (los *asteriscos* pasan a negrita) y también

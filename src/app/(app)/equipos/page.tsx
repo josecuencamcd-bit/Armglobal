@@ -103,6 +103,23 @@ function promedio(valores: (number | null)[]): number | null {
 
 type SolicitudBaja = { id: number; integrante_id: number | null; estado: string };
 
+/** Fila de "Asignación de actividades" — un encargo puntual (no el
+ * rol_servicio fijo de integrantes) con fecha límite; se avisa por correo
+ * a quien se le asignó, tenga o no cuenta en la app. */
+type Actividad = {
+  id: number;
+  campus: string;
+  area: string;
+  actividad: string;
+  asignado_nombre: string;
+  asignado_correo: string;
+  fecha_limite: string;
+  estado: string;
+  creado_por_nombre: string;
+  creado_en: string;
+  hecha_en: string | null;
+};
+
 type Ficha = {
   id: number;
   servicio: string;
@@ -187,6 +204,21 @@ export default function EquiposPage() {
   // misma página — acá solo se enlaza con un ancla).
   const [mostrarReportes, setMostrarReportes] = useState(false);
 
+  // Pestaña "Asignación de actividades": el líder (o Admin/Pastor/Ministro)
+  // le encarga algo puntual a alguien del equipo, con fecha límite — RLS
+  // (actividades_equipo_*) ya limita a un Líder a sus propias áreas.
+  const [mostrarActividades, setMostrarActividades] = useState(false);
+  const [actividades, setActividades] = useState<Actividad[] | null>(null);
+  const [errorActividad, setErrorActividad] = useState<string | null>(null);
+  const [mostrarFormActividad, setMostrarFormActividad] = useState(false);
+  const [textoActividad, setTextoActividad] = useState("");
+  const [fechaLimiteActividad, setFechaLimiteActividad] = useState(hoyISO());
+  const [asignadoId, setAsignadoId] = useState<string>("");
+  const [asignadoNombreLibre, setAsignadoNombreLibre] = useState("");
+  const [asignadoCorreoLibre, setAsignadoCorreoLibre] = useState("");
+  const [guardandoActividad, setGuardandoActividad] = useState(false);
+  const [marcandoActividad, setMarcandoActividad] = useState<number | null>(null);
+
   const cargar = useCallback(async (c: string, a: string) => {
     const [res, resBajas] = await Promise.all([
       fetch(`/api/integrantes?campus=${encodeURIComponent(c)}&area=${encodeURIComponent(a)}`),
@@ -250,6 +282,69 @@ export default function EquiposPage() {
     if (area === "Merch") cargarSolicitudesMerch(campus);
     else setSolicitudesMerch(null);
   }, [campus, area, cargarSolicitudesMerch]);
+
+  const cargarActividades = useCallback(async (c: string, a: string) => {
+    const res = await fetch(`/api/actividades?campus=${encodeURIComponent(c)}&area=${encodeURIComponent(a)}`);
+    const json = await res.json();
+    if (!json.ok) { setErrorActividad(json.error); return; }
+    setActividades(json.data);
+    setErrorActividad(null);
+  }, []);
+
+  useEffect(() => {
+    if (mostrarActividades) cargarActividades(campus, area);
+  }, [mostrarActividades, campus, area, cargarActividades]);
+
+  async function crearActividad() {
+    if (!textoActividad.trim()) { setErrorActividad("Cuéntanos qué hay que hacer."); return; }
+    const elegido = activos.find((i) => String(i.id) === asignadoId);
+    const nombre = elegido ? elegido.nombre : asignadoNombreLibre.trim();
+    const correo = (elegido?.correo || asignadoCorreoLibre).trim();
+    if (!nombre) { setErrorActividad("Falta a quién se le asigna."); return; }
+    if (!correo) { setErrorActividad("Falta el correo de quien la hace, para avisarle."); return; }
+    setGuardandoActividad(true);
+    try {
+      const res = await fetch("/api/actividades", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          campus,
+          area,
+          actividad: textoActividad.trim(),
+          asignado_nombre: nombre,
+          asignado_correo: correo,
+          fecha_limite: fechaLimiteActividad,
+        }),
+      });
+      const json = await res.json();
+      if (!json.ok) { setErrorActividad(json.error); return; }
+      setTextoActividad("");
+      setAsignadoId("");
+      setAsignadoNombreLibre("");
+      setAsignadoCorreoLibre("");
+      setFechaLimiteActividad(hoyISO());
+      setMostrarFormActividad(false);
+      setErrorActividad(null);
+      await cargarActividades(campus, area);
+    } catch {
+      setErrorActividad("No se pudo guardar — revisa tu conexión e intenta de nuevo.");
+    } finally {
+      setGuardandoActividad(false);
+    }
+  }
+
+  async function marcarActividad(id: number, estado: "Pendiente" | "Hecha") {
+    setMarcandoActividad(id);
+    const res = await fetch(`/api/actividades/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ estado }),
+    });
+    const json = await res.json();
+    setMarcandoActividad(null);
+    if (!json.ok) { setErrorActividad(json.error); return; }
+    await cargarActividades(campus, area);
+  }
 
   async function pedirMerch(i: Integrante, fd: FormData) {
     setEnviandoMerch(true);
@@ -645,6 +740,125 @@ export default function EquiposPage() {
               </div>
               <span className="muted">Ir ↓</span>
             </a>
+          )}
+        </div>
+      )}
+
+      <button
+        type="button"
+        className="boton-secundario"
+        style={{ marginBottom: 16 }}
+        onClick={() => setMostrarActividades((v) => !v)}
+      >
+        {mostrarActividades ? "Cerrar asignación de actividades" : `Asignación de actividades · ${area}`}
+      </button>
+
+      {mostrarActividades && (
+        <div className="tarjeta stack" style={{ marginBottom: 16 }}>
+          <span className="label">Actividades de {area}</span>
+          {errorActividad && <p className="aviso">{errorActividad}</p>}
+
+          {!actividades && <p className="muted">Cargando…</p>}
+          {actividades && actividades.length === 0 && !mostrarFormActividad && (
+            <p className="muted">Sin actividades asignadas todavía.</p>
+          )}
+          {actividades?.map((a) => (
+            <div className="eco-row" key={a.id}>
+              <div>
+                <b>{a.actividad}</b>
+                <small>
+                  {a.asignado_nombre} · vence {fechaLegibleFicha(a.fecha_limite)}
+                  {a.estado === "Hecha" && a.hecha_en ? ` · hecha ${fechaLegibleFicha(a.hecha_en.slice(0, 10))}` : ""}
+                </small>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span className={`eco-badge ${a.estado === "Hecha" ? "ok" : "warn"}`}>{a.estado}</span>
+                <button
+                  type="button"
+                  className="boton-secundario"
+                  style={{ width: "auto", padding: "6px 10px", fontSize: "0.78rem" }}
+                  disabled={marcandoActividad === a.id}
+                  onClick={() => marcarActividad(a.id, a.estado === "Hecha" ? "Pendiente" : "Hecha")}
+                >
+                  {marcandoActividad === a.id ? "…" : a.estado === "Hecha" ? "Reabrir" : "Marcar hecha"}
+                </button>
+              </div>
+            </div>
+          ))}
+
+          {!mostrarFormActividad && (
+            <button type="button" className="boton" onClick={() => setMostrarFormActividad(true)}>
+              + Asignar actividad
+            </button>
+          )}
+
+          {mostrarFormActividad && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 4 }}>
+              <div className="campo" style={{ marginBottom: 0 }}>
+                <label>Actividad</label>
+                <textarea
+                  rows={2}
+                  value={textoActividad}
+                  onChange={(e) => setTextoActividad(e.target.value)}
+                  placeholder="Ej: Enviar los mensajes de texto y coordinar la bienvenida de este domingo"
+                />
+              </div>
+              <div className="campo" style={{ marginBottom: 0 }}>
+                <label>Asignar a</label>
+                <select value={asignadoId} onChange={(e) => setAsignadoId(e.target.value)}>
+                  <option value="">— Elegir del equipo —</option>
+                  {activos.map((i) => (
+                    <option key={i.id} value={i.id}>{i.nombre}{i.correo ? "" : " (sin correo)"}</option>
+                  ))}
+                  <option value="otra">Otra persona…</option>
+                </select>
+              </div>
+              {asignadoId === "otra" && (
+                <>
+                  <div className="campo" style={{ marginBottom: 0 }}>
+                    <label>Nombre</label>
+                    <input value={asignadoNombreLibre} onChange={(e) => setAsignadoNombreLibre(e.target.value)} />
+                  </div>
+                  <div className="campo" style={{ marginBottom: 0 }}>
+                    <label>Correo (para avisarle)</label>
+                    <input
+                      type="email"
+                      value={asignadoCorreoLibre}
+                      onChange={(e) => setAsignadoCorreoLibre(e.target.value)}
+                      placeholder="correo@ejemplo.com"
+                    />
+                  </div>
+                </>
+              )}
+              {asignadoId && asignadoId !== "otra" && !activos.find((i) => String(i.id) === asignadoId)?.correo && (
+                <div className="campo" style={{ marginBottom: 0 }}>
+                  <label>Correo de {activos.find((i) => String(i.id) === asignadoId)?.nombre} (no tiene uno cargado — para avisarle)</label>
+                  <input
+                    type="email"
+                    value={asignadoCorreoLibre}
+                    onChange={(e) => setAsignadoCorreoLibre(e.target.value)}
+                    placeholder="correo@ejemplo.com"
+                  />
+                </div>
+              )}
+              <div className="campo" style={{ marginBottom: 0 }}>
+                <label>Fecha límite</label>
+                <input type="date" value={fechaLimiteActividad} onChange={(e) => setFechaLimiteActividad(e.target.value)} />
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button type="button" className="boton" style={{ flex: 1 }} disabled={guardandoActividad} onClick={crearActividad}>
+                  {guardandoActividad ? "Guardando…" : "Asignar y avisar por correo"}
+                </button>
+                <button
+                  type="button"
+                  className="boton-secundario"
+                  style={{ flex: 1, width: "auto" }}
+                  onClick={() => { setMostrarFormActividad(false); setErrorActividad(null); }}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
           )}
         </div>
       )}

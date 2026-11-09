@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      actividades_equipo: {
+        Row: {
+          actividad: string
+          area: Database["public"]["Enums"]["area_t"]
+          asignado_correo: string
+          asignado_nombre: string
+          campus: Database["public"]["Enums"]["campus_t"]
+          creado_en: string
+          creado_por_correo: string
+          creado_por_nombre: string
+          estado: string
+          fecha_limite: string
+          hecha_en: string | null
+          hecha_por: string | null
+          id: number
+        }
+        Insert: {
+          actividad: string
+          area: Database["public"]["Enums"]["area_t"]
+          asignado_correo: string
+          asignado_nombre: string
+          campus: Database["public"]["Enums"]["campus_t"]
+          creado_en?: string
+          creado_por_correo: string
+          creado_por_nombre: string
+          estado?: string
+          fecha_limite: string
+          hecha_en?: string | null
+          hecha_por?: string | null
+          id?: never
+        }
+        Update: {
+          actividad?: string
+          area?: Database["public"]["Enums"]["area_t"]
+          asignado_correo?: string
+          asignado_nombre?: string
+          campus?: Database["public"]["Enums"]["campus_t"]
+          creado_en?: string
+          creado_por_correo?: string
+          creado_por_nombre?: string
+          estado?: string
+          fecha_limite?: string
+          hecha_en?: string | null
+          hecha_por?: string | null
+          id?: never
+        }
+        Relationships: []
+      }
       administracion_semanal: {
         Row: {
           actualizado: string
