@@ -3,20 +3,21 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Icono } from "@/lib/iconos";
+import { esAppAdmin } from "@/lib/visibilidad-modulos";
 
 type Acceso = { correo: string; nombre: string; nota: string | null; estado: string };
 type AutEncuentro = { id: number; nombre: string; campus: string; encuentro: string; fecha: string; motivo: string; estado: string };
 type AutFondos = { id: number; solicitante: string | null; campus: string; area: string; mes: string; motivo: string; estado: string };
 type Ayuda = { id: number; correo: string; nombre: string | null; perfil_id: string | null; tipo: string | null; mensaje: string; estado: string };
 
-const TILES: { key: string; label: string; icon: string; href?: string }[] = [
+const TILES: { key: string; label: string; icon: string; href?: string; soloAdminApp?: boolean }[] = [
   { key: "accesos", label: "Accesos", icon: "soporte" },
-  { key: "perfiles", label: "Perfiles", icon: "perfiles", href: "/perfiles" },
+  { key: "perfiles", label: "Perfiles", icon: "perfiles", href: "/perfiles", soloAdminApp: true },
   { key: "fondos", label: "Fondos", icon: "fondo", href: "/fondos" },
-  { key: "cumpleanos", label: "Cumpleaños", icon: "cumples", href: "/cumpleanos" },
+  { key: "cumpleanos", label: "Cumpleaños", icon: "cumples", href: "/cumpleanos", soloAdminApp: true },
   { key: "administracion-semanal", label: "Administración semanal", icon: "administracionSemanal", href: "/administracion-semanal" },
-  { key: "nombres", label: "Nombres", icon: "perfiles", href: "/soporte/nombres" },
-  { key: "actividad", label: "Actividad", icon: "actividad", href: "/actividad" },
+  { key: "nombres", label: "Nombres", icon: "perfiles", href: "/soporte/nombres", soloAdminApp: true },
+  { key: "actividad", label: "Actividad", icon: "actividad", href: "/actividad", soloAdminApp: true },
 ];
 
 /** Soporte: mismo menú de la app vieja (grilla Accesos/Perfiles/Fondos/
@@ -36,6 +37,16 @@ export default function SoportePage() {
   const [error, setError] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState<string | null>(null);
   const [entrando, setEntrando] = useState<string | null>(null);
+  // Perfiles, Cumpleaños, Nombres y Actividad son solo del Admin app — el
+  // Pastor (de campus, principal o sin campus) los administra levantando
+  // un aviso en "Avisos de ayuda", no entrando directo a esas pantallas.
+  const [esAdminApp, setEsAdminApp] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/perfil").then((r) => r.json()).then((json) => {
+      if (json.ok) setEsAdminApp(esAppAdmin(json.data));
+    });
+  }, []);
 
   const cargar = useCallback(async () => {
     const [ra, rae, raf, ray] = await Promise.all([
@@ -107,7 +118,7 @@ export default function SoportePage() {
       {error && <p className="aviso">{error}</p>}
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10, marginBottom: 20 }}>
-        {TILES.map((t) => (
+        {TILES.filter((t) => !t.soloAdminApp || esAdminApp).map((t) => (
           <button
             key={t.key}
             onClick={() => t.href && router.push(t.href)}

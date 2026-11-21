@@ -6,7 +6,7 @@ import { AREAS, TALLAS, proximaFecha } from "@/lib/sesiones";
 import { useCampus } from "@/lib/campus-context";
 import { VolverAdministracion } from "@/lib/volver-admin";
 import { AREAS_DISPONIBILIDAD, ENCUENTRO_DE_SERVICIO } from "@/lib/disponibilidad";
-import { FONDO_AREAS } from "@/lib/visibilidad-modulos";
+import { FONDO_AREAS, esFin } from "@/lib/visibilidad-modulos";
 import MerchInventario from "./merch-inventario";
 
 type Integrante = {
@@ -218,6 +218,17 @@ export default function EquiposPage() {
   const [asignadoCorreoLibre, setAsignadoCorreoLibre] = useState("");
   const [guardandoActividad, setGuardandoActividad] = useState(false);
   const [marcandoActividad, setMarcandoActividad] = useState<number | null>(null);
+  // Un Líder solo puede asignar actividades a su propio equipo (sin
+  // "Otra persona" libre); Administrador, Pastor de campus/Pastor/Pastor
+  // principal y Ministro sí pueden a cualquiera — esto solo oculta la
+  // opción en pantalla, la regla real vive en /api/actividades (esFin()).
+  const [esFinanzas, setEsFinanzas] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/perfil").then((r) => r.json()).then((json) => {
+      if (json.ok) setEsFinanzas(esFin(json.data));
+    });
+  }, []);
 
   const cargar = useCallback(async (c: string, a: string) => {
     const [res, resBajas] = await Promise.all([
@@ -810,10 +821,13 @@ export default function EquiposPage() {
                   {activos.map((i) => (
                     <option key={i.id} value={i.id}>{i.nombre}{i.correo ? "" : " (sin correo)"}</option>
                   ))}
-                  <option value="otra">Otra persona…</option>
+                  {esFinanzas && <option value="otra">Otra persona…</option>}
                 </select>
+                {!esFinanzas && (
+                  <small className="muted">Como Líder, solo puedes asignar a alguien de tu equipo.</small>
+                )}
               </div>
-              {asignadoId === "otra" && (
+              {esFinanzas && asignadoId === "otra" && (
                 <>
                   <div className="campo" style={{ marginBottom: 0 }}>
                     <label>Nombre</label>
@@ -830,7 +844,7 @@ export default function EquiposPage() {
                   </div>
                 </>
               )}
-              {asignadoId && asignadoId !== "otra" && !activos.find((i) => String(i.id) === asignadoId)?.correo && (
+              {esFinanzas && asignadoId && asignadoId !== "otra" && !activos.find((i) => String(i.id) === asignadoId)?.correo && (
                 <div className="campo" style={{ marginBottom: 0 }}>
                   <label>Correo de {activos.find((i) => String(i.id) === asignadoId)?.nombre} (no tiene uno cargado — para avisarle)</label>
                   <input

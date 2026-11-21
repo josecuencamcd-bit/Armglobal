@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ok, fail, fromSupabaseError, parseBody } from "@/lib/api-helpers";
 import { CAMPUS, AREAS } from "@/lib/sesiones";
 import { identidadActuante } from "@/lib/identidad";
+import { esFin } from "@/lib/visibilidad-modulos";
 import { avisarActividad } from "@/lib/email";
 import { z } from "zod";
 
@@ -55,6 +56,23 @@ export async function POST(req: Request) {
   const supabase = await createClient();
   const identidad = await identidadActuante(supabase);
   if (!identidad) return fail("No autenticado.", 401);
+
+  // Un Líder solo asigna dentro de su propio equipo — se valida acá, no
+  // solo escondiendo "Otra persona" en pantalla. Administrador, Pastor de
+  // campus/Pastor/Pastor principal y Ministro (esFin) sí pueden avisarle a
+  // cualquiera (esFin ya exige también los campos areas/sirve/modulos_* de
+  // PerfilVisibilidad, que perfiles.Row trae todos).
+  if (!esFin(identidad.perfil)) {
+    const { data: enEquipo } = await supabase
+      .from("integrantes")
+      .select("id")
+      .eq("campus", parsedBody.data.campus)
+      .eq("area", parsedBody.data.area)
+      .eq("estado", "Activo")
+      .ilike("correo", parsedBody.data.asignado_correo)
+      .maybeSingle();
+    if (!enEquipo) return fail("Solo puedes asignar actividades a alguien de tu propio equipo.");
+  }
 
   const { data, error } = await supabase
     .from("actividades_equipo")
