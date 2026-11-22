@@ -165,6 +165,22 @@ export default function AportesEncuentroPage() {
     await cargar();
   }
 
+  // Mismo botón "Encuentro finalizado" / "Reabrir encuentro" que el
+  // Reporte — se repite acá porque el administrador de campus cierra el
+  // encuentro justo después de dejar registrados los aportes, sin volver
+  // a la pantalla anterior.
+  async function finalizar(valor: boolean) {
+    if (!confirm(valor ? "¿Marcar este encuentro como finalizado?" : "¿Reabrir este encuentro para seguir editándolo?")) return;
+    const res = await fetch(`/api/sesiones/${key}/finalizar`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ finalizado: valor }),
+    });
+    const json = await res.json();
+    if (!json.ok) { setError(json.error); return; }
+    await cargar();
+  }
+
   if (!estado && !error) return <div className="contenedor">Cargando…</div>;
 
   const [campus, encuentro, , fecha] = decodeURIComponent(key).split("|");
@@ -350,6 +366,21 @@ export default function AportesEncuentroPage() {
           onClick={() => setCompartiendo(true)}
         >
           Compartir reporte
+        </button>
+        <button
+          type="button"
+          disabled={bloqueado || !estado}
+          onClick={() => finalizar(!estado?.finalizado)}
+          style={{
+            flex: 1, borderRadius: 10, padding: "12px 6px", fontWeight: 700, fontSize: "0.85rem",
+            border: "none", cursor: bloqueado ? "default" : "pointer",
+            background: estado?.finalizado ? "var(--gold-grad)" : "var(--surface-2)",
+            color: estado?.finalizado ? "var(--accent-ink)" : "var(--ink)",
+            opacity: bloqueado ? 0.5 : estado?.finalizado ? 1 : 0.9,
+            whiteSpace: "pre-line",
+          }}
+        >
+          {estado?.finalizado ? <>Reabrir{"\n"}encuentro</> : <>Encuentro{"\n"}finalizado</>}
         </button>
         {bloqueado && !solicitudPendiente && (
           <button
