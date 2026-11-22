@@ -201,9 +201,9 @@ export default function AportesEncuentroPage() {
     L.push(`*Fecha:* ${fechaCL(fecha)}`);
     L.push(`*Responsable:* ${estado?.responsable ?? ""}`);
     L.push("", "*Formas de Sembrar*");
-    porCategoria.forEach((c) => L.push(`- ${c.categoria} 🟰 ${peso(c.total)}`));
+    porCategoria.filter((c) => c.total > 0).forEach((c) => L.push(`- ${c.categoria} 🟰 ${peso(c.total)}`));
     L.push("", "*Total De Siembra*");
-    porMetodo.forEach((m) => L.push(`- ${m.metodo} 🟰 ${peso(m.total)}`));
+    porMetodo.filter((m) => m.total > 0).forEach((m) => L.push(`- ${m.metodo} 🟰 ${peso(m.total)}`));
     L.push("", `*Total* 🟰 ${peso(total)}`);
     if (aportes.length > 0) {
       L.push("", "*Detalle*");
