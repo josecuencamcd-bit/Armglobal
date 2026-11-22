@@ -78,8 +78,11 @@ export async function PATCH(req: Request, context: { params: Promise<{ key: stri
       if (count === 0) return fail("Este encuentro ya está finalizado.", 403);
     }
 
-    const estado = await leerSesion(supabase, args);
-    return ok(estado);
+    // El cliente ya actualizó el número en pantalla de forma optimista y
+    // solo necesita saber si el guardado funcionó o no — recalcular todo el
+    // encuentro (5 consultas) en cada guardado de un solo campo era trabajo
+    // tirado a la basura.
+    return ok({ key });
   } catch (e) {
     return fromSupabaseError(e as { message: string; code?: string });
   }

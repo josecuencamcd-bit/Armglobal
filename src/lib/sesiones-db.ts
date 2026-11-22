@@ -61,6 +61,15 @@ export async function leerSesion(db: DB, args: ArgsEncuentro) {
  * la ruta lo traduce a 403. */
 export async function asegurarSesion(db: DB, args: ArgsEncuentro) {
   const key = claveSesion(args);
+
+  // La gran mayoría de las veces el encuentro ya existe (alguien ya guardó
+  // algo antes) — esta sola columna evita, en ese caso, la consulta extra a
+  // administracion_semanal que solo hace falta para el valor por defecto de
+  // "responsable" cuando la fila se crea por primera vez.
+  const { data: existente, error: eExiste } = await db.from("sesiones").select("key").eq("key", key).maybeSingle();
+  if (eExiste) throw eExiste;
+  if (existente) return key;
+
   const administracionAsignada = await administracionDeLaSemana(db, args.campus, args.fecha);
   const { error } = await db.from("sesiones").upsert(
     {
