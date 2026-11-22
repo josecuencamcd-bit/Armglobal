@@ -4,13 +4,21 @@ import { ArgsSchema } from "@/lib/sesiones";
 import { leerSesion, asegurarSesion } from "@/lib/sesiones-db";
 import { z } from "zod";
 
-const Schema = z.object({ finalizado: z.boolean().optional().default(true) });
+const Schema = z.object({
+  finalizado: z.boolean().optional().default(true),
+  // "general" = Reporte (asistencia/voluntarios/aceptaron), "aportes" =
+  // Aportes. Son dos cierres independientes: cada administrador cierra su
+  // propia parte cuando termina. El encuentro completo (lo que revisa el
+  // vigilante automático) se da por cerrado solo cuando las dos lo están.
+  campo: z.enum(["general", "aportes"]).optional().default("general"),
+});
 
 /** api_finalizar: marca (o desmarca, para "reabrir" el mismo día) el
- * encuentro como finalizado. El verdadero candado para editar pasado el
- * día del encuentro es auth_mismo_dia()/auth_autorizado() en RLS — este
- * flag ya no es lo que bloquea la edición por sí solo, solo registra si
- * el encuentro quedó cerrado o no para quien lo revise después. */
+ * Reporte o los Aportes de un encuentro como finalizados. El verdadero
+ * candado para editar pasado el día del encuentro es
+ * auth_mismo_dia()/auth_autorizado() en RLS — estos flags no bloquean la
+ * edición por sí solos, solo registran qué parte quedó cerrada para quien
+ * la revise después (y para el vigilante automático). */
 export async function POST(req: Request, context: { params: Promise<{ key: string }> }
 ) {
   const params = await context.params;
@@ -31,10 +39,11 @@ export async function POST(req: Request, context: { params: Promise<{ key: strin
   const supabase = await createClient();
   try {
     const key = await asegurarSesion(supabase, args);
-    const { error } = await supabase
-      .from("sesiones")
-      .update({ finalizado: parsedBody.data.finalizado, actualizado: new Date().toISOString() })
-      .eq("key", key);
+    const cambios =
+      parsedBody.data.campo === "aportes"
+        ? { aportes_finalizado: parsedBody.data.finalizado, actualizado: new Date().toISOString() }
+        : { finalizado: parsedBody.data.finalizado, actualizado: new Date().toISOString() };
+    const { error } = await supabase.from("sesiones").update(cambios).eq("key", key);
     if (error) throw error;
     return ok(await leerSesion(supabase, args));
   } catch (e) {

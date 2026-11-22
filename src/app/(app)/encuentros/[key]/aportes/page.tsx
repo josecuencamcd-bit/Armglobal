@@ -8,7 +8,7 @@ import { fotoAJpegDataUrl } from "@/lib/fotos-cliente";
 import ModalCompartir from "@/components/ModalCompartir";
 
 type Aporte = { id: string; nombre: string; monto: number; categoria: string; metodo: string };
-type Estado = { key: string; responsable: string; finalizado: boolean; aportes: Aporte[] };
+type Estado = { key: string; responsable: string; finalizado: boolean; aportesFinalizado: boolean; aportes: Aporte[] };
 type Foto = { path: string; url: string };
 
 function fechaCL(iso: string) {
@@ -165,16 +165,16 @@ export default function AportesEncuentroPage() {
     await cargar();
   }
 
-  // Mismo botón "Encuentro finalizado" / "Reabrir encuentro" que el
-  // Reporte — se repite acá porque el administrador de campus cierra el
-  // encuentro justo después de dejar registrados los aportes, sin volver
-  // a la pantalla anterior.
-  async function finalizar(valor: boolean) {
-    if (!confirm(valor ? "¿Marcar este encuentro como finalizado?" : "¿Reabrir este encuentro para seguir editándolo?")) return;
+  // Cierre propio de Aportes — independiente del cierre del Reporte
+  // general (asistencia/voluntarios), que vive en /encuentros/[key]. El
+  // encuentro completo (lo que revisa el vigilante automático) queda
+  // cerrado recién cuando las dos partes lo están.
+  async function finalizarAportes(valor: boolean) {
+    if (!confirm(valor ? "¿Marcar los aportes de este encuentro como finalizados?" : "¿Reabrir los aportes para seguir editándolos?")) return;
     const res = await fetch(`/api/sesiones/${key}/finalizar`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ finalizado: valor }),
+      body: JSON.stringify({ finalizado: valor, campo: "aportes" }),
     });
     const json = await res.json();
     if (!json.ok) { setError(json.error); return; }
@@ -230,6 +230,13 @@ export default function AportesEncuentroPage() {
       )}
       {!esHoy && !autorizado && solicitudPendiente && (
         <p className="aviso">Ya pediste autorización — esperando que el Pastor o Soporte la aprueben.</p>
+      )}
+      {estado && (
+        <p className="muted" style={{ fontSize: "0.78rem", margin: "0 0 16px" }}>
+          {estado.finalizado && estado.aportesFinalizado
+            ? "Encuentro cerrado por completo — Reporte y Aportes finalizados."
+            : `Falta cerrar: ${[!estado.finalizado && "Reporte", !estado.aportesFinalizado && "Aportes"].filter(Boolean).join(" y ")}.`}
+        </p>
       )}
 
       <div className="tarjeta">
@@ -370,17 +377,17 @@ export default function AportesEncuentroPage() {
         <button
           type="button"
           disabled={bloqueado || !estado}
-          onClick={() => finalizar(!estado?.finalizado)}
+          onClick={() => finalizarAportes(!estado?.aportesFinalizado)}
           style={{
             flex: 1, borderRadius: 10, padding: "12px 6px", fontWeight: 700, fontSize: "0.85rem",
             border: "none", cursor: bloqueado ? "default" : "pointer",
-            background: estado?.finalizado ? "var(--gold-grad)" : "var(--surface-2)",
-            color: estado?.finalizado ? "var(--accent-ink)" : "var(--ink)",
-            opacity: bloqueado ? 0.5 : estado?.finalizado ? 1 : 0.9,
+            background: estado?.aportesFinalizado ? "var(--gold-grad)" : "var(--surface-2)",
+            color: estado?.aportesFinalizado ? "var(--accent-ink)" : "var(--ink)",
+            opacity: bloqueado ? 0.5 : estado?.aportesFinalizado ? 1 : 0.9,
             whiteSpace: "pre-line",
           }}
         >
-          {estado?.finalizado ? <>Reabrir{"\n"}encuentro</> : <>Encuentro{"\n"}finalizado</>}
+          {estado?.aportesFinalizado ? <>Reabrir{"\n"}aportes</> : <>Aportes{"\n"}finalizados</>}
         </button>
         {bloqueado && !solicitudPendiente && (
           <button

@@ -34,6 +34,7 @@ type Estado = {
   // nombres y se pueden marcar/desmarcar varios.
   administracionAsignada: string[];
   finalizado: boolean;
+  aportesFinalizado: boolean;
   sesion: Sesion | null;
   asistencia: { area: string; cantidad: number }[];
   voluntarios: { area: string; cantidad: number }[];
@@ -235,7 +236,7 @@ export default function EncuentroPage() {
    * autorización vigente, así que el intento simplemente falla con el
    * error de RLS que ya traduce fromSupabaseError. */
   async function finalizar(valor: boolean) {
-    if (!confirm(valor ? "¿Marcar este encuentro como finalizado?" : "¿Reabrir este encuentro para seguir editándolo?")) return;
+    if (!confirm(valor ? "¿Marcar el Reporte de este encuentro como finalizado?" : "¿Reabrir el Reporte para seguir editándolo?")) return;
     const res = await fetch(`/api/sesiones/${key}/finalizar`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -316,6 +317,13 @@ export default function EncuentroPage() {
       )}
       {!esHoy && !autorizado && solicitudPendiente && (
         <p className="aviso">Ya pediste autorización para modificar este encuentro — esperando que el Pastor o Soporte la aprueben.</p>
+      )}
+      {estado && (
+        <p className="muted" style={{ fontSize: "0.78rem", margin: "-12px 0 16px" }}>
+          {estado.finalizado && estado.aportesFinalizado
+            ? "Encuentro cerrado por completo — Reporte y Aportes finalizados."
+            : `Falta cerrar: ${[!estado.finalizado && "Reporte", !estado.aportesFinalizado && "Aportes"].filter(Boolean).join(" y ")}.`}
+        </p>
       )}
 
       {estado && (
@@ -529,7 +537,7 @@ export default function EncuentroPage() {
                 whiteSpace: "pre-line",
               }}
             >
-              {estado.finalizado ? <>Reabrir{"\n"}encuentro</> : <>Encuentro{"\n"}finalizado</>}
+              {estado.finalizado ? <>Reabrir{"\n"}reporte</> : <>Reporte{"\n"}finalizado</>}
             </button>
             <button
               type="button"

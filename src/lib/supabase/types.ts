@@ -1315,6 +1315,7 @@ export type Database = {
           aceptaron: number | null
           actualizado: string
           adm: string | null
+          aportes_finalizado: boolean
           campus: Database["public"]["Enums"]["campus_t"]
           editado_por: string | null
           encuentro: string
@@ -1335,6 +1336,7 @@ export type Database = {
           aceptaron?: number | null
           actualizado?: string
           adm?: string | null
+          aportes_finalizado?: boolean
           campus: Database["public"]["Enums"]["campus_t"]
           editado_por?: string | null
           encuentro: string
@@ -1355,6 +1357,7 @@ export type Database = {
           aceptaron?: number | null
           actualizado?: string
           adm?: string | null
+          aportes_finalizado?: boolean
           campus?: Database["public"]["Enums"]["campus_t"]
           editado_por?: string | null
           encuentro?: string

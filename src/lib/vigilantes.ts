@@ -65,16 +65,19 @@ export function encuentrosVencidos(): EncuentroVencido[] {
   return out;
 }
 
+/** El encuentro se da por cerrado solo cuando sus dos partes lo están: el
+ * Reporte general (asistencia/voluntarios) Y Aportes — cada uno se cierra
+ * por separado desde su propia pantalla. */
 async function encuentroCerrado(db: DB, campus: (typeof CAMPUS)[number], encuentro: string, fecha: string): Promise<boolean> {
   const { data } = await db
     .from("sesiones")
-    .select("finalizado")
+    .select("finalizado, aportes_finalizado")
     .eq("campus", campus)
     .eq("encuentro", encuentro)
     .eq("fecha", fecha)
     .is("evento", null)
     .maybeSingle();
-  return !!data?.finalizado;
+  return !!data?.finalizado && !!data?.aportes_finalizado;
 }
 
 /** Encuentros vencidos cuyo administrador de campus todavía no finalizó. */
