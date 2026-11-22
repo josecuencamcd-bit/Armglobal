@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { ASIS_IDS, VOL_IDS, MODALIDADES, equiposVigentes, hoy } from "@/lib/sesiones";
@@ -161,17 +161,72 @@ export default function EncuentroPage() {
     }
   }
 
-  async function setCampo(campo: string, valor: string | number) {
+  // Antes cada click de + / - (o número escrito) esperaba la ida y vuelta
+  // al servidor (que además recalcula todo el encuentro con leerSesion())
+  // antes de que el número cambiara en pantalla — por eso se sentía lento.
+  // Ahora el número cambia al toque (optimista) y el guardado real va por
+  // detrás, con debounce por campo para no mandar una request por cada
+  // click si la persona suma varias veces seguidas. "mensaje"/"predicador"
+  // etc. ya guardan solo al salir del campo (onBlur), así que no necesitan
+  // debounce — se mandan de inmediato igual que antes.
+  const debounceRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
+  function aplicarLocal(prev: Estado, campo: string, valor: string | number): Estado {
+    if (campo.startsWith("asis_")) {
+      const area = campo.slice(5);
+      const existe = prev.asistencia.some((a) => a.area === area);
+      return {
+        ...prev,
+        asistencia: existe
+          ? prev.asistencia.map((a) => (a.area === area ? { ...a, cantidad: Number(valor) } : a))
+          : [...prev.asistencia, { area, cantidad: Number(valor) }],
+      };
+    }
+    if (campo.startsWith("vol_")) {
+      const area = campo.slice(4);
+      const existe = prev.voluntarios.some((v) => v.area === area);
+      return {
+        ...prev,
+        voluntarios: existe
+          ? prev.voluntarios.map((v) => (v.area === area ? { ...v, cantidad: Number(valor) } : v))
+          : [...prev.voluntarios, { area, cantidad: Number(valor) }],
+      };
+    }
+    const columna = campo === "aceptaron" ? "aceptaron" : campo === "onAcepto" ? "on_acepto" : campo === "onEspect" ? "on_espect" : campo;
+    return { ...prev, sesion: prev.sesion ? { ...prev.sesion, [columna]: valor } : prev.sesion };
+  }
+
+  async function guardarCampo(campo: string, valor: string | number) {
     setGuardando(true);
-    const res = await fetch(`/api/sesiones/${key}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ campo, valor }),
-    });
-    const json = await res.json();
-    setGuardando(false);
-    if (!json.ok) { setError(json.error); return; }
-    setEstado(json.data);
+    try {
+      const res = await fetch(`/api/sesiones/${key}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ campo, valor }),
+      });
+      const json = await res.json();
+      if (!json.ok) {
+        setError(json.error);
+        await cargar(); // revierte: trae de vuelta el valor real del servidor
+        return;
+      }
+      setError(null);
+    } catch {
+      setError("No se pudo guardar — revisa tu conexión.");
+      await cargar();
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  function setCampo(campo: string, valor: string | number, inmediato = false) {
+    setEstado((prev) => (prev ? aplicarLocal(prev, campo, valor) : prev));
+    if (inmediato) {
+      guardarCampo(campo, valor);
+      return;
+    }
+    clearTimeout(debounceRef.current[campo]);
+    debounceRef.current[campo] = setTimeout(() => guardarCampo(campo, valor), 500);
   }
 
   /** Dentro del mismo día del encuentro se puede cerrar y reabrir las
@@ -250,6 +305,7 @@ export default function EncuentroPage() {
       <h1 className="titulo" style={{ fontSize: "1.2rem", margin: "4px 0 0" }}>Reporte</h1>
       <p className="muted" style={{ margin: "2px 0 16px" }}>
         {encuentro} · {campus} · {fechaCL(fecha)}
+        {guardando && <span style={{ marginLeft: 8 }}>· guardando…</span>}
       </p>
       {error && <p className="aviso">{error}</p>}
       {!esHoy && autorizado && (
@@ -269,15 +325,15 @@ export default function EncuentroPage() {
               <ResponsableAdministracion
                 administracion={estado.administracionAsignada}
                 valor={estado.sesion?.responsable ?? estado.responsable}
-                disabled={guardando || bloqueado}
-                onToggle={(nombres) => setCampo("responsable", nombres.join(" y "))}
+                disabled={bloqueado}
+                onToggle={(nombres) => setCampo("responsable", nombres.join(" y "), true)}
               />
             ) : (
               <div className="campo">
                 <select
                   value={estado.sesion?.responsable ?? estado.responsable}
-                  disabled={guardando || bloqueado}
-                  onChange={(e) => setCampo("responsable", e.target.value)}
+                  disabled={bloqueado}
+                  onChange={(e) => setCampo("responsable", e.target.value, true)}
                 >
                   {equiposVigentes().map((eq) => <option key={eq} value={eq}>{eq}</option>)}
                 </select>
@@ -290,8 +346,8 @@ export default function EncuentroPage() {
               <label>Modalidad</label>
               <select
                 value={estado.sesion?.modalidad ?? MODALIDADES[0]}
-                disabled={guardando || bloqueado}
-                onChange={(e) => setCampo("modalidad", e.target.value)}
+                disabled={bloqueado}
+                onChange={(e) => setCampo("modalidad", e.target.value, true)}
               >
                 {MODALIDADES.map((m) => <option key={m} value={m}>{m}</option>)}
               </select>
@@ -301,8 +357,8 @@ export default function EncuentroPage() {
               <input
                 defaultValue={estado.sesion?.predicador ?? ""}
                 placeholder="Nombre del predicador"
-                disabled={guardando || bloqueado}
-                onBlur={(e) => setCampo("predicador", e.target.value)}
+                disabled={bloqueado}
+                onBlur={(e) => setCampo("predicador", e.target.value, true)}
               />
             </div>
             <div className="campo">
@@ -310,8 +366,8 @@ export default function EncuentroPage() {
               <input
                 defaultValue={estado.sesion?.mensaje ?? ""}
                 placeholder="Título del mensaje"
-                disabled={guardando || bloqueado}
-                onBlur={(e) => setCampo("mensaje", e.target.value)}
+                disabled={bloqueado}
+                onBlur={(e) => setCampo("mensaje", e.target.value, true)}
               />
             </div>
           </Seccion>
@@ -320,7 +376,7 @@ export default function EncuentroPage() {
             <Stepper
               label="Aceptaron a Jesús"
               valor={estado.sesion?.aceptaron ?? 0}
-              disabled={guardando || bloqueado}
+              disabled={bloqueado}
               onChange={(v) => setCampo("aceptaron", v)}
             />
           </Seccion>
@@ -333,7 +389,7 @@ export default function EncuentroPage() {
                   key={id}
                   label={ASIS_LABELS[id] ?? id}
                   valor={fila?.cantidad ?? 0}
-                  disabled={guardando || bloqueado}
+                  disabled={bloqueado}
                   onChange={(v) => setCampo(`asis_${id}`, v)}
                 />
               );
@@ -348,7 +404,7 @@ export default function EncuentroPage() {
                   key={id}
                   label={VOL_LABELS[id] ?? id}
                   valor={fila?.cantidad ?? 0}
-                  disabled={guardando || bloqueado}
+                  disabled={bloqueado}
                   onChange={(v) => setCampo(`vol_${id}`, v)}
                 />
               );
@@ -359,13 +415,13 @@ export default function EncuentroPage() {
             <Stepper
               label="Aceptaron a Jesús"
               valor={estado.sesion?.on_acepto ?? 0}
-              disabled={guardando || bloqueado}
+              disabled={bloqueado}
               onChange={(v) => setCampo("onAcepto", v)}
             />
             <Stepper
               label="Espectadores a la vez"
               valor={estado.sesion?.on_espect ?? 0}
-              disabled={guardando || bloqueado}
+              disabled={bloqueado}
               onChange={(v) => setCampo("onEspect", v)}
             />
           </Seccion>
@@ -376,16 +432,16 @@ export default function EncuentroPage() {
               <input
                 defaultValue={estado.sesion?.lideres ?? ""}
                 placeholder="Nombres"
-                disabled={guardando || bloqueado}
-                onBlur={(e) => setCampo("lideres", e.target.value)}
+                disabled={bloqueado}
+                onBlur={(e) => setCampo("lideres", e.target.value, true)}
               />
             </div>
             <div className="campo" style={{ marginBottom: 0 }}>
               <label>Adm. de campus</label>
               <select
                 value={estado.sesion?.adm ?? ""}
-                disabled={guardando || bloqueado}
-                onChange={(e) => setCampo("adm", e.target.value)}
+                disabled={bloqueado}
+                onChange={(e) => setCampo("adm", e.target.value, true)}
               >
                 {equipos.map((eq) => <option key={eq || "ninguno"} value={eq}>{eq || "Sin asignar"}</option>)}
               </select>
