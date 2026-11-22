@@ -4,10 +4,12 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { CATEGORIAS_ENCUENTRO, METODOS, hoy } from "@/lib/sesiones";
+import { fotoAJpegDataUrl } from "@/lib/fotos-cliente";
 import ModalCompartir from "@/components/ModalCompartir";
 
 type Aporte = { id: string; nombre: string; monto: number; categoria: string; metodo: string };
 type Estado = { key: string; responsable: string; finalizado: boolean; aportes: Aporte[] };
+type Foto = { path: string; url: string };
 
 function fechaCL(iso: string) {
   const [y, m, d] = iso.split("-");
@@ -46,6 +48,51 @@ export default function AportesEncuentroPage() {
   const [motivo, setMotivo] = useState("");
   const [enviandoMotivo, setEnviandoMotivo] = useState(false);
 
+  // Foto del cierre del POS (la misma que antes solo se veía en el Reporte
+  // del encuentro): el administrador de campus la toma justo acá, mientras
+  // registra los aportes, así que vive también en esta pantalla.
+  const [fotos, setFotos] = useState<Foto[] | null>(null);
+  const [subiendoFoto, setSubiendoFoto] = useState(false);
+  const [errorFoto, setErrorFoto] = useState<string | null>(null);
+
+  const cargarFotos = useCallback(async () => {
+    const res = await fetch(`/api/sesiones/${key}/fotos`);
+    const json = await res.json();
+    setFotos(json.ok ? json.data.fotos : []);
+  }, [key]);
+
+  async function subirFoto(file: File) {
+    setErrorFoto(null);
+    setSubiendoFoto(true);
+    try {
+      const dataUrl = await fotoAJpegDataUrl(file);
+      const res = await fetch(`/api/sesiones/${key}/fotos`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ foto: dataUrl }),
+      });
+      const json = await res.json();
+      if (!json.ok) { setErrorFoto(json.error); return; }
+      await cargarFotos();
+    } catch (e) {
+      setErrorFoto(e instanceof Error ? e.message : "No se pudo subir la foto.");
+    } finally {
+      setSubiendoFoto(false);
+    }
+  }
+
+  async function borrarFoto(path: string) {
+    if (!confirm("¿Borrar esta foto del cierre?")) return;
+    const res = await fetch(`/api/sesiones/${key}/fotos`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ path }),
+    });
+    const json = await res.json();
+    if (!json.ok) { setErrorFoto(json.error); return; }
+    await cargarFotos();
+  }
+
   const cargar = useCallback(async () => {
     const res = await fetch(`/api/sesiones/${key}`);
     const json = await res.json();
@@ -67,7 +114,8 @@ export default function AportesEncuentroPage() {
   useEffect(() => {
     cargar();
     cargarAutorizacion();
-  }, [cargar, cargarAutorizacion]);
+    cargarFotos();
+  }, [cargar, cargarAutorizacion, cargarFotos]);
 
   async function pedirAutorizacion() {
     if (!motivo.trim()) { setError("Cuéntanos el motivo para pedir autorización."); return; }
@@ -167,6 +215,48 @@ export default function AportesEncuentroPage() {
       {!esHoy && !autorizado && solicitudPendiente && (
         <p className="aviso">Ya pediste autorización — esperando que el Pastor o Soporte la aprueben.</p>
       )}
+
+      <div className="tarjeta">
+        <p style={{ margin: "0 0 10px", fontWeight: 600 }}>Foto del cierre del POS</p>
+        {errorFoto && <p className="aviso">{errorFoto}</p>}
+        {fotos && fotos.length > 0 && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
+            {fotos.map((f) => (
+              <div key={f.path} style={{ position: "relative" }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={f.url} alt="Cierre" style={{ width: 84, height: 84, objectFit: "cover", borderRadius: 8, border: "1px solid var(--line)" }} />
+                {!bloqueado && (
+                  <button
+                    type="button"
+                    onClick={() => borrarFoto(f.path)}
+                    style={{
+                      position: "absolute", top: -6, right: -6, width: 22, height: 22, borderRadius: "50%",
+                      border: "none", background: "var(--danger)", color: "#fff", fontSize: "0.7rem", cursor: "pointer",
+                    }}
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+        {!fotos && <p className="muted" style={{ fontSize: "0.8rem" }}>Cargando fotos…</p>}
+        {fotos && fotos.length >= 6 && <p className="muted" style={{ fontSize: "0.78rem" }}>Ya hay 6 fotos (máximo).</p>}
+        {fotos && fotos.length < 6 && !bloqueado && (
+          <label className="boton-secundario" style={{ display: "inline-block", fontSize: "0.8rem", cursor: "pointer" }}>
+            {subiendoFoto ? "Subiendo…" : "+ Agregar foto"}
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              disabled={subiendoFoto}
+              style={{ display: "none" }}
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) subirFoto(f); e.target.value = ""; }}
+            />
+          </label>
+        )}
+      </div>
 
       <div className="tarjeta">
         <p className="muted" style={{ margin: "0 0 8px", fontSize: "0.75rem" }}>TOTALES POR CATEGORÍA</p>

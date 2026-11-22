@@ -79,7 +79,7 @@ export default function EncuentroPage() {
   const cargarFotos = useCallback(async () => {
     const res = await fetch(`/api/sesiones/${key}/fotos`);
     const json = await res.json();
-    if (json.ok) setFotos(json.data.fotos);
+    setFotos(json.ok ? json.data.fotos : []);
   }, [key]);
 
   async function subirFoto(file: File) {
