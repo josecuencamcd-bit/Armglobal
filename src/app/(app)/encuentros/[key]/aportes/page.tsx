@@ -249,7 +249,6 @@ export default function AportesEncuentroPage() {
             <input
               type="file"
               accept="image/*"
-              capture="environment"
               disabled={subiendoFoto}
               style={{ display: "none" }}
               onChange={(e) => { const f = e.target.files?.[0]; if (f) subirFoto(f); e.target.value = ""; }}
