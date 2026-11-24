@@ -265,7 +265,11 @@ export default function ChecklistEncuentroPage() {
                 placeholder="Personas a cargo (una por línea)"
                 rows={Math.max(1, it.personas.split("\n").length)}
                 onChange={(e) => actualizarItem(it.id, { personas: e.target.value })}
-                style={{ fontSize: "0.82rem", marginTop: 6, width: "100%", resize: "vertical" }}
+                style={{
+                  fontSize: "0.82rem", marginTop: 6, width: "100%", resize: "vertical",
+                  background: "var(--surface-2)", border: "1px solid var(--line)", borderRadius: 8,
+                  color: "var(--ink)", padding: "8px 10px",
+                }}
               />
             </div>
             {!bloqueado && (
@@ -289,7 +293,10 @@ export default function ChecklistEncuentroPage() {
           rows={3}
           placeholder="Campus preparado, áreas organizadas para recibir a las personas…"
           onChange={(e) => cambiarObservacion(e.target.value)}
-          style={{ width: "100%" }}
+          style={{
+            width: "100%", background: "var(--surface-2)", border: "1px solid var(--line)",
+            borderRadius: 8, color: "var(--ink)", padding: "10px 12px",
+          }}
         />
       </div>
 
