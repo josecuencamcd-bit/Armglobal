@@ -26,10 +26,11 @@ export function VolverInteligente({ href, label = "‹ Volver" }: { href: string
         if (typeof window !== "undefined" && window.history.length > 1) router.back();
         else router.push(href);
       }}
-      className="muted"
       style={{
-        fontSize: "0.82rem", textDecoration: "none", background: "none",
-        border: "none", padding: 0, cursor: "pointer", font: "inherit",
+        display: "inline-flex", alignItems: "center", gap: 4, flexShrink: 0,
+        fontSize: "0.8rem", fontWeight: 600, color: "var(--ink)",
+        background: "var(--surface-2)", border: "1px solid var(--line)",
+        borderRadius: 999, padding: "6px 12px", cursor: "pointer",
       }}
     >
       {label}
