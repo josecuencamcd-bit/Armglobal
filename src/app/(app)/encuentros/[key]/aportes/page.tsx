@@ -6,6 +6,7 @@ import Link from "next/link";
 import { CATEGORIAS_ENCUENTRO, METODOS, hoy } from "@/lib/sesiones";
 import { fotoAJpegDataUrl } from "@/lib/fotos-cliente";
 import ModalCompartir from "@/components/ModalCompartir";
+import { VolverInteligente } from "@/components/VolverInteligente";
 
 type Aporte = { id: string; nombre: string; monto: number; categoria: string; metodo: string };
 type Estado = { key: string; responsable: string; finalizado: boolean; aportesFinalizado: boolean; checklistFinalizado: boolean; aportes: Aporte[] };
@@ -215,7 +216,7 @@ export default function AportesEncuentroPage() {
   return (
     <div className="contenedor" style={{ paddingTop: 24 }}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 2 }}>
-        <Link href={`/encuentros/${key}`} className="muted" style={{ fontSize: "0.82rem", textDecoration: "none" }}>‹ Reporte</Link>
+        <VolverInteligente href={`/encuentros/${key}`} />
         <h1 className="titulo" style={{ fontSize: "1.3rem", margin: 0 }}>Aportes</h1>
         <Link href={`/encuentros/${key}/checklist`} className="muted" style={{ fontSize: "0.82rem", textDecoration: "none", marginLeft: "auto" }}>Checklist ›</Link>
       </div>

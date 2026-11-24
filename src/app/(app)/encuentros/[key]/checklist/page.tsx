@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { hoy } from "@/lib/sesiones";
 import { plantillaChecklist, type ChecklistItem } from "@/lib/checklist";
+import { VolverInteligente } from "@/components/VolverInteligente";
 import ModalCompartir from "@/components/ModalCompartir";
 
 type EstadoEncuentro = { responsable: string; finalizado: boolean; aportesFinalizado: boolean; checklistFinalizado: boolean };
@@ -242,7 +243,7 @@ export default function ChecklistEncuentroPage() {
   return (
     <div className="contenedor" style={{ paddingTop: 24 }}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 2 }}>
-        <Link href={`/encuentros/${key}`} className="muted" style={{ fontSize: "0.82rem", textDecoration: "none" }}>‹ Reporte</Link>
+        <VolverInteligente href={`/encuentros/${key}`} />
         <Link href={`/encuentros/${key}/aportes`} className="muted" style={{ fontSize: "0.82rem", textDecoration: "none" }}>Aportes</Link>
         <h1 className="titulo" style={{ fontSize: "1.3rem", margin: 0 }}>Checklist</h1>
       </div>

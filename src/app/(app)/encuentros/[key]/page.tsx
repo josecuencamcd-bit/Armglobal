@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ASIS_IDS, VOL_IDS, MODALIDADES, equiposVigentes, hoy } from "@/lib/sesiones";
 import { fotoAJpegDataUrl } from "@/lib/fotos-cliente";
 import ModalCompartir from "@/components/ModalCompartir";
+import { VolverInteligente } from "@/components/VolverInteligente";
 
 type Foto = { path: string; url: string };
 
@@ -301,9 +302,7 @@ export default function EncuentroPage() {
 
   return (
     <div className="contenedor" style={{ paddingTop: 20 }}>
-      <Link href="/encuentros" className="muted" style={{ fontSize: "0.82rem", textDecoration: "none" }}>
-        ‹ Encuentros
-      </Link>
+      <VolverInteligente href="/encuentros" />
       <h1 className="titulo" style={{ fontSize: "1.2rem", margin: "4px 0 0" }}>Reporte</h1>
       <p className="muted" style={{ margin: "2px 0 16px" }}>
         {encuentro} · {campus} · {fechaCL(fecha)}
