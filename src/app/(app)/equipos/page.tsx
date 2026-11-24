@@ -6,7 +6,7 @@ import { AREAS, TALLAS, proximaFecha } from "@/lib/sesiones";
 import { useCampus } from "@/lib/campus-context";
 import { VolverAdministracion } from "@/lib/volver-admin";
 import { AREAS_DISPONIBILIDAD, ENCUENTRO_DE_SERVICIO } from "@/lib/disponibilidad";
-import { FONDO_AREAS, esFin, esLider } from "@/lib/visibilidad-modulos";
+import { FONDO_AREAS, esFin, esLider, fondosMios } from "@/lib/visibilidad-modulos";
 import MerchInventario from "./merch-inventario";
 import VistaMiembro from "./vista-miembro";
 
@@ -229,11 +229,18 @@ export default function EquiposPage() {
   // lectura de "Mi equipo" (ver VistaMiembro), en vez de toda la gestión
   // de abajo — null mientras no se sabe todavía quién es.
   const [areasDeMiembro, setAreasDeMiembro] = useState<string[] | null>(null);
+  // Áreas cuyo fondo puede ver esta persona: Pastor de campus/Pastor/Pastor
+  // principal ven todas (fondosMios ya las devuelve completas); un
+  // Administrador/Ministro que no lidera ningún equipo no ve ninguna — así
+  // el link "Fondo de equipo" de Reportes no aparece para quien solo está
+  // revisando un área que no es la suya.
+  const [misFondoAreas, setMisFondoAreas] = useState<string[]>([]);
 
   useEffect(() => {
     fetch("/api/perfil").then((r) => r.json()).then((json) => {
       if (!json.ok) return;
       setEsFinanzas(esFin(json.data));
+      setMisFondoAreas(fondosMios(json.data));
       if (!esLider(json.data) && !esFin(json.data)) {
         setAreasDeMiembro([...new Set([...(json.data.areas ?? []), ...(json.data.sirve ?? [])])]);
       } else {
@@ -742,7 +749,7 @@ export default function EquiposPage() {
       {mostrarReportes && (
         <div className="tarjeta stack" style={{ marginBottom: 16 }}>
           <span className="label">Reportes de {area}</span>
-          {(FONDO_AREAS as readonly string[]).includes(area) && (
+          {(FONDO_AREAS as readonly string[]).includes(area) && misFondoAreas.includes(area) && (
             <Link href="/fondos" className="eco-row" style={{ textDecoration: "none", color: "inherit" }}>
               <div>
                 <b>Fondo de equipo</b>
