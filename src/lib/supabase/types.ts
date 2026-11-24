@@ -880,6 +880,7 @@ export type Database = {
           creado_en: string
           creado_por: string | null
           estado: string
+          foto_url: string | null
           id: number
           nacimiento: string | null
           nombre: string
@@ -898,6 +899,7 @@ export type Database = {
           creado_en?: string
           creado_por?: string | null
           estado?: string
+          foto_url?: string | null
           id?: never
           nacimiento?: string | null
           nombre: string
@@ -916,6 +918,7 @@ export type Database = {
           creado_en?: string
           creado_por?: string | null
           estado?: string
+          foto_url?: string | null
           id?: never
           nacimiento?: string | null
           nombre?: string

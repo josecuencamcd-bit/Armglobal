@@ -6,8 +6,9 @@ import { AREAS, TALLAS, proximaFecha } from "@/lib/sesiones";
 import { useCampus } from "@/lib/campus-context";
 import { VolverAdministracion } from "@/lib/volver-admin";
 import { AREAS_DISPONIBILIDAD, ENCUENTRO_DE_SERVICIO } from "@/lib/disponibilidad";
-import { FONDO_AREAS, esFin } from "@/lib/visibilidad-modulos";
+import { FONDO_AREAS, esFin, esLider } from "@/lib/visibilidad-modulos";
 import MerchInventario from "./merch-inventario";
+import VistaMiembro from "./vista-miembro";
 
 type Integrante = {
   id: number;
@@ -223,10 +224,21 @@ export default function EquiposPage() {
   // principal y Ministro sí pueden a cualquiera — esto solo oculta la
   // opción en pantalla, la regla real vive en /api/actividades (esFin()).
   const [esFinanzas, setEsFinanzas] = useState(false);
+  // Quien sirve/forma parte de un equipo pero no lo lidera (ni es
+  // Finanzas/Pastor/Ministro/Administrador) ve una versión de solo
+  // lectura de "Mi equipo" (ver VistaMiembro), en vez de toda la gestión
+  // de abajo — null mientras no se sabe todavía quién es.
+  const [areasDeMiembro, setAreasDeMiembro] = useState<string[] | null>(null);
 
   useEffect(() => {
     fetch("/api/perfil").then((r) => r.json()).then((json) => {
-      if (json.ok) setEsFinanzas(esFin(json.data));
+      if (!json.ok) return;
+      setEsFinanzas(esFin(json.data));
+      if (!esLider(json.data) && !esFin(json.data)) {
+        setAreasDeMiembro([...new Set([...(json.data.areas ?? []), ...(json.data.sirve ?? [])])]);
+      } else {
+        setAreasDeMiembro([]);
+      }
     });
   }, []);
 
@@ -673,6 +685,9 @@ export default function EquiposPage() {
     setPidiendoBaja(null);
     await cargar(campus, area);
   }
+
+  if (areasDeMiembro === null) return <div className="contenedor">Cargando…</div>;
+  if (areasDeMiembro.length > 0) return <VistaMiembro campus={campus} areas={areasDeMiembro} />;
 
   if (!lista && !error) return <div className="contenedor">Cargando…</div>;
 

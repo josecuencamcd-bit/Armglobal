@@ -70,6 +70,10 @@ export function modulosVisibles(p: PerfilVisibilidad): Set<string> {
   // que también lidera Voluntariado): a esa persona sí hay que mostrarle
   // su equipo suelto en el menú, no solo escondido dentro de Administración.
   if (esLider(p)) { t.add("equipo"); t.add("asistencia"); }
+  // Quien no lidera pero sirve o forma parte de algún equipo (areas/sirve)
+  // igual entra a "Mi equipo" — ahí ve, por cada equipo del que forma
+  // parte, a sus compañeros (vista de solo lectura, sin gestión).
+  else if (!esFin(p) && (p.areas.length > 0 || p.sirve.length > 0)) t.add("equipo");
   if (esConex(p) && !esFin(p)) t.add("visitas");
   if (tiene(p, "Admin app")) t.add("solicitudes");
   if (fondosMios(p).length && !esFin(p)) t.add("fondo");
