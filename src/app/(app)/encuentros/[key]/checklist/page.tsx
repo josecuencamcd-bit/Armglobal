@@ -44,6 +44,13 @@ export default function ChecklistEncuentroPage() {
   const [motivo, setMotivo] = useState("");
   const [enviandoMotivo, setEnviandoMotivo] = useState(false);
 
+  // Llenado inteligente de "Personas a cargo": mientras se escribe la
+  // última línea, busca coincidencias entre los integrantes ya cargados
+  // del campus (mismo endpoint que usa Mi equipo para encontrar a
+  // alguien existente) y ofrece completarla con un clic.
+  const [sugerencias, setSugerencias] = useState<Record<string, { id: string; nombre: string; area: string }[]>>({});
+  const buscarRef = useRef<Record<string, ReturnType<typeof setTimeout> | null>>({});
+
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const cargar = useCallback(async () => {
@@ -155,6 +162,31 @@ export default function ChecklistEncuentroPage() {
     guardarDespuesDe(items ?? [], valor);
   }
 
+  function buscarPersonas(itemId: string, campusBusqueda: string, texto: string) {
+    const ultimaLinea = texto.split("\n").pop()?.trim() ?? "";
+    if (buscarRef.current[itemId]) clearTimeout(buscarRef.current[itemId]!);
+    if (ultimaLinea.length < 2) {
+      setSugerencias((prev) => ({ ...prev, [itemId]: [] }));
+      return;
+    }
+    buscarRef.current[itemId] = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/integrantes/buscar?campus=${encodeURIComponent(campusBusqueda)}&q=${encodeURIComponent(ultimaLinea)}`);
+        const json = await res.json();
+        if (json.ok) setSugerencias((prev) => ({ ...prev, [itemId]: json.data }));
+      } catch {
+        // sin sugerencias si falla la búsqueda — no bloquea seguir escribiendo
+      }
+    }, 300);
+  }
+
+  function elegirSugerencia(it: ChecklistItem, nombre: string) {
+    const lineas = it.personas.split("\n");
+    lineas[lineas.length - 1] = nombre;
+    actualizarItem(it.id, { personas: lineas.join("\n") + "\n" });
+    setSugerencias((prev) => ({ ...prev, [it.id]: [] }));
+  }
+
   async function finalizarChecklist(valor: boolean) {
     if (!confirm(valor ? "¿Marcar el Checklist de este encuentro como finalizado?" : "¿Reabrir el Checklist para seguir editándolo?")) return;
     const res = await fetch(`/api/sesiones/${key}/finalizar`, {
@@ -264,13 +296,32 @@ export default function ChecklistEncuentroPage() {
                 disabled={bloqueado}
                 placeholder="Personas a cargo (una por línea)"
                 rows={Math.max(1, it.personas.split("\n").length)}
-                onChange={(e) => actualizarItem(it.id, { personas: e.target.value })}
+                onChange={(e) => { actualizarItem(it.id, { personas: e.target.value }); buscarPersonas(it.id, campus, e.target.value); }}
+                onBlur={() => setTimeout(() => setSugerencias((prev) => ({ ...prev, [it.id]: [] })), 150)}
                 style={{
                   fontSize: "0.82rem", marginTop: 6, width: "100%", resize: "vertical",
                   background: "var(--surface-2)", border: "1px solid var(--line)", borderRadius: 8,
                   color: "var(--ink)", padding: "8px 10px",
                 }}
               />
+              {!!sugerencias[it.id]?.length && (
+                <div style={{ marginTop: 4, border: "1px solid var(--line)", borderRadius: 8, overflow: "hidden" }}>
+                  {sugerencias[it.id]!.map((s) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => elegirSugerencia(it, s.nombre)}
+                      style={{
+                        display: "block", width: "100%", textAlign: "left", padding: "8px 10px",
+                        fontSize: "0.8rem", background: "var(--surface-2)", borderBottom: "1px solid var(--line)",
+                      }}
+                    >
+                      {s.nombre} <span className="muted" style={{ fontSize: "0.72rem" }}>· {s.area}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             {!bloqueado && (
               <button className="boton-peligro" style={{ fontSize: "0.72rem", padding: "4px 8px" }} onClick={() => quitarItem(it.id)}>✕</button>
