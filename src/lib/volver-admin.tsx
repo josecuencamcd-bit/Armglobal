@@ -17,8 +17,12 @@ function VolverAdministracionInterno() {
   return (
     <Link
       href="/administracion"
-      className="muted"
-      style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: "0.82rem", marginBottom: 10, textDecoration: "none" }}
+      style={{
+        display: "inline-flex", alignItems: "center", gap: 4,
+        fontSize: "0.8rem", fontWeight: 700, color: "var(--gold)",
+        background: "var(--accent-soft)", border: "1px solid var(--gold)",
+        borderRadius: 999, padding: "6px 12px", marginBottom: 10, textDecoration: "none",
+      }}
     >
       ‹ Volver a Administración
     </Link>
