@@ -146,6 +146,23 @@ export async function destinatariosChecklist(db: DB, campus: Campus, fecha: stri
   return [...correos];
 }
 
+/** Para el recordatorio de "sigue sin cerrarse" pasada la hora límite del
+ * reporte: a diferencia del aviso previo y el de cierre, este va solo al
+ * responsable asignado esa semana, con copia al Admin app — no a todo el
+ * equipo pastoral ni al Administrador. */
+export async function destinatariosChecklistResponsables(db: DB, campus: Campus, fecha: string): Promise<string[]> {
+  const [{ data: porAdminApp }, nombresAsignados] = await Promise.all([
+    db.from("perfiles").select("correo").overlaps("roles", ["Admin app"]).not("correo", "is", null),
+    administracionDeLaSemana(db, campus, fecha),
+  ]);
+  const correos = new Set((porAdminApp ?? []).map((p) => p.correo).filter((c): c is string => !!c));
+  if (nombresAsignados.length) {
+    const { data: porNombre } = await db.from("perfiles").select("correo").eq("campus", campus).in("nombre", nombresAsignados).not("correo", "is", null);
+    for (const p of porNombre ?? []) if (p.correo) correos.add(p.correo);
+  }
+  return [...correos];
+}
+
 export interface EncuentroPorIniciar {
   campus: Campus;
   encuentro: string;

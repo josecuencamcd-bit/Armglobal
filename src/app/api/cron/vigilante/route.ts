@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { encuentrosPendientes, notasPendientes, checklistsPendientes, encuentrosPorIniciar, destinatariosChecklist, debeAvisar, vigilanteFondos } from "@/lib/vigilantes";
+import { encuentrosPendientes, notasPendientes, checklistsPendientes, encuentrosPorIniciar, destinatariosChecklist, destinatariosChecklistResponsables, debeAvisar, vigilanteFondos } from "@/lib/vigilantes";
 import { cumpleVigilante } from "@/lib/cumpleanos";
 import { enviarWhatsApp, telefonoWa } from "@/lib/whatsapp";
 import { avisarAdmins } from "@/lib/email";
@@ -105,7 +105,7 @@ export async function GET(req: Request) {
     const key = [e.campus, e.encuentro, e.fecha].join("|");
     if (!(await debeAvisar(supabase, "checklist", key, e.hoy))) continue;
 
-    const destinatarios = await destinatariosChecklist(supabase, e.campus, e.fecha);
+    const destinatarios = await destinatariosChecklistResponsables(supabase, e.campus, e.fecha);
     const cuando = e.hoy ? "hoy" : `del ${e.fecha.split("-").reverse().join("/")}`;
     try {
       await avisarAdmins({
