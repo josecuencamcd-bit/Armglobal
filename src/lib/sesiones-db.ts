@@ -45,14 +45,16 @@ export async function leerSesion(db: DB, args: ArgsEncuentro) {
     // vacío, la pantalla cae a la lista tradicional de equipos para elegir
     // una sola opción.
     administracionAsignada,
-    // Dos cierres independientes: "finalizado" es el del Reporte general
+    // Tres cierres independientes: "finalizado" es el del Reporte general
     // (asistencia/voluntarios/aceptaron), "aportesFinalizado" es el de
-    // Aportes — cada administrador cierra su parte cuando termina, sin
-    // depender de que la otra también esté lista. El encuentro completo
-    // (lo que revisa el vigilante automático) recién se da por cerrado
-    // cuando las dos lo están.
+    // Aportes, "checklistFinalizado" es el del Checklist pre-encuentro —
+    // cada administrador cierra su parte cuando termina, sin depender de
+    // que las otras también estén listas. El encuentro completo (lo que
+    // revisa el vigilante automático) recién se da por cerrado cuando las
+    // tres lo están.
     finalizado: sesion?.finalizado ?? false,
     aportesFinalizado: sesion?.aportes_finalizado ?? false,
+    checklistFinalizado: sesion?.checklist_finalizado ?? false,
     sesion,
     asistencia: asistencia ?? [],
     voluntarios: voluntarios ?? [],

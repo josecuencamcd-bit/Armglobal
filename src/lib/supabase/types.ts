@@ -1317,6 +1317,9 @@ export type Database = {
           adm: string | null
           aportes_finalizado: boolean
           campus: Database["public"]["Enums"]["campus_t"]
+          checklist_finalizado: boolean
+          checklist_items: Json
+          checklist_observacion: string | null
           editado_por: string | null
           encuentro: string
           evento: string | null
@@ -1338,6 +1341,9 @@ export type Database = {
           adm?: string | null
           aportes_finalizado?: boolean
           campus: Database["public"]["Enums"]["campus_t"]
+          checklist_finalizado?: boolean
+          checklist_items?: Json
+          checklist_observacion?: string | null
           editado_por?: string | null
           encuentro: string
           evento?: string | null
@@ -1359,6 +1365,9 @@ export type Database = {
           adm?: string | null
           aportes_finalizado?: boolean
           campus?: Database["public"]["Enums"]["campus_t"]
+          checklist_finalizado?: boolean
+          checklist_items?: Json
+          checklist_observacion?: string | null
           editado_por?: string | null
           encuentro?: string
           evento?: string | null

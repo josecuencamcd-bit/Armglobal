@@ -7,15 +7,16 @@ import { z } from "zod";
 const Schema = z.object({
   finalizado: z.boolean().optional().default(true),
   // "general" = Reporte (asistencia/voluntarios/aceptaron), "aportes" =
-  // Aportes. Son dos cierres independientes: cada administrador cierra su
-  // propia parte cuando termina. El encuentro completo (lo que revisa el
-  // vigilante automático) se da por cerrado solo cuando las dos lo están.
-  campo: z.enum(["general", "aportes"]).optional().default("general"),
+  // Aportes, "checklist" = Checklist pre-encuentro. Tres cierres
+  // independientes: cada administrador cierra su propia parte cuando
+  // termina. El encuentro completo (lo que revisa el vigilante automático)
+  // se da por cerrado solo cuando las tres lo están.
+  campo: z.enum(["general", "aportes", "checklist"]).optional().default("general"),
 });
 
 /** api_finalizar: marca (o desmarca, para "reabrir" el mismo día) el
- * Reporte o los Aportes de un encuentro como finalizados. El verdadero
- * candado para editar pasado el día del encuentro es
+ * Reporte, los Aportes o el Checklist de un encuentro como finalizados. El
+ * verdadero candado para editar pasado el día del encuentro es
  * auth_mismo_dia()/auth_autorizado() en RLS — estos flags no bloquean la
  * edición por sí solos, solo registran qué parte quedó cerrada para quien
  * la revise después (y para el vigilante automático). */
@@ -39,10 +40,13 @@ export async function POST(req: Request, context: { params: Promise<{ key: strin
   const supabase = await createClient();
   try {
     const key = await asegurarSesion(supabase, args);
+    const ahora = new Date().toISOString();
     const cambios =
       parsedBody.data.campo === "aportes"
-        ? { aportes_finalizado: parsedBody.data.finalizado, actualizado: new Date().toISOString() }
-        : { finalizado: parsedBody.data.finalizado, actualizado: new Date().toISOString() };
+        ? { aportes_finalizado: parsedBody.data.finalizado, actualizado: ahora }
+        : parsedBody.data.campo === "checklist"
+        ? { checklist_finalizado: parsedBody.data.finalizado, actualizado: ahora }
+        : { finalizado: parsedBody.data.finalizado, actualizado: ahora };
     const { error } = await supabase.from("sesiones").update(cambios).eq("key", key);
     if (error) throw error;
     return ok(await leerSesion(supabase, args));

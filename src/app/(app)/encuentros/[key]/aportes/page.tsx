@@ -8,7 +8,7 @@ import { fotoAJpegDataUrl } from "@/lib/fotos-cliente";
 import ModalCompartir from "@/components/ModalCompartir";
 
 type Aporte = { id: string; nombre: string; monto: number; categoria: string; metodo: string };
-type Estado = { key: string; responsable: string; finalizado: boolean; aportesFinalizado: boolean; aportes: Aporte[] };
+type Estado = { key: string; responsable: string; finalizado: boolean; aportesFinalizado: boolean; checklistFinalizado: boolean; aportes: Aporte[] };
 type Foto = { path: string; url: string };
 
 function fechaCL(iso: string) {
@@ -217,6 +217,7 @@ export default function AportesEncuentroPage() {
       <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 2 }}>
         <Link href={`/encuentros/${key}`} className="muted" style={{ fontSize: "0.82rem", textDecoration: "none" }}>‹ Reporte</Link>
         <h1 className="titulo" style={{ fontSize: "1.3rem", margin: 0 }}>Aportes</h1>
+        <Link href={`/encuentros/${key}/checklist`} className="muted" style={{ fontSize: "0.82rem", textDecoration: "none", marginLeft: "auto" }}>Checklist ›</Link>
       </div>
       <p className="muted" style={{ margin: "0 0 16px", fontSize: "0.82rem" }}>
         {encuentro} · {campus} · {fechaCL(fecha)}{estado?.responsable ? ` · Responsable: ${estado.responsable}` : ""}
@@ -233,9 +234,9 @@ export default function AportesEncuentroPage() {
       )}
       {estado && (
         <p className="muted" style={{ fontSize: "0.78rem", margin: "0 0 16px" }}>
-          {estado.finalizado && estado.aportesFinalizado
-            ? "Encuentro cerrado por completo — Reporte y Aportes finalizados."
-            : `Falta cerrar: ${[!estado.finalizado && "Reporte", !estado.aportesFinalizado && "Aportes"].filter(Boolean).join(" y ")}.`}
+          {estado.finalizado && estado.aportesFinalizado && estado.checklistFinalizado
+            ? "Encuentro cerrado por completo — Reporte, Aportes y Checklist finalizados."
+            : `Falta cerrar: ${[!estado.finalizado && "Reporte", !estado.aportesFinalizado && "Aportes", !estado.checklistFinalizado && "Checklist"].filter(Boolean).join(", ")}.`}
         </p>
       )}
 

@@ -35,6 +35,7 @@ type Estado = {
   administracionAsignada: string[];
   finalizado: boolean;
   aportesFinalizado: boolean;
+  checklistFinalizado: boolean;
   sesion: Sesion | null;
   asistencia: { area: string; cantidad: number }[];
   voluntarios: { area: string; cantidad: number }[];
@@ -320,9 +321,9 @@ export default function EncuentroPage() {
       )}
       {estado && (
         <p className="muted" style={{ fontSize: "0.78rem", margin: "-12px 0 16px" }}>
-          {estado.finalizado && estado.aportesFinalizado
-            ? "Encuentro cerrado por completo — Reporte y Aportes finalizados."
-            : `Falta cerrar: ${[!estado.finalizado && "Reporte", !estado.aportesFinalizado && "Aportes"].filter(Boolean).join(" y ")}.`}
+          {estado.finalizado && estado.aportesFinalizado && estado.checklistFinalizado
+            ? "Encuentro cerrado por completo — Reporte, Aportes y Checklist finalizados."
+            : `Falta cerrar: ${[!estado.finalizado && "Reporte", !estado.aportesFinalizado && "Aportes", !estado.checklistFinalizado && "Checklist"].filter(Boolean).join(", ")}.`}
         </p>
       )}
 
@@ -461,6 +462,16 @@ export default function EncuentroPage() {
               <p style={{ margin: 0, fontWeight: 600 }}>Aportes</p>
               <p className="muted" style={{ margin: "2px 0 0", fontSize: "0.8rem" }}>
                 {estado.aportes.length} registrado{estado.aportes.length === 1 ? "" : "s"} · ${estado.aportes.reduce((s, a) => s + a.monto, 0).toLocaleString("es-CL")}
+              </p>
+            </div>
+            <span className="muted">›</span>
+          </Link>
+
+          <Link href={`/encuentros/${key}/checklist`} className="tarjeta" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", textDecoration: "none", color: "inherit" }}>
+            <div>
+              <p style={{ margin: 0, fontWeight: 600 }}>Checklist pre encuentro</p>
+              <p className="muted" style={{ margin: "2px 0 0", fontSize: "0.8rem" }}>
+                {estado.checklistFinalizado ? "Finalizado" : "Pendiente"}
               </p>
             </div>
             <span className="muted">›</span>

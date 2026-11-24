@@ -11,7 +11,7 @@ const ICONO_POR_CLAVE: Record<string, string> = {
   "administracion-semanal": "administracionSemanal", fondos: "fondo", reportes: "finanzas", fechas: "administracionSemanal",
   equipo: "equipo", asistencia: "asistencia", fondo: "fondo", visitas: "visitas",
   solicitudes: "bajas", equipostats: "actividad", reporte: "asistencia", aportes: "aportes",
-  amor: "fondo",
+  checklist: "asistencia", amor: "fondo",
 };
 
 /**
