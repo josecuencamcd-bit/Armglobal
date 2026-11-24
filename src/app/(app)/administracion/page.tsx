@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { Icono } from "@/lib/iconos";
 import { useCampus } from "@/lib/campus-context";
 import { adminSubnav, type PerfilVisibilidad } from "@/lib/visibilidad-modulos";
@@ -25,24 +24,23 @@ const ICONO_POR_CLAVE: Record<string, string> = {
  */
 export default function AdministracionPage() {
   const router = useRouter();
-  const supabase = createClient();
   const { campusActivo, puedeElegir, elegirCampus } = useCampus();
   const [perfil, setPerfil] = useState<PerfilVisibilidad | null>(null);
 
   useEffect(() => {
     let cancelado = false;
-    (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data } = await supabase
-        .from("perfiles")
-        .select("roles, areas, sirve, modulos_on, modulos_off")
-        .eq("id", user.id)
-        .maybeSingle();
-      if (!cancelado && data) setPerfil(data as unknown as PerfilVisibilidad);
-    })();
+    // /api/perfil (no una consulta directa a Supabase) porque ya resuelve
+    // identidadActuante(): si hay una "vista como X" activa, trae el perfil
+    // de X. Antes esto consultaba perfiles por el id de la sesión real, así
+    // que durante una "vista como" mostraba los accesos del admin/pastor
+    // real (todos) en vez de los de a quién se estaba viendo — por eso a
+    // alguien sin acceso a fondos (ej. un Administrador sin equipo propio)
+    // igual le aparecía "Fondo de equipo" acá.
+    fetch("/api/perfil").then((r) => r.json()).then((json) => {
+      if (!cancelado && json.ok) setPerfil(json.data as PerfilVisibilidad);
+    });
     return () => { cancelado = true; };
-  }, [supabase]);
+  }, []);
 
   if (!perfil) return <div className="contenedor">Cargando…</div>;
 
