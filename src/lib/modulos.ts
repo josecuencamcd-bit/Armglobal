@@ -8,6 +8,12 @@ export type Modulo = { key: string; label: string; href: string; icon: string; l
 export const MODULOS: Modulo[] = [
   { key: "inicio", label: "Inicio", href: "/inicio", icon: "inicio", listo: true },
   { key: "soporte", label: "Soporte", href: "/soporte", icon: "soporte", listo: true },
+  // Bandeja de pendientes del encuentro (Reporte/Aportes/Checklist sin
+  // cerrar, pasada la hora límite): a quien le corresponda cerrarlo le
+  // muestra el botón para ir directo; al resto solo le aparece como
+  // información (sin el link). Mismo gate que "soporte" (puedeSoporte) +
+  // esFin (quien puede ser responsable de un encuentro).
+  { key: "notificaciones", label: "Notificaciones", href: "/notificaciones", icon: "notificaciones", listo: true },
   { key: "bajas", label: "Bajas", href: "/bajas", icon: "bajas", listo: true },
   { key: "panorama", label: "Panorama", href: "/panorama", icon: "panorama", listo: true },
   { key: "cumpleanos", label: "Cumpleaños", href: "/cumpleanos", icon: "cumples", listo: true },

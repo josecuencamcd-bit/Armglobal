@@ -78,6 +78,7 @@ export function modulosVisibles(p: PerfilVisibilidad): Set<string> {
   t.add("reuniones");
   t.add("miperfil");
   if (puedeSoporte(p)) t.add("soporte");
+  if (puedeSoporte(p) || esFin(p)) t.add("notificaciones");
   t.add("cumples");
 
   for (const k of p.modulos_off ?? []) if (k !== "inicio") t.delete(k);
@@ -136,6 +137,7 @@ export const CLAVE_A_MODULO_APP: Record<string, string> = {
   visitas: "visitas",
   bajas: "solicitudes",
   soporte: "soporte",
+  notificaciones: "notificaciones",
   reuniones: "reuniones",
   perfil: "miperfil",
   estadisticas: "equipostats",

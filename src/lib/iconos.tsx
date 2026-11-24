@@ -20,6 +20,7 @@ export const ICONOS: Record<string, string> = {
   actividad: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/>',
   administracion: '<rect x="4" y="3" width="7" height="7" rx="1.5"/><rect x="13" y="3" width="7" height="7" rx="1.5"/><rect x="4" y="14" width="7" height="7" rx="1.5"/><rect x="13" y="14" width="7" height="7" rx="1.5"/>',
   volver: '<path d="M19 12H5"/><path d="M11 6l-6 6 6 6"/>',
+  notificaciones: '<path d="M6 10a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6H4c.5-.5 2-2 2-6z"/><path d="M10 19a2 2 0 0 0 4 0"/>',
   menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
 };
 
