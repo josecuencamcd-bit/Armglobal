@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "./supabase/types";
 import { CAMPUS, ENCUENTROS, DIA, AREAS, hoy } from "./sesiones";
 import { mesAnt, cierreSimplificado } from "./informe-fondos";
+import { administracionDeLaSemana } from "./sesiones-db";
 import { avisarAdmins } from "./email";
 
 type DB = SupabaseClient<Database>;
@@ -13,6 +14,15 @@ const REC_ENC: Record<string, number> = {
   "Domingo AM": 14 * 60,
   "Domingo PM": 20 * 60 + 45,
   "Jueves PM": 21 * 60 + 45,
+};
+
+/** Hora de INICIO de cada encuentro recurrente (a diferencia de REC_ENC,
+ * que es la hora límite del reporte, después de terminar) — usada para el
+ * aviso del Checklist pre-encuentro 15 minutos antes de empezar. */
+const INICIO_ENC: Record<string, number> = {
+  "Domingo AM": 11 * 60,
+  "Domingo PM": 18 * 60,
+  "Jueves PM": 20 * 60,
 };
 
 function sumaDias(fecha: string, dias: number): string {
@@ -112,12 +122,55 @@ export async function checklistsPendientes(db: DB): Promise<EncuentroVencido[]> 
   return out;
 }
 
-/** A quién le toca enterarse del Checklist pre-encuentro: el administrador
- * responsable, el Admin app y el equipo pastoral (Pastor/Pastor de
- * campus/Pastor principal/Ministro) de ese campus — mismo criterio para el
- * recordatorio si no se cierra a tiempo y para el aviso cuando sí queda
- * listo. */
-export const ROLES_CHECKLIST = ["Administrador", "Admin app", "Pastor de campus", "Pastor principal", "Pastor", "Ministro"] as const;
+/** A quién le toca enterarse del Checklist pre-encuentro por su rol:
+ * Administrador, Admin app y equipo pastoral (Pastor de campus/Pastor/
+ * Pastor principal) de ese campus — mismo criterio para el aviso previo al
+ * inicio, el recordatorio si no se cierra a tiempo y el aviso cuando sí
+ * queda listo. */
+export const ROLES_CHECKLIST = ["Administrador", "Admin app", "Pastor de campus", "Pastor principal", "Pastor"] as const;
+
+/** Destinatarios del Checklist pre-encuentro: los de ROLES_CHECKLIST más,
+ * con copia, quien(es) estén asignados esa semana en Administración
+ * semanal (la persona responsable de llenarlo) — aunque no tengan uno de
+ * esos roles. */
+export async function destinatariosChecklist(db: DB, campus: Campus, fecha: string): Promise<string[]> {
+  const [{ data: porRol }, nombresAsignados] = await Promise.all([
+    db.from("perfiles").select("correo").overlaps("roles", ROLES_CHECKLIST).or(`campus.eq.${campus},campus.is.null`).not("correo", "is", null),
+    administracionDeLaSemana(db, campus, fecha),
+  ]);
+  const correos = new Set((porRol ?? []).map((p) => p.correo).filter((c): c is string => !!c));
+  if (nombresAsignados.length) {
+    const { data: porNombre } = await db.from("perfiles").select("correo").eq("campus", campus).in("nombre", nombresAsignados).not("correo", "is", null);
+    for (const p of porNombre ?? []) if (p.correo) correos.add(p.correo);
+  }
+  return [...correos];
+}
+
+export interface EncuentroPorIniciar {
+  campus: Campus;
+  encuentro: string;
+  fecha: string;
+}
+
+/** Encuentros recurrentes de HOY cuyo inicio cae dentro de los próximos 15
+ * minutos — ventana del aviso del Checklist pre-encuentro, pensada para un
+ * cron que corre cada 15 min (si el inicio es a las 18:00, avisa en la
+ * pasada de las 17:45-18:00). */
+export function encuentrosPorIniciar(): EncuentroPorIniciar[] {
+  const fecha = hoy();
+  const [y, m, d] = fecha.split("-").map(Number);
+  const diaSemana = new Date(Date.UTC(y, m - 1, d, 12)).getUTCDay();
+  const min = minutosDelDia();
+  const out: EncuentroPorIniciar[] = [];
+  for (const campus of CAMPUS) {
+    for (const tipo of ENCUENTROS[campus] ?? []) {
+      if (DIA[tipo] !== diaSemana || INICIO_ENC[tipo] === undefined) continue;
+      const inicio = INICIO_ENC[tipo];
+      if (min >= inicio - 15 && min < inicio) out.push({ campus, encuentro: tipo, fecha });
+    }
+  }
+  return out;
+}
 
 async function notaFinalizada(db: DB, campus: string, area: string, fecha: string): Promise<boolean> {
   const key = [campus, area, fecha].join("|");
@@ -148,7 +201,7 @@ export async function notasPendientes(db: DB): Promise<NotaPendiente[]> {
  * true si corresponde avisar ahora (y dejó el contador actualizado). */
 export async function debeAvisar(
   db: DB,
-  tipo: "encuentros" | "notas" | "checklist",
+  tipo: "encuentros" | "notas" | "checklist" | "checklist-previo",
   key: string,
   esHoy: boolean
 ): Promise<boolean> {

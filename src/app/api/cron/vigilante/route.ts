@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { encuentrosPendientes, notasPendientes, checklistsPendientes, ROLES_CHECKLIST, debeAvisar, vigilanteFondos } from "@/lib/vigilantes";
+import { encuentrosPendientes, notasPendientes, checklistsPendientes, encuentrosPorIniciar, destinatariosChecklist, debeAvisar, vigilanteFondos } from "@/lib/vigilantes";
 import { cumpleVigilante } from "@/lib/cumpleanos";
 import { enviarWhatsApp, telefonoWa } from "@/lib/whatsapp";
 import { avisarAdmins } from "@/lib/email";
@@ -38,6 +38,7 @@ export async function GET(req: Request) {
     encuentros_avisados: 0,
     notas_avisadas: 0,
     checklist_avisados: 0,
+    checklist_previos: 0,
     roles_aplicados: 0,
     fondos_cerrados: 0,
     fondos_avisos: 0,
@@ -104,17 +105,11 @@ export async function GET(req: Request) {
     const key = [e.campus, e.encuentro, e.fecha].join("|");
     if (!(await debeAvisar(supabase, "checklist", key, e.hoy))) continue;
 
-    const { data: destinatarios } = await supabase
-      .from("perfiles")
-      .select("correo")
-      .overlaps("roles", ROLES_CHECKLIST)
-      .or(`campus.eq.${e.campus},campus.is.null`)
-      .not("correo", "is", null);
-
+    const destinatarios = await destinatariosChecklist(supabase, e.campus, e.fecha);
     const cuando = e.hoy ? "hoy" : `del ${e.fecha.split("-").reverse().join("/")}`;
     try {
       await avisarAdmins({
-        destinatarios: (destinatarios ?? []).map((d) => d.correo).filter((c): c is string => !!c),
+        destinatarios,
         asunto: `Falta cerrar el Checklist pre encuentro · Campus ${e.campus}`,
         titulo: "Checklist pre encuentro sin finalizar",
         datos: [
@@ -124,6 +119,43 @@ export async function GET(req: Request) {
         nota: "Nadie marcó el Checklist pre encuentro como finalizado. Revísalo y ciérralo en la app.",
       });
       resultado.checklist_avisados++;
+    } catch {
+      // un fallo de correo no debe bloquear el resto de los avisos
+    }
+  }
+
+  // Aviso previo: 15 min antes de que arranque el encuentro, para que el
+  // responsable asignado (y el administrador/equipo pastoral en copia)
+  // alcancen a dejar el Checklist pre-encuentro listo. Solo si todavía no
+  // está finalizado — si ya lo cerraron antes, no hace falta molestar.
+  const porIniciar = await encuentrosPorIniciar();
+  for (const e of porIniciar) {
+    const key = [e.campus, e.encuentro, e.fecha].join("|");
+    if (!(await debeAvisar(supabase, "checklist-previo", key, true))) continue;
+
+    const { data: sesion } = await supabase
+      .from("sesiones")
+      .select("checklist_finalizado")
+      .eq("campus", e.campus)
+      .eq("encuentro", e.encuentro)
+      .eq("fecha", e.fecha)
+      .is("evento", null)
+      .maybeSingle();
+    if (sesion?.checklist_finalizado) continue;
+
+    const destinatarios = await destinatariosChecklist(supabase, e.campus, e.fecha);
+    try {
+      await avisarAdmins({
+        destinatarios,
+        asunto: `Checklist pre encuentro — empieza en 15 min · Campus ${e.campus}`,
+        titulo: "El encuentro está por empezar",
+        datos: [
+          ["Encuentro", e.encuentro],
+          ["Campus", e.campus],
+        ],
+        nota: "Faltan 15 minutos para que empiece. Deja listo y cierra el Checklist pre encuentro en la app.",
+      });
+      resultado.checklist_previos++;
     } catch {
       // un fallo de correo no debe bloquear el resto de los avisos
     }

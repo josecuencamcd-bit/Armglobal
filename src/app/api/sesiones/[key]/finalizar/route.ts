@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ok, fail, fromSupabaseError } from "@/lib/api-helpers";
 import { ArgsSchema } from "@/lib/sesiones";
 import { leerSesion, asegurarSesion } from "@/lib/sesiones-db";
-import { ROLES_CHECKLIST } from "@/lib/vigilantes";
+import { destinatariosChecklist } from "@/lib/vigilantes";
 import { avisarAdmins } from "@/lib/email";
 import { z } from "zod";
 
@@ -59,14 +59,9 @@ export async function POST(req: Request, context: { params: Promise<{ key: strin
     // recordatorio de "sigue sin cerrarse" en vigilantes.ts.
     if (parsedBody.data.campo === "checklist" && parsedBody.data.finalizado) {
       try {
-        const { data: destinatarios } = await supabase
-          .from("perfiles")
-          .select("correo")
-          .overlaps("roles", ROLES_CHECKLIST)
-          .or(`campus.eq.${args.campus},campus.is.null`)
-          .not("correo", "is", null);
+        const destinatarios = await destinatariosChecklist(supabase, args.campus, args.fecha);
         await avisarAdmins({
-          destinatarios: (destinatarios ?? []).map((d) => d.correo).filter((c): c is string => !!c),
+          destinatarios,
           asunto: `Checklist pre encuentro listo · Campus ${args.campus}`,
           titulo: "El Checklist pre encuentro quedó finalizado",
           datos: [

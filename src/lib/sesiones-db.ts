@@ -9,7 +9,7 @@ type DB = SupabaseClient<Database>;
  * el campo Responsable: si hay alguien asignado, el reporte viene
  * precargado con esos nombres en vez de depender de que alguien elija una
  * de las parejas fijas. */
-async function administracionDeLaSemana(db: DB, campus: ArgsEncuentro["campus"], fecha: string): Promise<string[]> {
+export async function administracionDeLaSemana(db: DB, campus: ArgsEncuentro["campus"], fecha: string): Promise<string[]> {
   const { data, error } = await db
     .from("administracion_semanal")
     .select("nombres")
