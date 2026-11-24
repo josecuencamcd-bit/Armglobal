@@ -91,6 +91,34 @@ export async function encuentrosPendientes(db: DB): Promise<EncuentroVencido[]> 
   return out;
 }
 
+/** Igual que encuentrosPendientes, pero mirando solo el Checklist
+ * pre-encuentro (área independiente de Reporte/Aportes) — para el
+ * recordatorio por correo a administradores/equipo pastoral si nadie lo
+ * cerró, separado del aviso genérico de "encuentro pendiente". */
+export async function checklistsPendientes(db: DB): Promise<EncuentroVencido[]> {
+  const vencidos = encuentrosVencidos();
+  const out: EncuentroVencido[] = [];
+  for (const e of vencidos) {
+    const { data } = await db
+      .from("sesiones")
+      .select("checklist_finalizado")
+      .eq("campus", e.campus)
+      .eq("encuentro", e.encuentro)
+      .eq("fecha", e.fecha)
+      .is("evento", null)
+      .maybeSingle();
+    if (!data?.checklist_finalizado) out.push(e);
+  }
+  return out;
+}
+
+/** A quién le toca enterarse del Checklist pre-encuentro: el administrador
+ * responsable, el Admin app y el equipo pastoral (Pastor/Pastor de
+ * campus/Pastor principal/Ministro) de ese campus — mismo criterio para el
+ * recordatorio si no se cierra a tiempo y para el aviso cuando sí queda
+ * listo. */
+export const ROLES_CHECKLIST = ["Administrador", "Admin app", "Pastor de campus", "Pastor principal", "Pastor", "Ministro"] as const;
+
 async function notaFinalizada(db: DB, campus: string, area: string, fecha: string): Promise<boolean> {
   const key = [campus, area, fecha].join("|");
   const { data } = await db.from("notas").select("finalizado").eq("key", key).maybeSingle();
@@ -120,7 +148,7 @@ export async function notasPendientes(db: DB): Promise<NotaPendiente[]> {
  * true si corresponde avisar ahora (y dejó el contador actualizado). */
 export async function debeAvisar(
   db: DB,
-  tipo: "encuentros" | "notas",
+  tipo: "encuentros" | "notas" | "checklist",
   key: string,
   esHoy: boolean
 ): Promise<boolean> {

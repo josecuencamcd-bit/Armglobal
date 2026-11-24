@@ -1,7 +1,8 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { encuentrosPendientes, notasPendientes, debeAvisar, vigilanteFondos } from "@/lib/vigilantes";
+import { encuentrosPendientes, notasPendientes, checklistsPendientes, ROLES_CHECKLIST, debeAvisar, vigilanteFondos } from "@/lib/vigilantes";
 import { cumpleVigilante } from "@/lib/cumpleanos";
 import { enviarWhatsApp, telefonoWa } from "@/lib/whatsapp";
+import { avisarAdmins } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +37,7 @@ export async function GET(req: Request) {
   const resultado = {
     encuentros_avisados: 0,
     notas_avisadas: 0,
+    checklist_avisados: 0,
     roles_aplicados: 0,
     fondos_cerrados: 0,
     fondos_avisos: 0,
@@ -91,6 +93,40 @@ export async function GET(req: Request) {
     const texto = `⚠️ Falta finalizar la asistencia de ${e.area} en ${e.encuentro} (${cuando}) · Campus ${e.campus}.`;
     await Promise.all((destinatarios ?? []).map((d) => enviarWhatsApp(telefonoWa(d.telefono), texto)));
     resultado.notas_avisadas++;
+  }
+
+  // Recordatorio por correo del Checklist pre-encuentro sin cerrar — a
+  // diferencia de encuentros/notas (WhatsApp, aún sin credenciales), este
+  // va por Resend al administrador responsable, Admin app y equipo
+  // pastoral del campus (ver ROLES_CHECKLIST).
+  const pendChecklist = await checklistsPendientes(supabase);
+  for (const e of pendChecklist) {
+    const key = [e.campus, e.encuentro, e.fecha].join("|");
+    if (!(await debeAvisar(supabase, "checklist", key, e.hoy))) continue;
+
+    const { data: destinatarios } = await supabase
+      .from("perfiles")
+      .select("correo")
+      .overlaps("roles", ROLES_CHECKLIST)
+      .or(`campus.eq.${e.campus},campus.is.null`)
+      .not("correo", "is", null);
+
+    const cuando = e.hoy ? "hoy" : `del ${e.fecha.split("-").reverse().join("/")}`;
+    try {
+      await avisarAdmins({
+        destinatarios: (destinatarios ?? []).map((d) => d.correo).filter((c): c is string => !!c),
+        asunto: `Falta cerrar el Checklist pre encuentro · Campus ${e.campus}`,
+        titulo: "Checklist pre encuentro sin finalizar",
+        datos: [
+          ["Encuentro", `${e.encuentro} (${cuando})`],
+          ["Campus", e.campus],
+        ],
+        nota: "Nadie marcó el Checklist pre encuentro como finalizado. Revísalo y ciérralo en la app.",
+      });
+      resultado.checklist_avisados++;
+    } catch {
+      // un fallo de correo no debe bloquear el resto de los avisos
+    }
   }
 
   return Response.json({ ok: true, ...resultado });

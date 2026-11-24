@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { ok, fail, fromSupabaseError } from "@/lib/api-helpers";
 import { ArgsSchema } from "@/lib/sesiones";
 import { leerSesion, asegurarSesion } from "@/lib/sesiones-db";
+import { ROLES_CHECKLIST } from "@/lib/vigilantes";
+import { avisarAdmins } from "@/lib/email";
 import { z } from "zod";
 
 const Schema = z.object({
@@ -49,7 +51,37 @@ export async function POST(req: Request, context: { params: Promise<{ key: strin
         : { finalizado: parsedBody.data.finalizado, actualizado: ahora };
     const { error } = await supabase.from("sesiones").update(cambios).eq("key", key);
     if (error) throw error;
-    return ok(await leerSesion(supabase, args));
+    const sesionLeida = await leerSesion(supabase, args);
+
+    // Al quedar listo el Checklist pre-encuentro, avisa de inmediato (no
+    // espera al cron) al administrador responsable, Admin app y equipo
+    // pastoral del campus — mismo criterio de destinatarios que el
+    // recordatorio de "sigue sin cerrarse" en vigilantes.ts.
+    if (parsedBody.data.campo === "checklist" && parsedBody.data.finalizado) {
+      try {
+        const { data: destinatarios } = await supabase
+          .from("perfiles")
+          .select("correo")
+          .overlaps("roles", ROLES_CHECKLIST)
+          .or(`campus.eq.${args.campus},campus.is.null`)
+          .not("correo", "is", null);
+        await avisarAdmins({
+          destinatarios: (destinatarios ?? []).map((d) => d.correo).filter((c): c is string => !!c),
+          asunto: `Checklist pre encuentro listo · Campus ${args.campus}`,
+          titulo: "El Checklist pre encuentro quedó finalizado",
+          datos: [
+            ["Encuentro", `${args.encuentro} · ${args.fecha.split("-").reverse().join("/")}`],
+            ["Campus", args.campus],
+            ["Responsable", sesionLeida.responsable],
+          ],
+          nota: "Ya puedes revisarlo entrando al Checklist de ese encuentro en la app.",
+        });
+      } catch {
+        // un fallo de correo no debe bloquear el cierre del checklist
+      }
+    }
+
+    return ok(sesionLeida);
   } catch (e) {
     return fromSupabaseError(e as { message: string; code?: string });
   }
