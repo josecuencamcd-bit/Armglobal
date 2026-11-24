@@ -25,6 +25,7 @@ type Integrante = {
   profesion: string | null;
   talla_polera: string | null;
   talla_poleron: string | null;
+  foto_url: string | null;
   /** Equipos además del principal (Camino 2) — alguien que sirve en más de
    * un equipo y responde la encuesta de disponibilidad por cada uno. */
   equipos_extra: string[];
@@ -63,6 +64,49 @@ function diasHastaCumple(nacimiento: string): number | null {
   let d = Date.UTC(hoy.getFullYear(), +mesStr - 1, +diaStr);
   if (d < base) d = Date.UTC(hoy.getFullYear() + 1, +mesStr - 1, +diaStr);
   return Math.round((d - base) / 86_400_000);
+}
+
+function iniciales(nombre: string): string {
+  return nombre.split(/\s+/).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? "").join("");
+}
+
+/** Reduce la foto de perfil de un integrante a un cuadrado chico y la
+ * comprime a JPEG hasta entrar en el tope de 45000 caracteres que acepta
+ * /api/integrantes/[id]/foto — mismo patrón que vista-miembro.tsx y
+ * "Mi perfil". */
+async function fotoPerfilADataUrl(file: File): Promise<string> {
+  const bitmap = await createImageBitmap(file);
+  const lado = 320;
+  const canvas = document.createElement("canvas");
+  canvas.width = lado;
+  canvas.height = lado;
+  const ctx = canvas.getContext("2d")!;
+  const escala = Math.max(lado / bitmap.width, lado / bitmap.height);
+  const w = bitmap.width * escala;
+  const h = bitmap.height * escala;
+  ctx.drawImage(bitmap, (lado - w) / 2, (lado - h) / 2, w, h);
+  for (const calidad of [0.8, 0.6, 0.4, 0.25]) {
+    const url = canvas.toDataURL("image/jpeg", calidad);
+    if (url.length <= 45_000) return url;
+  }
+  throw new Error("La foto es muy pesada. Prueba con otra.");
+}
+
+function AvatarIntegrante({ nombre, foto, size = 40 }: { nombre: string; foto: string | null; size?: number }) {
+  return foto ? (
+    <img src={foto} alt="" style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+  ) : (
+    <div
+      style={{
+        width: size, height: size, borderRadius: "50%", flexShrink: 0,
+        background: "var(--gold-grad)", color: "var(--accent-ink)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontWeight: 700, fontSize: size * 0.38,
+      }}
+    >
+      {iniciales(nombre)}
+    </div>
+  );
 }
 
 /** Convierte el archivo elegido (foto del comprobante de pago) a un jpeg
@@ -164,6 +208,8 @@ export default function EquiposPage() {
   const [vinculando, setVinculando] = useState(false);
   const [editando, setEditando] = useState<Integrante | null>(null);
   const [guardandoEdit, setGuardandoEdit] = useState(false);
+  const [subiendoFoto, setSubiendoFoto] = useState<number | null>(null);
+  const [errorFoto, setErrorFoto] = useState<string | null>(null);
   const [bajasPendientes, setBajasPendientes] = useState<Set<number>>(new Set());
   const [pidiendoBaja, setPidiendoBaja] = useState<number | null>(null);
   const [enviandoBaja, setEnviandoBaja] = useState(false);
@@ -647,6 +693,39 @@ export default function EquiposPage() {
     await cargar(campus, area);
   }
 
+  async function subirFotoIntegrante(id: number, file: File) {
+    setErrorFoto(null);
+    setSubiendoFoto(id);
+    try {
+      const foto_url = await fotoPerfilADataUrl(file);
+      const res = await fetch(`/api/integrantes/${id}/foto`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ foto_url }),
+      });
+      const json = await res.json();
+      if (!json.ok) { setErrorFoto(json.error); return; }
+      await cargar(campus, area);
+    } catch (e) {
+      setErrorFoto(e instanceof Error ? e.message : "No se pudo subir la foto.");
+    } finally {
+      setSubiendoFoto(null);
+    }
+  }
+
+  async function quitarFotoIntegrante(id: number) {
+    setErrorFoto(null);
+    setSubiendoFoto(id);
+    try {
+      const res = await fetch(`/api/integrantes/${id}/foto`, { method: "DELETE" });
+      const json = await res.json();
+      if (!json.ok) { setErrorFoto(json.error); return; }
+      await cargar(campus, area);
+    } finally {
+      setSubiendoFoto(null);
+    }
+  }
+
   async function guardarEdicion(fd: FormData) {
     if (!editando) return;
     setGuardandoEdit(true);
@@ -1128,7 +1207,9 @@ export default function EquiposPage() {
         return (
         <div key={i.id}>
           <div className="fila" style={{ flexDirection: "column", alignItems: "stretch", gap: 8 }}>
-            <div>
+            <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+              <AvatarIntegrante nombre={i.nombre} foto={i.foto_url} />
+              <div>
               <div>
                 {i.nombre}
                 {i.es_extra && (
@@ -1145,6 +1226,7 @@ export default function EquiposPage() {
               {i.equipos_extra.length > 0 && (
                 <div className="muted" style={{ fontSize: "0.76rem" }}>También sirve en: {i.equipos_extra.join(", ")}</div>
               )}
+              </div>
             </div>
             <span style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
               <button
@@ -1236,6 +1318,33 @@ export default function EquiposPage() {
           )}
           {editando?.id === i.id && (
             <form className="tarjeta" action={(fd) => guardarEdicion(fd)} style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 10 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <AvatarIntegrante nombre={i.nombre} foto={i.foto_url} size={56} />
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <label className="boton-secundario" style={{ display: "inline-block", width: "auto", fontSize: "0.8rem", cursor: "pointer" }}>
+                    {subiendoFoto === i.id ? "Subiendo…" : i.foto_url ? "Cambiar foto" : "Agregar foto"}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      disabled={subiendoFoto === i.id}
+                      style={{ display: "none" }}
+                      onChange={(e) => { const f = e.target.files?.[0]; if (f) subirFotoIntegrante(i.id, f); e.target.value = ""; }}
+                    />
+                  </label>
+                  {i.foto_url && (
+                    <button
+                      type="button"
+                      className="boton-peligro"
+                      style={{ width: "auto", fontSize: "0.8rem" }}
+                      disabled={subiendoFoto === i.id}
+                      onClick={() => quitarFotoIntegrante(i.id)}
+                    >
+                      Quitar foto
+                    </button>
+                  )}
+                </div>
+              </div>
+              {errorFoto && <p className="aviso" style={{ margin: 0 }}>{errorFoto}</p>}
               <div className="campo">
                 <label>Nombre</label>
                 <input name="nombre" defaultValue={i.nombre} required />
