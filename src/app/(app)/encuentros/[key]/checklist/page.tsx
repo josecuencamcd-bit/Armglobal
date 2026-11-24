@@ -162,16 +162,24 @@ export default function ChecklistEncuentroPage() {
     guardarDespuesDe(items ?? [], valor);
   }
 
+  // El nombre que se está escribiendo puede separarse de los anteriores
+  // con salto de línea, coma, guion o punto — cualquiera de los cuatro
+  // corta el "token" actual para buscar/reemplazar solo ese nombre.
+  function tokenActual(texto: string): { prefijo: string; token: string } {
+    const idx = Math.max(texto.lastIndexOf("\n"), texto.lastIndexOf(","), texto.lastIndexOf("-"), texto.lastIndexOf("."));
+    return { prefijo: texto.slice(0, idx + 1), token: texto.slice(idx + 1) };
+  }
+
   function buscarPersonas(itemId: string, campusBusqueda: string, texto: string) {
-    const ultimaLinea = texto.split("\n").pop()?.trim() ?? "";
+    const q = tokenActual(texto).token.trim();
     if (buscarRef.current[itemId]) clearTimeout(buscarRef.current[itemId]!);
-    if (ultimaLinea.length < 2) {
+    if (q.length < 2) {
       setSugerencias((prev) => ({ ...prev, [itemId]: [] }));
       return;
     }
     buscarRef.current[itemId] = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/integrantes/buscar?campus=${encodeURIComponent(campusBusqueda)}&q=${encodeURIComponent(ultimaLinea)}`);
+        const res = await fetch(`/api/integrantes/buscar?campus=${encodeURIComponent(campusBusqueda)}&q=${encodeURIComponent(q)}`);
         const json = await res.json();
         if (json.ok) setSugerencias((prev) => ({ ...prev, [itemId]: json.data }));
       } catch {
@@ -181,9 +189,9 @@ export default function ChecklistEncuentroPage() {
   }
 
   function elegirSugerencia(it: ChecklistItem, nombre: string) {
-    const lineas = it.personas.split("\n");
-    lineas[lineas.length - 1] = nombre;
-    actualizarItem(it.id, { personas: lineas.join("\n") + "\n" });
+    const { prefijo, token } = tokenActual(it.personas);
+    const espacioPrevio = token.match(/^\s*/)?.[0] ?? "";
+    actualizarItem(it.id, { personas: prefijo + espacioPrevio + nombre });
     setSugerencias((prev) => ({ ...prev, [it.id]: [] }));
   }
 
@@ -299,7 +307,7 @@ export default function ChecklistEncuentroPage() {
                 onChange={(e) => { actualizarItem(it.id, { personas: e.target.value }); buscarPersonas(it.id, campus, e.target.value); }}
                 onBlur={() => setTimeout(() => setSugerencias((prev) => ({ ...prev, [it.id]: [] })), 150)}
                 style={{
-                  fontSize: "0.82rem", marginTop: 6, width: "100%", resize: "vertical",
+                  fontSize: "0.82rem", marginTop: 6, width: "100%", resize: "none",
                   background: "var(--surface-2)", border: "1px solid var(--line)", borderRadius: 8,
                   color: "var(--ink)", padding: "8px 10px",
                 }}
@@ -346,7 +354,7 @@ export default function ChecklistEncuentroPage() {
           onChange={(e) => cambiarObservacion(e.target.value)}
           style={{
             width: "100%", background: "var(--surface-2)", border: "1px solid var(--line)",
-            borderRadius: 8, color: "var(--ink)", padding: "10px 12px",
+            borderRadius: 8, color: "var(--ink)", padding: "10px 12px", resize: "none",
           }}
         />
       </div>
