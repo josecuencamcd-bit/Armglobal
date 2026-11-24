@@ -354,6 +354,24 @@ export type Database = {
         }
         Relationships: []
       }
+      checklist_plantillas: {
+        Row: {
+          actualizado: string
+          campus: Database["public"]["Enums"]["campus_t"]
+          items: Json
+        }
+        Insert: {
+          actualizado?: string
+          campus: Database["public"]["Enums"]["campus_t"]
+          items?: Json
+        }
+        Update: {
+          actualizado?: string
+          campus?: Database["public"]["Enums"]["campus_t"]
+          items?: Json
+        }
+        Relationships: []
+      }
       cierres_mes: {
         Row: {
           area: string

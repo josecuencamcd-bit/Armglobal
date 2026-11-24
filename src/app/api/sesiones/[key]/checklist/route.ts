@@ -11,25 +11,27 @@ function argsDeKey(key: string) {
 }
 
 /** GET: checklist pre-encuentro. Si todavía no se ha guardado nada para
- * este encuentro, se devuelve la plantilla fija de partida (sin escribirla
- * en la base — recién se guarda cuando el administrador hace el primer
- * cambio). */
+ * este encuentro, arranca desde la plantilla guardada del campus (los
+ * títulos/detalles/personas a cargo del último encuentro donde se
+ * guardaron cambios) y, si tampoco hay una, desde la lista fija de
+ * partida — nunca se escribe nada en la base hasta el primer cambio. */
 export async function GET(_req: Request, context: { params: Promise<{ key: string }> }) {
   const params = await context.params;
   const key = decodeURIComponent(params.key);
-  if (!argsDeKey(key)) return fail("Encuentro no válido.");
+  const args = argsDeKey(key);
+  if (!args) return fail("Encuentro no válido.");
 
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("sesiones")
-    .select("checklist_items, checklist_observacion")
-    .eq("key", key)
-    .maybeSingle();
+  const [{ data, error }, { data: plantilla }] = await Promise.all([
+    supabase.from("sesiones").select("checklist_items, checklist_observacion").eq("key", key).maybeSingle(),
+    supabase.from("checklist_plantillas").select("items").eq("campus", args.campus).maybeSingle(),
+  ]);
   if (error) return fromSupabaseError(error);
 
   const items = (data?.checklist_items as ChecklistItem[] | null) ?? [];
+  const items_plantilla = (plantilla?.items as ChecklistItem[] | null) ?? [];
   return ok({
-    items: items.length > 0 ? items : plantillaChecklist(),
+    items: items.length > 0 ? items : items_plantilla.length > 0 ? items_plantilla : plantillaChecklist(),
     observacion: data?.checklist_observacion ?? "",
   });
 }
@@ -66,6 +68,17 @@ export async function PATCH(req: Request, context: { params: Promise<{ key: stri
       })
       .eq("key", key);
     if (error) throw error;
+
+    // Esta misma lista (títulos/detalles/personas a cargo, ítems agregados
+    // o sacados) queda como plantilla del campus para el próximo encuentro
+    // — "hecho" siempre en false, la observación general no se guarda acá
+    // porque es una nota semanal, no parte de la plantilla.
+    const itemsPlantilla: ChecklistItem[] = parsedBody.data.items.map((it) => ({ ...it, hecho: false }));
+    const { error: errorPlantilla } = await supabase
+      .from("checklist_plantillas")
+      .upsert({ campus: args.campus, items: itemsPlantilla, actualizado: new Date().toISOString() });
+    if (errorPlantilla) throw errorPlantilla;
+
     return ok({ key });
   } catch (e) {
     return fromSupabaseError(e as { message: string; code?: string });
