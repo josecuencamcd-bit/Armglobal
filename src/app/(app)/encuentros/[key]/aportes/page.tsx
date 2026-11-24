@@ -215,8 +215,8 @@ export default function AportesEncuentroPage() {
 
   return (
     <div className="contenedor" style={{ paddingTop: 24 }}>
-      <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 2 }}>
-        <VolverInteligente href={`/encuentros/${key}`} />
+      <VolverInteligente href={`/encuentros/${key}`} />
+      <div style={{ display: "flex", alignItems: "baseline", gap: 8, margin: "8px 0 2px" }}>
         <h1 className="titulo" style={{ fontSize: "1.3rem", margin: 0 }}>Aportes</h1>
         <Link href={`/encuentros/${key}/checklist`} className="muted" style={{ fontSize: "0.82rem", textDecoration: "none", marginLeft: "auto" }}>Checklist ›</Link>
       </div>

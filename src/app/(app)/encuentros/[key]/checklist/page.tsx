@@ -242,10 +242,10 @@ export default function ChecklistEncuentroPage() {
 
   return (
     <div className="contenedor" style={{ paddingTop: 24 }}>
-      <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 2 }}>
-        <VolverInteligente href={`/encuentros/${key}`} />
-        <Link href={`/encuentros/${key}/aportes`} className="muted" style={{ fontSize: "0.82rem", textDecoration: "none" }}>Aportes</Link>
+      <VolverInteligente href={`/encuentros/${key}`} />
+      <div style={{ display: "flex", alignItems: "baseline", gap: 8, margin: "8px 0 2px" }}>
         <h1 className="titulo" style={{ fontSize: "1.3rem", margin: 0 }}>Checklist</h1>
+        <Link href={`/encuentros/${key}/aportes`} className="muted" style={{ fontSize: "0.82rem", textDecoration: "none", marginLeft: "auto" }}>Aportes ›</Link>
       </div>
       <p className="muted" style={{ margin: "0 0 16px", fontSize: "0.82rem" }}>
         {encuentro} · {campus} · {fechaCL(fecha)}{estado?.responsable ? ` · Responsable: ${estado.responsable}` : ""}

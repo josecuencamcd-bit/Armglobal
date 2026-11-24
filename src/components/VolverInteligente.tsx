@@ -28,8 +28,8 @@ export function VolverInteligente({ href, label = "‹ Volver" }: { href: string
       }}
       style={{
         display: "inline-flex", alignItems: "center", gap: 4, flexShrink: 0,
-        fontSize: "0.8rem", fontWeight: 600, color: "var(--ink)",
-        background: "var(--surface-2)", border: "1px solid var(--line)",
+        fontSize: "0.8rem", fontWeight: 700, color: "var(--gold)",
+        background: "var(--accent-soft)", border: "1px solid var(--gold)",
         borderRadius: 999, padding: "6px 12px", cursor: "pointer",
       }}
     >
