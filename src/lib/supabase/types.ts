@@ -1022,6 +1022,142 @@ export type Database = {
           },
         ]
       }
+      merch_producto_movimientos: {
+        Row: {
+          campus: Database["public"]["Enums"]["campus_t"]
+          cantidad: number
+          creado_en: string
+          fecha: string
+          id: number
+          monto: number | null
+          nota: string | null
+          por: string | null
+          precio_unitario: number | null
+          producto_id: number
+          tipo_mov: string
+        }
+        Insert: {
+          campus: Database["public"]["Enums"]["campus_t"]
+          cantidad: number
+          creado_en?: string
+          fecha?: string
+          id?: never
+          monto?: number | null
+          nota?: string | null
+          por?: string | null
+          precio_unitario?: number | null
+          producto_id: number
+          tipo_mov: string
+        }
+        Update: {
+          campus?: Database["public"]["Enums"]["campus_t"]
+          cantidad?: number
+          creado_en?: string
+          fecha?: string
+          id?: never
+          monto?: number | null
+          nota?: string | null
+          por?: string | null
+          precio_unitario?: number | null
+          producto_id?: number
+          tipo_mov?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "merch_producto_movimientos_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "merch_productos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      merch_producto_solicitudes: {
+        Row: {
+          campus: Database["public"]["Enums"]["campus_t"]
+          cantidad: number
+          correo_solicitante: string | null
+          creado_en: string
+          estado: string
+          id: number
+          nota: string | null
+          producto_id: number
+          resuelto_en: string | null
+          resuelto_por: string | null
+          solicitante: string
+        }
+        Insert: {
+          campus: Database["public"]["Enums"]["campus_t"]
+          cantidad?: number
+          correo_solicitante?: string | null
+          creado_en?: string
+          estado?: string
+          id?: never
+          nota?: string | null
+          producto_id: number
+          resuelto_en?: string | null
+          resuelto_por?: string | null
+          solicitante: string
+        }
+        Update: {
+          campus?: Database["public"]["Enums"]["campus_t"]
+          cantidad?: number
+          correo_solicitante?: string | null
+          creado_en?: string
+          estado?: string
+          id?: never
+          nota?: string | null
+          producto_id?: number
+          resuelto_en?: string | null
+          resuelto_por?: string | null
+          solicitante?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "merch_producto_solicitudes_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "merch_productos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      merch_productos: {
+        Row: {
+          activo: boolean
+          actualizado_en: string
+          campus: Database["public"]["Enums"]["campus_t"]
+          creado_en: string
+          foto_url: string | null
+          id: number
+          nombre: string
+          precio: number
+          stock: number
+        }
+        Insert: {
+          activo?: boolean
+          actualizado_en?: string
+          campus: Database["public"]["Enums"]["campus_t"]
+          creado_en?: string
+          foto_url?: string | null
+          id?: never
+          nombre: string
+          precio: number
+          stock?: number
+        }
+        Update: {
+          activo?: boolean
+          actualizado_en?: string
+          campus?: Database["public"]["Enums"]["campus_t"]
+          creado_en?: string
+          foto_url?: string | null
+          id?: never
+          nombre?: string
+          precio?: number
+          stock?: number
+        }
+        Relationships: []
+      }
       merch_solicitudes: {
         Row: {
           area: Database["public"]["Enums"]["area_t"]
@@ -1639,6 +1775,34 @@ export type Database = {
           p_mes: string
         }
         Returns: boolean
+      }
+      merch_producto_registrar_movimiento: {
+        Args: {
+          p_cantidad: number
+          p_nota: string
+          p_por: string
+          p_producto_id: number
+          p_tipo_mov: string
+        }
+        Returns: {
+          campus: Database["public"]["Enums"]["campus_t"]
+          cantidad: number
+          creado_en: string
+          fecha: string
+          id: number
+          monto: number | null
+          nota: string | null
+          por: string | null
+          precio_unitario: number | null
+          producto_id: number
+          tipo_mov: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "merch_producto_movimientos"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       merch_registrar_movimiento: {
         Args: {

@@ -22,6 +22,7 @@ export const ICONOS: Record<string, string> = {
   volver: '<path d="M19 12H5"/><path d="M11 6l-6 6 6 6"/>',
   notificaciones: '<path d="M6 10a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6H4c.5-.5 2-2 2-6z"/><path d="M10 19a2 2 0 0 0 4 0"/>',
   menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
+  tienda: '<path d="M4 9l1.2-4.4A1 1 0 0 1 6.2 4h11.6a1 1 0 0 1 1 .6L20 9"/><path d="M4 9v9a1.5 1.5 0 0 0 1.5 1.5h13A1.5 1.5 0 0 0 20 18V9"/><path d="M4 9h16"/><path d="M9 13.5a3 3 0 0 0 6 0"/>',
 };
 
 export function Icono({ id, size = 22 }: { id: string; size?: number }) {

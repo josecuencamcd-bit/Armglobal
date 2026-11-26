@@ -8,6 +8,7 @@ import { VolverAdministracion } from "@/lib/volver-admin";
 import { AREAS_DISPONIBILIDAD, ENCUENTRO_DE_SERVICIO } from "@/lib/disponibilidad";
 import { FONDO_AREAS, esFin, esLider, fondosMios } from "@/lib/visibilidad-modulos";
 import MerchInventario from "./merch-inventario";
+import MerchCatalogo from "./merch-catalogo";
 import VistaMiembro from "./vista-miembro";
 
 type Integrante = {
@@ -1046,6 +1047,7 @@ export default function EquiposPage() {
 
       {area === "Merch" && (
         <div id="merch-inventario">
+          <MerchCatalogo campus={campus} />
           <MerchInventario campus={campus} />
         </div>
       )}

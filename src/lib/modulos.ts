@@ -39,6 +39,11 @@ export const MODULOS: Modulo[] = [
   // informe de Finanzas — entra por su propio selector de encuentro/fecha
   // y va directo a /encuentros/[key]/aportes (no pasa por el Reporte).
   { key: "aportes", label: "Aportes", href: "/encuentros/aportes", icon: "aportes", listo: true },
+  // Vitrina del catálogo de Merch: sin clave vieja equivalente en
+  // CLAVE_A_MODULO_APP → queda visible para cualquier persona (así lo
+  // pidió José: "cualquier voluntario" entra a ver el stock y comprar),
+  // no solo para quien tiene área "Merch".
+  { key: "merch-catalogo", label: "Catálogo Merch", href: "/merch", icon: "tienda", listo: true },
   // Única puerta para Ministro/Administrador a Mi equipo/Asistencia/Fondo
   // de equipo/Conexión/Bajas/Estadísticas/Reporte/Aportes (esFin() los
   // saca del menú normal) — y para Pastor/Pastor de campus, a Administración
