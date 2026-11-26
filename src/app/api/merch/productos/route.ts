@@ -26,6 +26,7 @@ export async function GET(req: Request) {
 const ProductoSchema = z.object({
   campus: z.enum(CAMPUS, { error: () => "Campus no válido." }),
   nombre: z.string().trim().min(1, "Falta el nombre.").max(80),
+  descripcion: z.string().trim().max(200).optional(),
   precio: z.number().int().min(0).max(100_000_000),
   stock: z.number().int().min(0).max(1_000_000).default(0),
   // Igual formato/tope que integrantes.foto_url y perfiles.foto_url.

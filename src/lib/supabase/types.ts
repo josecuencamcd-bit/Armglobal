@@ -978,6 +978,24 @@ export type Database = {
         }
         Relationships: []
       }
+      merch_config: {
+        Row: {
+          actualizado_en: string
+          campus: Database["public"]["Enums"]["campus_t"]
+          datos_transferencia: string | null
+        }
+        Insert: {
+          actualizado_en?: string
+          campus: Database["public"]["Enums"]["campus_t"]
+          datos_transferencia?: string | null
+        }
+        Update: {
+          actualizado_en?: string
+          campus?: Database["public"]["Enums"]["campus_t"]
+          datos_transferencia?: string | null
+        }
+        Relationships: []
+      }
       merch_movimientos: {
         Row: {
           articulo_id: number
@@ -1076,10 +1094,12 @@ export type Database = {
         Row: {
           campus: Database["public"]["Enums"]["campus_t"]
           cantidad: number
+          comprobante_url: string | null
           correo_solicitante: string | null
           creado_en: string
           estado: string
           id: number
+          metodo_pago: string | null
           nota: string | null
           producto_id: number
           resuelto_en: string | null
@@ -1089,10 +1109,12 @@ export type Database = {
         Insert: {
           campus: Database["public"]["Enums"]["campus_t"]
           cantidad?: number
+          comprobante_url?: string | null
           correo_solicitante?: string | null
           creado_en?: string
           estado?: string
           id?: never
+          metodo_pago?: string | null
           nota?: string | null
           producto_id: number
           resuelto_en?: string | null
@@ -1102,10 +1124,12 @@ export type Database = {
         Update: {
           campus?: Database["public"]["Enums"]["campus_t"]
           cantidad?: number
+          comprobante_url?: string | null
           correo_solicitante?: string | null
           creado_en?: string
           estado?: string
           id?: never
+          metodo_pago?: string | null
           nota?: string | null
           producto_id?: number
           resuelto_en?: string | null
@@ -1128,6 +1152,7 @@ export type Database = {
           actualizado_en: string
           campus: Database["public"]["Enums"]["campus_t"]
           creado_en: string
+          descripcion: string | null
           foto_url: string | null
           id: number
           nombre: string
@@ -1139,6 +1164,7 @@ export type Database = {
           actualizado_en?: string
           campus: Database["public"]["Enums"]["campus_t"]
           creado_en?: string
+          descripcion?: string | null
           foto_url?: string | null
           id?: never
           nombre: string
@@ -1150,6 +1176,7 @@ export type Database = {
           actualizado_en?: string
           campus?: Database["public"]["Enums"]["campus_t"]
           creado_en?: string
+          descripcion?: string | null
           foto_url?: string | null
           id?: never
           nombre?: string

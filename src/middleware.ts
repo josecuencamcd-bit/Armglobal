@@ -50,6 +50,11 @@ export async function middleware(request: NextRequest) {
   const esPublica =
     request.nextUrl.pathname === "/" ||
     request.nextUrl.pathname.startsWith("/login") ||
+    // Vitrina de Merch: link que se comparte con gente sin cuenta en la
+    // app (ver /vitrina/page.tsx y /api/vitrina/*) — a propósito no pasa
+    // por el chequeo de sesión de abajo.
+    request.nextUrl.pathname.startsWith("/vitrina") ||
+    request.nextUrl.pathname.startsWith("/api/vitrina") ||
     request.nextUrl.pathname.startsWith("/api/solicitudes-acceso") ||
     request.nextUrl.pathname.startsWith("/api/auth") ||
     request.nextUrl.pathname.startsWith("/api/whatsapp") ||

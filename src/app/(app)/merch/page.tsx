@@ -7,6 +7,7 @@ import { useCampus } from "@/lib/campus-context";
 type Producto = {
   id: number;
   nombre: string;
+  descripcion: string | null;
   precio: number;
   foto_url: string | null;
   stock: number;
@@ -25,6 +26,22 @@ function clp(n: number): string {
   return n.toLocaleString("es-CL", { style: "currency", currency: "CLP", maximumFractionDigits: 0 });
 }
 
+/** Mismo achique que el de la vitrina pública — el comprobante sube como
+ * jpeg liviano, no el base64 que ya usan las fotos de producto/perfil. */
+async function comprobanteADataUrl(file: File): Promise<string> {
+  const bitmap = await createImageBitmap(file);
+  const maxLado = 1000;
+  const escala = Math.min(1, maxLado / Math.max(bitmap.width, bitmap.height));
+  const w = bitmap.width * escala;
+  const h = bitmap.height * escala;
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d")!;
+  ctx.drawImage(bitmap, 0, 0, w, h);
+  return canvas.toDataURL("image/jpeg", 0.75);
+}
+
 /**
  * Vitrina del catálogo de Merch: cualquier persona del campus ve los
  * productos con foto/precio/stock y pide comprar — RLS deja ver el
@@ -40,19 +57,24 @@ export default function MerchCatalogoPage() {
   const [error, setError] = useState<string | null>(null);
   const [seleccionado, setSeleccionado] = useState<Producto | null>(null);
   const [cantidad, setCantidad] = useState(1);
+  const [metodoPago, setMetodoPago] = useState<"Transferencia" | "Presencial">("Transferencia");
+  const [datosTransferencia, setDatosTransferencia] = useState<string | null>(null);
+  const [comprobante, setComprobante] = useState<string | undefined>(undefined);
   const [nota, setNota] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [puedeGestionar, setPuedeGestionar] = useState(false);
 
   const cargar = useCallback(async () => {
-    const [rProd, rMias, rPerfil] = await Promise.all([
+    const [rProd, rMias, rPerfil, rConfig] = await Promise.all([
       fetch(`/api/merch/productos?campus=${encodeURIComponent(campusActivo)}&activos=1`),
       fetch(`/api/merch/producto-solicitudes?campus=${encodeURIComponent(campusActivo)}&propias=1`),
       fetch("/api/perfil"),
+      fetch(`/api/merch/config?campus=${encodeURIComponent(campusActivo)}`),
     ]);
-    const [jProd, jMias, jPerfil] = await Promise.all([rProd.json(), rMias.json(), rPerfil.json()]);
+    const [jProd, jMias, jPerfil, jConfig] = await Promise.all([rProd.json(), rMias.json(), rPerfil.json(), rConfig.json()]);
     if (jProd.ok) setProductos(jProd.data);
     if (jMias.ok) setMisSolicitudes(jMias.data);
+    if (jConfig.ok) setDatosTransferencia(jConfig.data.datos_transferencia ?? null);
     if (jPerfil.ok) {
       const p = jPerfil.data as { roles: string[]; areas: string[]; sirve: string[] };
       const esFin = p.roles.some((r) => ["Pastor principal", "Pastor de campus", "Pastor", "Ministro", "Administrador"].includes(r));
@@ -67,6 +89,8 @@ export default function MerchCatalogoPage() {
   function abrirSolicitud(p: Producto) {
     setSeleccionado(p);
     setCantidad(1);
+    setMetodoPago("Transferencia");
+    setComprobante(undefined);
     setNota("");
     setError(null);
   }
@@ -82,6 +106,8 @@ export default function MerchCatalogoPage() {
         campus: campusActivo,
         producto_id: seleccionado.id,
         cantidad,
+        metodo_pago: metodoPago,
+        comprobante,
         nota: nota || undefined,
       }),
     });
@@ -139,6 +165,7 @@ export default function MerchCatalogoPage() {
                 )}
               </div>
               <b style={{ fontSize: "0.88rem", lineHeight: 1.2 }}>{p.nombre}</b>
+              {p.descripcion && <span className="muted" style={{ fontSize: "0.76rem", lineHeight: 1.25 }}>{p.descripcion}</span>}
               <span style={{ fontSize: "0.88rem", fontWeight: 700, color: "var(--gold)" }}>{clp(p.precio)}</span>
               {agotado ? (
                 <span className="chip" style={{ fontSize: "0.7rem", padding: "2px 8px", minHeight: "auto", alignSelf: "flex-start" }}>Agotado</span>
@@ -197,6 +224,29 @@ export default function MerchCatalogoPage() {
                 onChange={(e) => setCantidad(Math.max(1, Math.min(seleccionado.stock, Number(e.target.value) || 1)))}
               />
             </div>
+            <div className="campo">
+              <label>Método de pago</label>
+              <select value={metodoPago} onChange={(e) => setMetodoPago(e.target.value as "Transferencia" | "Presencial")}>
+                <option value="Transferencia">Transferencia</option>
+                <option value="Presencial">Presencial (pago al retirar)</option>
+              </select>
+            </div>
+            {metodoPago === "Transferencia" && (
+              <div className="tarjeta" style={{ padding: 10, fontSize: "0.82rem" }}>
+                {datosTransferencia ? (
+                  <>
+                    <p className="muted" style={{ margin: "0 0 6px" }}>Datos para transferir:</p>
+                    <p style={{ margin: 0, whiteSpace: "pre-wrap" }}>{datosTransferencia}</p>
+                  </>
+                ) : (
+                  <p className="muted" style={{ margin: 0 }}>Te van a compartir los datos de la cuenta al confirmar tu solicitud.</p>
+                )}
+                <label className="boton-secundario" style={{ display: "inline-block", width: "auto", fontSize: "0.78rem", marginTop: 8, cursor: "pointer" }}>
+                  {comprobante ? "Comprobante adjunto ✓" : "Adjuntar comprobante (opcional)"}
+                  <input type="file" accept="image/*" style={{ display: "none" }} onChange={async (e) => { const f = e.target.files?.[0]; if (f) setComprobante(await comprobanteADataUrl(f)); e.target.value = ""; }} />
+                </label>
+              </div>
+            )}
             <div className="campo">
               <label>Nota (opcional)</label>
               <input value={nota} onChange={(e) => setNota(e.target.value)} placeholder="Ej: paso a buscarlo el domingo" />

@@ -4,6 +4,7 @@ import { z } from "zod";
 
 const EdicionSchema = z.object({
   nombre: z.string().trim().min(1, "Falta el nombre.").max(80).optional(),
+  descripcion: z.string().trim().max(200).nullable().optional(),
   precio: z.number().int().min(0).max(100_000_000).optional(),
   activo: z.boolean().optional(),
   foto_url: z.string().regex(/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/).max(45_000).nullable().optional(),

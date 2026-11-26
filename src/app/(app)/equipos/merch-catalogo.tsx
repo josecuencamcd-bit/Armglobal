@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 type Producto = {
   id: number;
   nombre: string;
+  descripcion: string | null;
   precio: number;
   foto_url: string | null;
   stock: number;
@@ -18,6 +19,8 @@ type SolicitudProducto = {
   cantidad: number;
   estado: string;
   nota: string | null;
+  metodo_pago: string | null;
+  comprobante_url: string | null;
   creado_en: string;
 };
 type Informe = {
@@ -84,14 +87,20 @@ export default function MerchCatalogo({ campus }: { campus: string }) {
   const [informe, setInforme] = useState<Informe | null>(null);
   const [cargandoInforme, setCargandoInforme] = useState(false);
 
+  const [datosTransferencia, setDatosTransferencia] = useState("");
+  const [guardandoConfig, setGuardandoConfig] = useState(false);
+  const [linkCopiado, setLinkCopiado] = useState(false);
+
   const cargar = useCallback(async () => {
-    const [rProd, rSol] = await Promise.all([
+    const [rProd, rSol, rConfig] = await Promise.all([
       fetch(`/api/merch/productos?campus=${encodeURIComponent(campus)}`),
       fetch(`/api/merch/producto-solicitudes?campus=${encodeURIComponent(campus)}&estado=Pendiente`),
+      fetch(`/api/merch/config?campus=${encodeURIComponent(campus)}`),
     ]);
-    const [jProd, jSol] = await Promise.all([rProd.json(), rSol.json()]);
+    const [jProd, jSol, jConfig] = await Promise.all([rProd.json(), rSol.json(), rConfig.json()]);
     if (jProd.ok) setProductos(jProd.data);
     if (jSol.ok) setSolicitudes(jSol.data);
+    if (jConfig.ok) setDatosTransferencia(jConfig.data.datos_transferencia ?? "");
   }, [campus]);
 
   useEffect(() => {
@@ -118,6 +127,7 @@ export default function MerchCatalogo({ campus }: { campus: string }) {
       body: JSON.stringify({
         campus,
         nombre: fd.get("nombre"),
+        descripcion: (fd.get("descripcion") as string)?.trim() || undefined,
         precio: Number(fd.get("precio") || 0),
         stock: Number(fd.get("stock") || 0),
         foto_url: fotoNueva,
@@ -195,10 +205,62 @@ export default function MerchCatalogo({ campus }: { campus: string }) {
     if (informe) await generarInforme();
   }
 
+  async function guardarConfig() {
+    setGuardandoConfig(true);
+    setError(null);
+    const res = await fetch("/api/merch/config", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ campus, datos_transferencia: datosTransferencia.trim() || null }),
+    });
+    const json = await res.json();
+    setGuardandoConfig(false);
+    if (!json.ok) { setError(json.error); return; }
+  }
+
+  async function copiarLink() {
+    const url = `${window.location.origin}/vitrina?campus=${encodeURIComponent(campus)}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setLinkCopiado(true);
+      setTimeout(() => setLinkCopiado(false), 2500);
+    } catch {
+      window.prompt("Copia el link:", url);
+    }
+  }
+
+  async function verComprobante(id: number) {
+    const res = await fetch(`/api/merch/producto-solicitudes/${id}/foto`);
+    const json = await res.json();
+    if (!json.ok) { setError(json.error); return; }
+    window.open(json.data.url, "_blank");
+  }
+
   return (
     <div className="tarjeta stack" style={{ marginBottom: 16 }}>
       <span className="label">Catálogo (vitrina)</span>
       {error && <p className="aviso">{error}</p>}
+
+      <div className="tarjeta" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <p className="muted" style={{ margin: 0, fontSize: "0.8rem" }}>Compartir vitrina</p>
+        <p style={{ margin: 0, fontSize: "0.82rem" }}>
+          Cualquiera con este link ve el catálogo y pide comprar, sin necesitar cuenta en la app.
+        </p>
+        <button type="button" className="boton-secundario" style={{ width: "auto", padding: "8px 14px" }} onClick={copiarLink}>
+          {linkCopiado ? "¡Copiado!" : "Copiar link para compartir"}
+        </button>
+        <div className="campo">
+          <label>Datos de transferencia (se muestran cuando eligen pagar así)</label>
+          <textarea
+            value={datosTransferencia} onChange={(e) => setDatosTransferencia(e.target.value)}
+            placeholder="Ej: Banco Estado, Cuenta Vista 123456789, RUT 11.111.111-1, Nombre Apellido"
+            rows={3} style={{ resize: "vertical" }}
+          />
+        </div>
+        <button type="button" className="boton-secundario" style={{ width: "auto", padding: "8px 14px" }} onClick={guardarConfig} disabled={guardandoConfig}>
+          {guardandoConfig ? "Guardando…" : "Guardar datos"}
+        </button>
+      </div>
 
       {solicitudes && solicitudes.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -209,7 +271,15 @@ export default function MerchCatalogo({ campus }: { campus: string }) {
               <div key={s.id} className="eco-row">
                 <div>
                   <b>{prod?.nombre ?? "Producto"}</b> × {s.cantidad}
-                  <small>{s.solicitante}{s.nota ? ` · ${s.nota}` : ""}</small>
+                  <small>
+                    {s.solicitante}{s.correo_solicitante ? ` · ${s.correo_solicitante}` : ""}
+                    {s.metodo_pago ? ` · ${s.metodo_pago}` : ""}{s.nota ? ` · ${s.nota}` : ""}
+                  </small>
+                  {s.comprobante_url && (
+                    <button type="button" className="muted" style={{ background: "none", border: "none", padding: 0, fontSize: "0.76rem", textDecoration: "underline", cursor: "pointer" }} onClick={() => verComprobante(s.id)}>
+                      Ver comprobante
+                    </button>
+                  )}
                 </div>
                 <span style={{ display: "flex", gap: 6 }}>
                   <button
@@ -256,6 +326,10 @@ export default function MerchCatalogo({ campus }: { campus: string }) {
         <div className="campo">
           <label>Nombre</label>
           <input name="nombre" placeholder="Ej: Libro Un Nuevo Tú" required maxLength={80} />
+        </div>
+        <div className="campo">
+          <label>Descripción (opcional)</label>
+          <input name="descripcion" placeholder="Ej: Tapa blanda, 180 páginas" maxLength={200} />
         </div>
         <div style={{ display: "flex", gap: 10 }}>
           <div className="campo" style={{ flex: 1 }}>
