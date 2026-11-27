@@ -122,13 +122,21 @@ export default function MerchCatalogoPage() {
     <div className="contenedor" style={{ paddingTop: 24 }}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 10 }}>
         <h1 className="titulo" style={{ fontSize: "1.3rem", margin: 0 }}>Catálogo Merch</h1>
-        {puedeGestionar && (
-          <Link href="/equipos?area=Merch" className="muted" style={{ fontSize: "0.82rem", textDecoration: "none", marginLeft: "auto" }}>
-            Gestionar ›
-          </Link>
-        )}
       </div>
-      <p className="muted" style={{ marginTop: 0, fontSize: "0.85rem" }}>{campusActivo}</p>
+      <p className="muted" style={{ marginTop: 0, marginBottom: puedeGestionar ? 10 : 20, fontSize: "0.85rem" }}>{campusActivo}</p>
+
+      {puedeGestionar && (
+        <Link
+          href="/equipos?area=Merch"
+          className="boton"
+          style={{
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+            textDecoration: "none", marginBottom: 20,
+          }}
+        >
+          Cargar productos, fotos y stock ›
+        </Link>
+      )}
 
       {error && <p className="aviso">{error}</p>}
 
