@@ -141,18 +141,28 @@ function Shell({ children, impersonando }: { children: React.ReactNode; imperson
   // "administracion" nunca va a la barra suelta (en la app vieja tampoco:
   // no está en PRIORIDAD_NAV) — se excluye acá de forma directa, sin pasar
   // por el vaivén de ida y vuelta entre las dos tablas de claves, para que
-  // nunca dependa de ese cálculo. "soporte" y "bajas" (solicitudes) también
-  // se excluyen a pedido: quedan detrás de "Más" en vez de sueltas.
-  const NUNCA_SUELTOS = new Set(["administracion", "soporte", "bajas"]);
+  // nunca dependa de ese cálculo. "soporte", "bajas" (solicitudes) y, a
+  // pedido de José, "asistencia" también se excluyen: quedan detrás de
+  // "Más" en vez de sueltas (Asistencia le da el lugar suelto a Merch).
+  const NUNCA_SUELTOS = new Set(["administracion", "soporte", "bajas", "asistencia"]);
   const clavesPrincipales = perfil
     ? clavesPrincipalesNav({ roles: perfil.roles, areas: perfil.areas, sirve: perfil.sirve, modulos_on: perfil.modulos_on, modulos_off: perfil.modulos_off })
         .map((cv) => MODULO_APP_A_CLAVE[cv])
         .filter((k): k is string => !!k && !NUNCA_SUELTOS.has(k))
     : [];
-  const principales = [
+  const principalesBase = [
     modulosDeEstaPersona.find((m) => m.key === "inicio"),
     ...clavesPrincipales.map((k) => modulosDeEstaPersona.find((m) => m.key === k)).filter((m): m is Modulo => !!m),
   ].filter((m): m is Modulo => !!m);
+  // "merch-catalogo" no tiene claveVieja (CLAVE_A_MODULO_APP), así que
+  // nunca pasa por PRIORIDAD_NAV/clavesPrincipalesNav — a pedido de José
+  // va siempre suelto en la barra (Inicio · Mi equipo · Merch · Más), para
+  // todos los roles, igual que el parche de "administracion" en Más más
+  // abajo: se agrega acá directo en vez de depender de ese cálculo.
+  const merchModulo = modulosDeEstaPersona.find((m) => m.key === "merch-catalogo");
+  const principales = merchModulo && !principalesBase.some((m) => m.key === "merch-catalogo")
+    ? [...principalesBase, merchModulo]
+    : principalesBase;
   const resto = modulosDeEstaPersona.filter((m) => !principales.some((p) => p.key === m.key));
   const tieneAdministracion = !!visibles?.has("administracion");
   // Red de seguridad: si por lo que sea "administracion" no llegó por el

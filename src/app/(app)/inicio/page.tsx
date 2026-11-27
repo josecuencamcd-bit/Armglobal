@@ -205,23 +205,6 @@ export default function InicioPage() {
       )}
       {!mostrarCampus && <div style={{ marginBottom: 12 }} />}
 
-      {mostrarAdministracion && (
-        <button
-          type="button"
-          onClick={() => router.push("/administracion")}
-          className="tarjeta"
-          style={{
-            display: "flex", alignItems: "center", gap: 10, width: "100%",
-            padding: "14px 16px", marginBottom: 12, cursor: "pointer", textAlign: "left",
-            background: "var(--gold-grad)", color: "#1a1203", border: "none",
-          }}
-        >
-          <Icono id="administracion" size={20} />
-          <span style={{ fontWeight: 700, flex: 1 }}>Administración</span>
-          <span>›</span>
-        </button>
-      )}
-
       {ayudaAbierta && (
         <div className="tarjeta" style={{ marginBottom: 12 }}>
           {ayudaOk ? (
@@ -323,6 +306,36 @@ export default function InicioPage() {
           <button className="boton-secundario" style={{ marginTop: 10 }} onClick={() => router.push("/estadisticas")}>Ver estadísticas del equipo</button>
         </div>
       )}
+
+      {mostrarAdministracion && (
+        <button
+          type="button"
+          onClick={() => router.push("/administracion")}
+          className="tarjeta"
+          style={{
+            display: "flex", alignItems: "center", gap: 10, width: "100%",
+            padding: "12px 16px", marginBottom: 12, cursor: "pointer", textAlign: "left",
+            background: "var(--gold-grad)", color: "#1a1203", border: "none",
+          }}
+        >
+          <Icono id="administracion" size={20} />
+          <span style={{ fontWeight: 700, flex: 1 }}>Administración</span>
+          <span>›</span>
+        </button>
+      )}
+
+      <button
+        type="button"
+        onClick={() => router.push("/merch")}
+        className="tarjeta eco-row"
+        style={{ width: "100%", cursor: "pointer", textAlign: "left", border: "none" }}
+      >
+        <div>
+          <b>🛍️ Catálogo Merch</b>
+          <small className="muted" style={{ display: "block" }}>Mira qué hay disponible y pide comprar</small>
+        </div>
+        <span className="muted">Ver →</span>
+      </button>
 
       {!!totalAvisos && (
         <div className="tarjeta" style={{ marginBottom: 12, borderColor: "var(--danger)" }}>

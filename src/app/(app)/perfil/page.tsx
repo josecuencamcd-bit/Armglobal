@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
 type MiPerfil = { nombre: string; correo: string; telefono: string | null; nacimiento: string | null; foto_url: string | null };
@@ -222,14 +221,6 @@ export default function MiPerfilPage() {
               <button type="button" aria-pressed={tema === "claro"} onClick={() => cambiarTema("claro")}>Claro</button>
             </div>
           </div>
-
-          <Link href="/merch" className="tarjeta eco-row" style={{ textDecoration: "none", color: "inherit" }}>
-            <div>
-              <b>Catálogo Merch</b>
-              <small>Mira qué hay disponible y pide comprar.</small>
-            </div>
-            <span className="muted">Ver →</span>
-          </Link>
 
           <div className="tarjeta">
             <p style={{ fontWeight: 600, margin: "0 0 4px" }}>Correo con el que entro</p>
