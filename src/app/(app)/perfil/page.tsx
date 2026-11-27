@@ -120,39 +120,65 @@ export default function MiPerfilPage() {
         <>
           <div className="tarjeta">
             <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
-              <div
+              <label
                 style={{
                   width: 64, height: 64, borderRadius: "50%", flex: "0 0 auto", overflow: "hidden",
                   background: perfil.foto_url ? undefined : "var(--gold-grad)",
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  color: "var(--accent-ink)", fontWeight: 700, fontSize: "1.3rem",
+                  color: "var(--accent-ink)", cursor: subiendoFoto ? "default" : "pointer",
+                  position: "relative",
                 }}
               >
                 {perfil.foto_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={perfil.foto_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 ) : (
-                  perfil.nombre.split(" ").slice(0, 2).map((p) => p[0]).join("").toUpperCase()
+                  <span style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M4 7h3l2-2h6l2 2h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1Z" />
+                      <circle cx="12" cy="13" r="3.5" />
+                    </svg>
+                    <span style={{ fontSize: "0.58rem", fontWeight: 700 }}>Subir</span>
+                  </span>
                 )}
-              </div>
+                {subiendoFoto && (
+                  <span
+                    style={{
+                      position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center",
+                      background: "rgba(0,0,0,0.45)", color: "#fff", fontSize: "0.6rem", fontWeight: 700,
+                    }}
+                  >
+                    …
+                  </span>
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => cambiarFoto(e.target.files?.[0])}
+                  disabled={subiendoFoto}
+                  style={{ display: "none" }}
+                />
+              </label>
               <div>
                 <p style={{ fontWeight: 700, margin: 0 }}>{perfil.nombre}</p>
                 <p className="muted" style={{ margin: "2px 0 8px", fontSize: "0.85rem" }}>{perfil.correo}</p>
-                <label
-                  style={{
-                    display: "inline-block", fontSize: "0.78rem", color: "var(--accent)", cursor: "pointer",
-                    border: "1px solid var(--line)", borderRadius: 999, padding: "4px 10px",
-                  }}
-                >
-                  {subiendoFoto ? "Subiendo…" : "Cambiar foto"}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => cambiarFoto(e.target.files?.[0])}
-                    disabled={subiendoFoto}
-                    style={{ display: "none" }}
-                  />
-                </label>
+                {perfil.foto_url && (
+                  <label
+                    style={{
+                      display: "inline-block", fontSize: "0.78rem", color: "var(--accent)", cursor: "pointer",
+                      border: "1px solid var(--line)", borderRadius: 999, padding: "4px 10px",
+                    }}
+                  >
+                    {subiendoFoto ? "Subiendo…" : "Cambiar foto"}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => cambiarFoto(e.target.files?.[0])}
+                      disabled={subiendoFoto}
+                      style={{ display: "none" }}
+                    />
+                  </label>
+                )}
               </div>
             </div>
 
