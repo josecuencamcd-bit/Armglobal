@@ -5,7 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { ok, fail, fromSupabaseError, parseBody } from "@/lib/api-helpers";
 import { CAMPUS, AREAS, TALLAS } from "@/lib/sesiones";
 import { identidadActuante } from "@/lib/identidad";
-import { esFin } from "@/lib/visibilidad-modulos";
+import { esFin, esPastorC } from "@/lib/visibilidad-modulos";
 import { enviarBienvenidaIntegrante } from "@/lib/email";
 import { z } from "zod";
 
@@ -51,8 +51,13 @@ export async function GET(req: Request) {
 
   const identidad = await identidadActuante(supabase);
   if (!identidad) return fail("No autenticado.", 401);
-  const autorizado =
-    esFin(identidad.perfil) || identidad.perfil.areas.includes(area) || identidad.perfil.sirve.includes(area);
+  // "Su equipo": lo lidera, sirve en él, o es Pastor de campus/Pastor (ve
+  // todo) → datos completos. Un Ministro/Administrador que NO es parte de
+  // esta área puede ver el equipo (roster), pero no le corresponde ver las
+  // estadísticas de servicio de gente que no es su responsabilidad — eso es
+  // del líder de esa área. Se recorta más abajo, no se niega el acceso.
+  const esSuEquipo = esPastorC(identidad.perfil) || identidad.perfil.areas.includes(area) || identidad.perfil.sirve.includes(area);
+  const autorizado = esSuEquipo || esFin(identidad.perfil);
   if (!autorizado) return fail("No tienes permiso para ver este equipo.", 403);
 
   // La lista de "Mi equipo" debe traer tanto a quienes tienen esta área
@@ -104,6 +109,18 @@ export async function GET(req: Request) {
     }
   }
   const final = combinados.map((i) => ({ ...i, equipos_extra: porId.get(i.id) ?? [] }));
+
+  // Equipo ajeno (ve por ser Ministro/Administrador, no por liderarlo ni
+  // servir ahí): solo nombre, foto y rol de servicio — ni estadísticas
+  // (años de iglesia/servicio) ni datos de contacto (teléfono, correo,
+  // nacimiento, profesión, tallas).
+  if (!esSuEquipo) {
+    const recortado = final.map((i) => ({
+      id: i.id, nombre: i.nombre, area: i.area, campus: i.campus, estado: i.estado,
+      rol_servicio: i.rol_servicio, foto_url: i.foto_url, equipos_extra: i.equipos_extra, es_extra: i.es_extra,
+    }));
+    return ok(recortado);
+  }
 
   return ok(final);
 }
