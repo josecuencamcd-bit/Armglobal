@@ -58,6 +58,7 @@ export default function InicioPage() {
   const [resumenLider, setResumenLider] = useState<ResumenLider | null>(null);
   const [equipo, setEquipo] = useState<EquipoStats | null>(null);
   const [cumplesHoy, setCumplesHoy] = useState<Cumple[]>([]);
+  const [cumpleModalAbierto, setCumpleModalAbierto] = useState(false);
   const [ayudaAbierta, setAyudaAbierta] = useState(false);
   const [ayudaTipo, setAyudaTipo] = useState(TIPOS_AYUDA[0]);
   const [ayudaMensaje, setAyudaMensaje] = useState("");
@@ -144,7 +145,23 @@ export default function InicioPage() {
         <h1 className="titulo" style={{ fontSize: "1.5rem", margin: 0 }}>
           Hola{nombre ? `, ${nombre}` : ""}
         </h1>
-        <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+          {cumplesHoy.length > 0 && (
+            <button
+              type="button"
+              className="cumple-corner"
+              title={cumplesHoy.length === 1 ? `Hoy cumple ${cumplesHoy[0].nombre}` : `${cumplesHoy.length} cumpleaños hoy`}
+              onClick={() => setCumpleModalAbierto(true)}
+            >
+              {cumplesHoy.length === 1 && cumplesHoy[0].foto_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={cumplesHoy[0].foto_url} alt="" />
+              ) : (
+                "🎂"
+              )}
+              {cumplesHoy.length > 1 && <span className="conteo">{cumplesHoy.length}</span>}
+            </button>
+          )}
           {mostrarSoporte && (
             <button onClick={() => router.push("/soporte")} className="soporte-btn">
               ⚙ Soporte
@@ -156,6 +173,33 @@ export default function InicioPage() {
           </button>
         </div>
       </div>
+
+      {cumpleModalAbierto && (
+        <div className="nav-sheet" onClick={() => setCumpleModalAbierto(false)}>
+          <div className="nav-sheet-card" onClick={(e) => e.stopPropagation()}>
+            <div className="nav-sheet-head">
+              <b>🎂 Cumpleaños de hoy</b>
+              <button onClick={() => setCumpleModalAbierto(false)}>✕</button>
+            </div>
+            {cumplesHoy.map((c, idx) => (
+              <div key={c.nombre + idx} className="cumple-modal-item">
+                {c.foto_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={c.foto_url} alt="" />
+                ) : (
+                  <span className="emoji">🎂</span>
+                )}
+                <div>
+                  <b>¡Feliz cumpleaños, {c.nombre.split(" ")[0]}!</b>
+                  <p className="muted" style={{ margin: "2px 0 0", fontSize: "0.82rem" }}>
+                    Sirve en {c.area}{c.anos_iglesia != null ? ` · ${c.anos_iglesia} años en la iglesia` : ""}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       {mostrarCampus && (
         <p className="muted" style={{ margin: "0 0 16px", fontSize: "0.8rem" }}>Campus {campusActivo}</p>
       )}
@@ -168,7 +212,7 @@ export default function InicioPage() {
           className="tarjeta"
           style={{
             display: "flex", alignItems: "center", gap: 10, width: "100%",
-            padding: "14px 16px", marginBottom: 16, cursor: "pointer", textAlign: "left",
+            padding: "14px 16px", marginBottom: 12, cursor: "pointer", textAlign: "left",
             background: "var(--gold-grad)", color: "#1a1203", border: "none",
           }}
         >
@@ -179,7 +223,7 @@ export default function InicioPage() {
       )}
 
       {ayudaAbierta && (
-        <div className="tarjeta" style={{ marginBottom: 16 }}>
+        <div className="tarjeta" style={{ marginBottom: 12 }}>
           {ayudaOk ? (
             <p className="ok" style={{ margin: 0 }}>Mensaje enviado. Gracias por avisar.</p>
           ) : (
@@ -208,7 +252,7 @@ export default function InicioPage() {
       )}
 
       {resumen && (
-        <div className="tarjeta hero-card" style={{ marginBottom: 16 }}>
+        <div className="tarjeta hero-card" style={{ marginBottom: 12 }}>
           <div className="hero-tit">
             <span className="hero-ic"><Icono id="panorama" size={18} /></span>
             <div>
@@ -226,29 +270,8 @@ export default function InicioPage() {
         </div>
       )}
 
-      {cumplesHoy.length > 0 && (
-        <div className="tarjeta hero-card" style={{ marginBottom: 16 }}>
-          {cumplesHoy.map((c, idx) => (
-            <div key={c.nombre + idx} style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: idx < cumplesHoy.length - 1 ? 14 : 0 }}>
-              {c.foto_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={c.foto_url} alt="" style={{ width: 56, height: 56, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
-              ) : (
-                <span style={{ fontSize: "2.2rem", lineHeight: 1 }}>🎂</span>
-              )}
-              <div>
-                <b style={{ fontSize: "1.05rem" }}>¡Feliz cumpleaños, {c.nombre.split(" ")[0]}!</b>
-                <p className="muted" style={{ margin: "2px 0 0", fontSize: "0.82rem" }}>
-                  Sirve en {c.area}{c.anos_iglesia != null ? ` · ${c.anos_iglesia} años en la iglesia` : ""}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
       {resumenLider && (
-        <div className="tarjeta hero-card" style={{ marginBottom: 16 }}>
+        <div className="tarjeta hero-card" style={{ marginBottom: 12 }}>
           <div className="hero-tit">
             <span className="hero-ic"><Icono id="fondo" size={18} /></span>
             <div>
@@ -274,7 +297,7 @@ export default function InicioPage() {
       )}
 
       {mostrarEquipo && equipo && (
-        <div className="tarjeta" style={{ marginBottom: 16 }}>
+        <div className="tarjeta" style={{ marginBottom: 12 }}>
           <p className="muted" style={{ margin: "0 0 10px", fontSize: "0.75rem" }}>
             TU EQUIPO · {equipo.area.toUpperCase()} · Últimos {equipo.dias} días
           </p>
@@ -302,7 +325,7 @@ export default function InicioPage() {
       )}
 
       {!!totalAvisos && (
-        <div className="tarjeta" style={{ marginBottom: 16, borderColor: "var(--danger)" }}>
+        <div className="tarjeta" style={{ marginBottom: 12, borderColor: "var(--danger)" }}>
           <p className="muted" style={{ margin: "0 0 10px", fontSize: "0.75rem" }}>PENDIENTES</p>
           {(avisos!.encuentros.length > 0 || avisos!.cierres.length > 0 || avisos!.autorizaciones > 0) && (
             <div className="eco-cards" style={{ marginBottom: 10 }}>
@@ -354,7 +377,7 @@ export default function InicioPage() {
       )}
 
       {miAdministracion && (
-        <div className="sirves" style={{ marginBottom: 16, cursor: "pointer" }} onClick={() => router.push("/administracion-semanal")}>
+        <div className="sirves" style={{ marginBottom: 12, cursor: "pointer" }} onClick={() => router.push("/administracion-semanal")}>
           <span className="ic"><Icono id="asistencia" size={20} /></span>
           <div>
             <b>Esta semana administras</b>

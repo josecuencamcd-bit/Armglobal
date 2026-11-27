@@ -144,10 +144,10 @@ textarea:focus-visible,
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
   border: 1px solid var(--hud-line);
-  border-radius: var(--r-lg);
+  border-radius: var(--r-md);
   box-shadow: var(--hud-glow);
-  padding: 16px;
-  margin-bottom: 12px;
+  padding: 14px;
+  margin-bottom: 10px;
   position: relative;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
@@ -335,27 +335,28 @@ textarea:focus-visible,
 .hero-card {
   background: radial-gradient(120% 140% at 0% 0%, var(--accent-soft), var(--surface) 55%);
   border: 1px solid var(--gold) !important;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4), 0 0 46px -10px rgba(245, 166, 35, 0.35);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4), 0 0 32px -12px rgba(245, 166, 35, 0.3);
+  padding: 14px 16px;
 }
-.hero-tit { display: flex; align-items: center; gap: 10px; margin-bottom: 2px; }
+.hero-tit { display: flex; align-items: center; gap: 9px; margin-bottom: 2px; }
 .hero-ic {
-  width: 36px; height: 36px; border-radius: var(--r-sm);
+  width: 30px; height: 30px; border-radius: var(--r-sm);
   background: var(--gold-grad); color: var(--on-solid);
   display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto;
-  box-shadow: 0 0 18px -4px rgba(245, 166, 35, 0.7);
+  box-shadow: 0 0 14px -4px rgba(245, 166, 35, 0.7);
 }
-.hero-tit b { display: block; font-size: 0.7rem; font-family: var(--font-num); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
-.hero-tit small { display: block; font-size: 0.78rem; color: var(--ink); opacity: 0.85; }
+.hero-tit b { display: block; font-size: 0.66rem; font-family: var(--font-num); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.hero-tit small { display: block; font-size: 0.76rem; color: var(--ink); opacity: 0.85; }
 .hero-num {
-  font-family: var(--font-num); font-size: 2.1rem; font-weight: 700;
-  letter-spacing: -0.01em; color: var(--gold); margin: 6px 0 2px;
-  text-shadow: 0 0 22px rgba(245, 166, 35, 0.55);
+  font-family: var(--font-num); font-size: 1.7rem; font-weight: 700;
+  letter-spacing: -0.01em; color: var(--gold); margin: 4px 0 2px;
+  text-shadow: 0 0 16px rgba(245, 166, 35, 0.45);
 }
-.hero-card .eco-sub { color: var(--muted); font-size: 0.8rem; }
+.hero-card .eco-sub { color: var(--muted); font-size: 0.78rem; }
 .hero-chip {
   display: flex; align-items: center; gap: 8px; width: fit-content;
-  padding: 5px 12px; border-radius: 20px; font-size: 0.8rem;
-  background: var(--glass-2); border: 1px solid var(--hud-line); margin: 10px 0;
+  padding: 4px 11px; border-radius: 20px; font-size: 0.78rem;
+  background: var(--glass-2); border: 1px solid var(--hud-line); margin: 8px 0;
 }
 .hero-chip.ok b { color: var(--ok); } .hero-chip.bad b { color: var(--danger); }
 .hero-chip span { color: var(--muted); margin-left: 4px; }
@@ -371,6 +372,37 @@ textarea:focus-visible,
   display: inline-flex; align-items: center; justify-content: center;
 }
 .sirves b { display: block; color: var(--gold); }
+
+/* Insignia de cumpleaños en la esquina de Inicio — reemplaza la tarjeta
+ * grande de antes: un círculo chico (foto o 🎂) junto a Soporte/Ayuda,
+ * con contador si hay más de una persona, que al tocar abre el detalle
+ * en una hoja (mismo patrón que el menú del avatar). */
+.cumple-corner {
+  position: relative;
+  flex: 0 0 auto;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  border: 2px solid var(--gold);
+  background: var(--gold-grad);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 1rem; line-height: 1; cursor: pointer;
+  box-shadow: 0 0 14px -3px rgba(245, 166, 35, 0.7);
+  overflow: hidden;
+}
+.cumple-corner img { width: 100%; height: 100%; object-fit: cover; }
+.cumple-corner .conteo {
+  position: absolute; top: -3px; right: -3px;
+  min-width: 15px; height: 15px; padding: 0 3px; border-radius: 999px;
+  background: var(--danger); color: #fff; font-size: 0.6rem; font-weight: 700;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1.5px solid var(--bg);
+}
+.cumple-modal-item { display: flex; align-items: center; gap: 12px; padding: 8px 10px; }
+.cumple-modal-item img, .cumple-modal-item .emoji {
+  width: 46px; height: 46px; border-radius: 50%; flex-shrink: 0;
+}
+.cumple-modal-item img { object-fit: cover; }
+.cumple-modal-item .emoji { display: inline-flex; align-items: center; justify-content: center; font-size: 1.6rem; background: var(--accent-soft); }
 
 .cum-hoy {
   display: flex; align-items: center; gap: 14px; padding: 16px;
@@ -479,13 +511,13 @@ textarea:focus-visible,
 /* Tarjetas de KPI (.eco-card, grilla .eco-cards) y barra de progreso
  * (.stat-bar) — porte 1:1 de la app vieja, usadas en Estadísticas
  * (eCards()) y cualquier otra pantalla con métricas en grilla. */
-.eco-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.eco-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .eco-card {
-  background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
-  padding: 12px 14px; display: flex; flex-direction: column; gap: 2px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md);
+  padding: 10px 12px; display: flex; flex-direction: column; gap: 1px;
 }
-.eco-card b { font-family: var(--font-num); font-size: 1.5rem; color: var(--gold); }
-.eco-card span { font-size: 0.78rem; color: var(--muted); }
+.eco-card b { font-family: var(--font-num); font-size: 1.3rem; color: var(--gold); }
+.eco-card span { font-size: 0.74rem; color: var(--muted); }
 .eco-card.warn b { color: var(--accent-2); }
 .eco-card.ok b { color: var(--ok); }
 .eco-card.bad b { color: var(--danger); }
