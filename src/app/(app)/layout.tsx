@@ -62,6 +62,7 @@ type Perfil = {
   sirve: Area[];
   modulos_on: string[];
   modulos_off: string[];
+  foto_url: string | null;
 };
 
 type Impersonando = { target: { nombre: string; correo: string } } | null;
@@ -80,21 +81,18 @@ function Shell({ children, impersonando }: { children: React.ReactNode; imperson
   useEffect(() => {
     let cancelado = false;
     (async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data } = await supabase
-        .from("perfiles")
-        .select("nombre, roles, campus, areas, sirve, modulos_on, modulos_off")
-        .eq("id", user.id)
-        .maybeSingle();
-      if (!cancelado && data) setPerfil(data as Perfil);
+      // /api/perfil ya resuelve "vista como X" (identidadActuante) — antes
+      // esto consultaba perfiles directo con el usuario REAL de la sesión,
+      // por lo que el avatar (foto, rol, módulos) mostraba a José y no a la
+      // persona que se está viendo durante una prueba.
+      const res = await fetch("/api/perfil");
+      const json = await res.json();
+      if (!cancelado && json.ok) setPerfil(json.data as Perfil);
     })();
     return () => {
       cancelado = true;
     };
-  }, [supabase]);
+  }, []);
 
   async function salir() {
     await supabase.auth.signOut();
@@ -227,9 +225,14 @@ function Shell({ children, impersonando }: { children: React.ReactNode; imperson
               onClick={() => setMenuPerfilAbierto(true)}
               title={`${perfil.nombre} · ${rol}`}
               className="avatar"
-              style={{ cursor: "pointer" }}
+              style={{ cursor: "pointer", padding: 0, overflow: "hidden" }}
             >
-              {iniciales(perfil.nombre)}
+              {perfil.foto_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={perfil.foto_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              ) : (
+                iniciales(perfil.nombre)
+              )}
             </button>
           )}
         </div>
