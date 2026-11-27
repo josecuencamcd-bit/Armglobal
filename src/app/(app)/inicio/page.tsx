@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCampus } from "@/lib/campus-context";
 import { esFin, puedeSoporte, type PerfilVisibilidad } from "@/lib/visibilidad-modulos";
 import { Icono } from "@/lib/iconos";
+import { peso } from "@/lib/grafico-linea";
 
 /** Reemplaza vInicio() de Code.gs. A pedido de José (27-11), Home quedó
  * reducido a lo informativo/accionable: saludo + cumpleaños del día (ícono
@@ -31,11 +32,19 @@ type Avisos = {
   autorizaciones: number;
   total: number;
 };
-type Cumple = { nombre: string; area: string; anos_iglesia: number | null; foto_url: string | null; hoy?: boolean };
+type Cumple = { nombre: string; area: string; anos_iglesia: number | null; foto_url: string | null; hoy: boolean; faltan: number | null };
+type Proximo = { encuentro: string; fecha: string; hoy: boolean } | null;
+type ProductoMerch = { id: string; nombre: string; precio: number; foto_url: string | null; fotos: string[] | null };
 
 function mesTitulo(mes: string): string {
   const [y, m] = mes.split("-").map(Number);
   return new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString("es-CL", { month: "long", year: "numeric", timeZone: "UTC" });
+}
+
+/** "jueves 4 de diciembre" — para la tarjeta de Próximo encuentro. */
+function fechaLarga(fecha: string): string {
+  const [y, m, d] = fecha.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
 }
 
 export default function InicioPage() {
@@ -45,8 +54,10 @@ export default function InicioPage() {
   const [perfil, setPerfil] = useState<PerfilVisibilidad | null>(null);
   const [miAdministracion, setMiAdministracion] = useState<MiAdministracion | null | undefined>(undefined);
   const [avisos, setAvisos] = useState<Avisos | null>(null);
+  const [proximo, setProximo] = useState<Proximo>(null);
   const [cumplesHoy, setCumplesHoy] = useState<Cumple[]>([]);
-  const [cumpleModalAbierto, setCumpleModalAbierto] = useState(false);
+  const [proximoCumple, setProximoCumple] = useState<Cumple | null>(null);
+  const [productoMerch, setProductoMerch] = useState<ProductoMerch | null>(null);
   const [ayudaAbierta, setAyudaAbierta] = useState(false);
   const [ayudaTipo, setAyudaTipo] = useState(TIPOS_AYUDA[0]);
   const [ayudaMensaje, setAyudaMensaje] = useState("");
@@ -90,10 +101,34 @@ export default function InicioPage() {
 
   useEffect(() => {
     fetch("/api/avisos").then((r) => r.json()).then((json) => { if (json.ok) setAvisos(json.data); });
-    fetch("/api/cumpleanos").then((r) => r.json()).then((json) => {
-      if (json.ok) setCumplesHoy((json.data.lista as Cumple[]).filter((p) => p.hoy));
+    fetch("/api/proximo-encuentro").then((r) => r.json()).then((json) => { if (json.ok) setProximo(json.data); });
+    // ?todo=1 trae todo el año ordenado por cercanía (lista[0] es el/la
+    // próxima persona en cumplir, sea hoy o en N días) — José: "quién es
+    // la siguiente persona" y, cuando llegue su día, que muestre a esa
+    // persona cumpliendo hoy.
+    fetch("/api/cumpleanos?todo=1").then((r) => r.json()).then((json) => {
+      if (!json.ok) return;
+      const lista = json.data.lista as Cumple[];
+      setCumplesHoy(lista.filter((p) => p.hoy));
+      setProximoCumple(lista[0] ?? null);
     });
   }, []);
+
+  useEffect(() => {
+    if (!campusActivo) return;
+    fetch(`/api/merch/productos?campus=${encodeURIComponent(campusActivo)}&activos=1`)
+      .then((r) => r.json())
+      .then((json) => {
+        if (!json.ok) return;
+        const productos = (json.data as ProductoMerch[]).filter((p) => p.foto_url || p.fotos?.length);
+        if (!productos.length) { setProductoMerch(null); return; }
+        // Rotación diaria (no aleatoria por render, para que no "salte" cada
+        // vez que se recarga la pantalla el mismo día) — José: que la
+        // tarjeta vaya promocionando distintos productos con el tiempo.
+        const diaDelAno = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86_400_000);
+        setProductoMerch(productos[diaDelAno % productos.length]);
+      });
+  }, [campusActivo]);
 
   async function enviarAyuda() {
     if (!ayudaMensaje.trim()) return;
@@ -126,22 +161,6 @@ export default function InicioPage() {
           Hola{nombre ? `, ${nombre}` : ""}
         </h1>
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-          {cumplesHoy.length > 0 && (
-            <button
-              type="button"
-              className="cumple-corner"
-              title={cumplesHoy.length === 1 ? `Hoy cumple ${cumplesHoy[0].nombre}` : `${cumplesHoy.length} cumpleaños hoy`}
-              onClick={() => setCumpleModalAbierto(true)}
-            >
-              {cumplesHoy.length === 1 && cumplesHoy[0].foto_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={cumplesHoy[0].foto_url} alt="" />
-              ) : (
-                "🎂"
-              )}
-              {cumplesHoy.length > 1 && <span className="conteo">{cumplesHoy.length}</span>}
-            </button>
-          )}
           {mostrarSoporte && (
             <button onClick={() => router.push("/soporte")} className="soporte-btn">
               ⚙ Soporte
@@ -154,32 +173,6 @@ export default function InicioPage() {
         </div>
       </div>
 
-      {cumpleModalAbierto && (
-        <div className="nav-sheet" onClick={() => setCumpleModalAbierto(false)}>
-          <div className="nav-sheet-card" onClick={(e) => e.stopPropagation()}>
-            <div className="nav-sheet-head">
-              <b>🎂 Cumpleaños de hoy</b>
-              <button onClick={() => setCumpleModalAbierto(false)}>✕</button>
-            </div>
-            {cumplesHoy.map((c, idx) => (
-              <div key={c.nombre + idx} className="cumple-modal-item">
-                {c.foto_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={c.foto_url} alt="" />
-                ) : (
-                  <span className="emoji">🎂</span>
-                )}
-                <div>
-                  <b>¡Feliz cumpleaños, {c.nombre.split(" ")[0]}!</b>
-                  <p className="muted" style={{ margin: "2px 0 0", fontSize: "0.82rem" }}>
-                    Sirve en {c.area}{c.anos_iglesia != null ? ` · ${c.anos_iglesia} años en la iglesia` : ""}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
       {mostrarCampus && (
         <p className="muted" style={{ margin: "0 0 16px", fontSize: "0.8rem" }}>Campus {campusActivo}</p>
       )}
@@ -191,12 +184,72 @@ export default function InicioPage() {
         className="tarjeta eco-row"
         style={{ width: "100%", cursor: "pointer", textAlign: "left", border: "none" }}
       >
-        <div>
-          <b>🛍️ Catálogo Merch</b>
-          <small className="muted" style={{ display: "block" }}>Mira qué hay disponible y pide comprar</small>
-        </div>
+        {productoMerch ? (
+          <>
+            {(() => {
+              const foto = productoMerch.fotos?.[0] ?? productoMerch.foto_url;
+              return foto ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={foto} alt="" style={{ width: 48, height: 48, borderRadius: 10, objectFit: "cover", flexShrink: 0 }} />
+              ) : null;
+            })()}
+            <div style={{ minWidth: 0 }}>
+              <b>🛍️ {productoMerch.nombre}</b>
+              <small className="muted" style={{ display: "block" }}>{peso(productoMerch.precio)} · Catálogo Merch</small>
+            </div>
+          </>
+        ) : (
+          <div>
+            <b>🛍️ Catálogo Merch</b>
+            <small className="muted" style={{ display: "block" }}>Mira qué hay disponible y pide comprar</small>
+          </div>
+        )}
         <span className="muted">Ver →</span>
       </button>
+
+      {proximo && (
+        <button
+          type="button"
+          onClick={() => router.push("/encuentros")}
+          className="tarjeta eco-row"
+          style={{ width: "100%", cursor: "pointer", textAlign: "left", border: "none" }}
+        >
+          <div>
+            <b>📅 Próximo encuentro</b>
+            <small className="muted" style={{ display: "block" }}>
+              {proximo.encuentro} · {proximo.hoy ? "Hoy" : fechaLarga(proximo.fecha)}
+            </small>
+          </div>
+          <span className="muted">Ver →</span>
+        </button>
+      )}
+
+      {(cumplesHoy.length > 0 || proximoCumple) && (
+        <button
+          type="button"
+          onClick={() => router.push("/cumpleanos")}
+          className="tarjeta eco-row"
+          style={{ width: "100%", cursor: "pointer", textAlign: "left", border: "none" }}
+        >
+          {cumplesHoy.length > 0 ? (
+            <div>
+              <b>🎂 ¡Feliz cumpleaños, {cumplesHoy[0].nombre.split(" ")[0]}!</b>
+              <small className="muted" style={{ display: "block" }}>
+                Sirve en {cumplesHoy[0].area}
+                {cumplesHoy.length > 1 ? ` · +${cumplesHoy.length - 1} más hoy` : ""}
+              </small>
+            </div>
+          ) : proximoCumple ? (
+            <div>
+              <b>🎂 Próximo cumpleaños: {proximoCumple.nombre.split(" ")[0]}</b>
+              <small className="muted" style={{ display: "block" }}>
+                En {proximoCumple.faltan} día{proximoCumple.faltan === 1 ? "" : "s"} · {proximoCumple.area}
+              </small>
+            </div>
+          ) : null}
+          <span className="muted">Ver →</span>
+        </button>
+      )}
 
       {ayudaAbierta && (
         <div className="tarjeta" style={{ marginBottom: 12 }}>
