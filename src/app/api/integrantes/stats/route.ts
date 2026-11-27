@@ -38,7 +38,10 @@ export async function GET(req: Request) {
   const areasPerfil = (perfil.areas as string[] | null) ?? [];
   const esPastor =
     roles.includes("Pastor principal") || roles.includes("Pastor de campus") || roles.includes("Pastor");
-  if (!esPastor && !areasPerfil.length) return fail("No lideras ningún equipo.", 403);
+  // Dentro de un área puede haber varios "Líder", pero solo el "Líder
+  // responsable" ve las estadísticas de ESE equipo (José, 27-nov).
+  const esResponsable = roles.includes("Líder responsable");
+  if (!esPastor && !esResponsable) return fail("No eres responsable de ningún equipo.", 403);
 
   const areasVisibles =
     esPastor ? [...AREAS] : areasPerfil.filter((a) => AREAS.includes(a as (typeof AREAS)[number]));

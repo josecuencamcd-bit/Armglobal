@@ -7,7 +7,7 @@ import { MODULOS_APP, DEFAULTS_NOMBRE_MOD, TITULOS_MOD } from "@/lib/modulosApp"
 
 const ROLES = [
   "Pastor principal", "Pastor de campus", "Pastor", "Ministro",
-  "Administrador", "Líder", "Voluntario", "Admin app",
+  "Administrador", "Líder", "Líder responsable", "Voluntario", "Admin app",
 ] as const;
 
 type Perfil = {

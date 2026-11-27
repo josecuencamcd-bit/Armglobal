@@ -18,7 +18,10 @@ export async function GET(req: Request) {
   const roles = (perfil.roles as string[] | null) ?? [];
   const areasPerfil = (perfil.areas as string[] | null) ?? [];
   const esPastor = roles.includes("Pastor principal") || roles.includes("Pastor de campus") || roles.includes("Pastor");
-  const liderFondos = roles.includes("Líder") ? areasPerfil.filter((a) => AREAS.includes(a as (typeof AREAS)[number])) : [];
+  // Dentro de un área puede haber varios "Líder", pero solo el "Líder
+  // responsable" ve/administra el fondo de ESE equipo (José, 27-nov) — el
+  // resto queda fuera, igual que cualquiera que solo sirve ahí.
+  const liderFondos = roles.includes("Líder responsable") ? areasPerfil.filter((a) => AREAS.includes(a as (typeof AREAS)[number])) : [];
   if (!esPastor && !liderFondos.length) return fail("Tu perfil no tiene acceso a los fondos de equipo.", 403);
 
   const areasVisibles = esPastor ? [...AREAS] : liderFondos;

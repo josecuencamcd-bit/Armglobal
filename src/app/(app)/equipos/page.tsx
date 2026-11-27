@@ -6,7 +6,7 @@ import { AREAS, TALLAS, proximaFecha } from "@/lib/sesiones";
 import { useCampus } from "@/lib/campus-context";
 import { VolverAdministracion } from "@/lib/volver-admin";
 import { AREAS_DISPONIBILIDAD, ENCUENTRO_DE_SERVICIO } from "@/lib/disponibilidad";
-import { FONDO_AREAS, esFin, esLider, esPastorC, esAppAdmin, fondosMios } from "@/lib/visibilidad-modulos";
+import { FONDO_AREAS, esFin, esResponsable, esPastorC, esAppAdmin, fondosMios } from "@/lib/visibilidad-modulos";
 import MerchInventario from "./merch-inventario";
 import MerchCatalogo from "./merch-catalogo";
 import VistaMiembro, { AporteEquipo } from "./vista-miembro";
@@ -303,16 +303,19 @@ export default function EquiposPage() {
       setMisFondoAreas(fondosMios(json.data));
       const esAltoResp = esPastorC(json.data) || esAppAdmin(json.data);
       setAltoResponsable(esAltoResp);
-      setMisAreasLider(json.data.areas ?? []);
+      // Dentro de un área puede haber varios "Líder", pero solo el "Líder
+      // responsable" administra ese equipo (fondos, estadísticas, editar
+      // integrantes) — José, 27-nov: un co-líder que no es el responsable
+      // tiene la misma visibilidad que cualquiera que sirve ahí, nunca la
+      // de gestión completa, aunque su perfil tenga esa área en "areas".
+      const esResp = esResponsable(json.data);
+      setMisAreasLider(esResp ? (json.data.areas ?? []) : []);
       setMisAreasSirve(json.data.sirve ?? []);
-      // Quien no lidera ningún área y no administra todo (Ministro o
-      // Administrador "de a pie", o un Voluntario que solo sirve/forma
-      // parte de un equipo) ve la versión de solo lectura de "Mi equipo" —
-      // antes esto solo miraba esFin(), así que un Administrador o Ministro
-      // SIN equipo propio igual entraba a gestionar cualquier área, lo que
-      // José pidió corregir: "si no lidera, es parte de un equipo, no
-      // responsable de ninguno".
-      if (!esLider(json.data) && !esAltoResp) {
+      // Quien no es responsable de ningún equipo y no administra todo
+      // (Ministro o Administrador "de a pie", un co-líder sin
+      // responsabilidad, o un Voluntario que solo sirve/forma parte de un
+      // equipo) ve la versión de solo lectura de "Mi equipo".
+      if (!esResp && !esAltoResp) {
         setAreasDeMiembro([...new Set([...(json.data.areas ?? []), ...(json.data.sirve ?? [])])]);
       } else {
         setAreasDeMiembro([]);

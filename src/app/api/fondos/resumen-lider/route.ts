@@ -15,7 +15,9 @@ export async function GET(req: Request) {
   const perfil = identidad.perfil;
   const roles = (perfil.roles as string[] | null) ?? [];
   const areasPerfil = (perfil.areas as string[] | null) ?? [];
-  const areas = roles.includes("Líder") ? areasPerfil.filter((a) => AREAS.includes(a as (typeof AREAS)[number])) : [];
+  // Solo el "Líder responsable" ve la tarjeta del fondo en Inicio — un
+  // co-líder de la misma área (que no es el responsable) no.
+  const areas = roles.includes("Líder responsable") ? areasPerfil.filter((a) => AREAS.includes(a as (typeof AREAS)[number])) : [];
   if (!areas.length) return fail("Tu perfil no lidera un fondo de equipo.", 403);
 
   const { searchParams } = new URL(req.url);

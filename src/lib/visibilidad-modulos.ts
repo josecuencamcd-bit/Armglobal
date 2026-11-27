@@ -28,15 +28,25 @@ export function esFin(p: PerfilVisibilidad) {
 export function esPanorama(p: PerfilVisibilidad) {
   return esPastorC(p) || tiene(p, "Admin app");
 }
+/** Cualquiera que lidere un área (sea o no el responsable) — uso general,
+ * de cara al roster: sigue mostrándose como "Líder" para todos. */
 export function esLider(p: PerfilVisibilidad) {
-  return tiene(p, "Líder");
+  return tiene(p, "Líder") || tiene(p, "Líder responsable");
+}
+/** Dentro de un área puede haber varios "Líder", pero solo UNO es el
+ * "Líder responsable" (fondos, estadísticas) — el resto de los líderes de
+ * esa área quedan con la misma visibilidad que quien solo sirve ahí. Esta
+ * distinción es de uso interno; en pantalla nunca se muestra "Líder
+ * responsable", siempre "Líder". */
+export function esResponsable(p: PerfilVisibilidad) {
+  return tiene(p, "Líder responsable");
 }
 export function esConex(p: PerfilVisibilidad) {
   return p.areas.includes("Conexión") || p.sirve.includes("Conexión");
 }
 export function fondosMios(p: PerfilVisibilidad): Area[] {
   if (esPastorC(p)) return FONDO_AREAS.slice();
-  if (tiene(p, "Líder")) return p.areas.filter((a) => (FONDO_AREAS as string[]).includes(a));
+  if (esResponsable(p)) return p.areas.filter((a) => (FONDO_AREAS as string[]).includes(a));
   return [];
 }
 export function puedeSoporte(p: PerfilVisibilidad) {
@@ -45,11 +55,13 @@ export function puedeSoporte(p: PerfilVisibilidad) {
 export function esAppAdmin(p: PerfilVisibilidad) {
   return tiene(p, "Admin app");
 }
-/** puedeVerEquipo: a quién le muestra Inicio la tarjeta "Tu equipo" — un
- * Líder que no sea además un rol alto (ese ve el panel completo en
- * Estadísticas/Panorama, no esta tarjeta resumida). */
+/** puedeVerEquipo: a quién le muestra Inicio la tarjeta "Tu equipo" — el
+ * "Líder responsable" que no sea además un rol alto (ese ve el panel
+ * completo en Estadísticas/Panorama, no esta tarjeta resumida). Un
+ * co-líder que no es el responsable no ve esta tarjeta — solo tiene la
+ * visibilidad de "Mi equipo" (roster), igual que un voluntario. */
 export function puedeVerEquipo(p: PerfilVisibilidad) {
-  return esLider(p) && !esAlto(p);
+  return esResponsable(p) && !esAlto(p);
 }
 
 /**
