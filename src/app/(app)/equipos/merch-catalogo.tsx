@@ -316,7 +316,14 @@ export default function MerchCatalogo({ campus }: { campus: string }) {
             <div style={{ width: 56, height: 56, borderRadius: 8, background: "var(--surface-2)" }} />
           )}
           <label className="boton-secundario" style={{ display: "inline-block", width: "auto", fontSize: "0.8rem", cursor: "pointer" }}>
-            {fotoNueva ? "Cambiar foto" : "Agregar foto"}
+            Tomar foto
+            <input
+              type="file" accept="image/*" capture="environment" style={{ display: "none" }}
+              onChange={async (e) => { const f = e.target.files?.[0]; if (f) setFotoNueva(await fotoProductoADataUrl(f)); e.target.value = ""; }}
+            />
+          </label>
+          <label className="boton-secundario" style={{ display: "inline-block", width: "auto", fontSize: "0.8rem", cursor: "pointer" }}>
+            {fotoNueva ? "Cambiar" : "Galería"}
             <input
               type="file" accept="image/*" style={{ display: "none" }}
               onChange={async (e) => { const f = e.target.files?.[0]; if (f) setFotoNueva(await fotoProductoADataUrl(f)); e.target.value = ""; }}
@@ -427,7 +434,14 @@ function ProductoFila({
           <div className="muted" style={{ fontSize: "0.78rem" }}>{clp(producto.precio)} · stock {producto.stock}</div>
         </div>
         <label className="boton-secundario" style={{ display: "inline-block", width: "auto", fontSize: "0.76rem", padding: "6px 10px", cursor: "pointer" }}>
-          {subiendoFoto ? "…" : "Foto"}
+          {subiendoFoto ? "…" : "Cámara"}
+          <input
+            type="file" accept="image/*" capture="environment" disabled={subiendoFoto} style={{ display: "none" }}
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) onFoto(f); e.target.value = ""; }}
+          />
+        </label>
+        <label className="boton-secundario" style={{ display: "inline-block", width: "auto", fontSize: "0.76rem", padding: "6px 10px", cursor: "pointer" }}>
+          {subiendoFoto ? "…" : "Galería"}
           <input
             type="file" accept="image/*" disabled={subiendoFoto} style={{ display: "none" }}
             onChange={(e) => { const f = e.target.files?.[0]; if (f) onFoto(f); e.target.value = ""; }}
