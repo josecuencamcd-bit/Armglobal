@@ -141,10 +141,14 @@ function Shell({ children, impersonando }: { children: React.ReactNode; imperson
   // "administracion" nunca va a la barra suelta (en la app vieja tampoco:
   // no está en PRIORIDAD_NAV) — se excluye acá de forma directa, sin pasar
   // por el vaivén de ida y vuelta entre las dos tablas de claves, para que
-  // nunca dependa de ese cálculo. "soporte", "bajas" (solicitudes) y, a
-  // pedido de José, "asistencia" también se excluyen: quedan detrás de
-  // "Más" en vez de sueltas (Asistencia le da el lugar suelto a Merch).
-  const NUNCA_SUELTOS = new Set(["administracion", "soporte", "bajas", "asistencia"]);
+  // nunca dependa de ese cálculo. A pedido de José (27-11, caso detectado
+  // en el perfil de Aline/"Ali": terminaba con Cumpleaños y Reuniones
+  // sueltos en vez de Merch, porque PRIORIDAD_NAV varía según qué tenga
+  // visible cada persona) la barra suelta queda ESTANDARIZADA para
+  // cualquier rol: Inicio + Mi equipo (si aplica) + Merch + Más. Todo lo
+  // demás — Fondo, Asistencia, Cumpleaños, Reuniones, Administración,
+  // Soporte, Bajas — vive solo dentro de "Más", nunca suelto.
+  const NUNCA_SUELTOS = new Set(["administracion", "soporte", "bajas", "asistencia", "cumpleanos", "reuniones", "fondos"]);
   const clavesPrincipales = perfil
     ? clavesPrincipalesNav({ roles: perfil.roles, areas: perfil.areas, sirve: perfil.sirve, modulos_on: perfil.modulos_on, modulos_off: perfil.modulos_off })
         .map((cv) => MODULO_APP_A_CLAVE[cv])
