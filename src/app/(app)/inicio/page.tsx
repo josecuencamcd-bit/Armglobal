@@ -41,7 +41,7 @@ type ResumenLider = {
   tendencia: { mes: string; monto: number }[];
 };
 type EquipoStats = { area: string; dias: number; pct: number | null; servicios: number; sinServir: number; personas: { nombre: string; pct: number | null }[] };
-type Cumple = { nombre: string; hoy?: boolean };
+type Cumple = { nombre: string; area: string; anos_iglesia: number | null; foto_url: string | null; hoy?: boolean };
 
 function mesTitulo(mes: string): string {
   const [y, m] = mes.split("-").map(Number);
@@ -230,6 +230,27 @@ export default function InicioPage() {
         </div>
       )}
 
+      {cumplesHoy.length > 0 && (
+        <div className="tarjeta hero-card" style={{ marginBottom: 16 }}>
+          {cumplesHoy.map((c, idx) => (
+            <div key={c.nombre + idx} style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: idx < cumplesHoy.length - 1 ? 14 : 0 }}>
+              {c.foto_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={c.foto_url} alt="" style={{ width: 56, height: 56, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+              ) : (
+                <span style={{ fontSize: "2.2rem", lineHeight: 1 }}>🎂</span>
+              )}
+              <div>
+                <b style={{ fontSize: "1.05rem" }}>¡Feliz cumpleaños, {c.nombre.split(" ")[0]}!</b>
+                <p className="muted" style={{ margin: "2px 0 0", fontSize: "0.82rem" }}>
+                  Sirve en {c.area}{c.anos_iglesia != null ? ` · ${c.anos_iglesia} años en la iglesia` : ""}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {resumenLider && (
         <div className="tarjeta hero-card" style={{ marginBottom: 16 }}>
           <div className="hero-tit">
@@ -342,16 +363,6 @@ export default function InicioPage() {
           <div>
             <b>Esta semana administras</b>
             <span>Te toca administrar en {miAdministracion.campus}</span>
-          </div>
-        </div>
-      )}
-
-      {cumplesHoy.length > 0 && (
-        <div className="cum-hoy" style={{ marginBottom: 16 }}>
-          <span className="big">🎂</span>
-          <div>
-            <b>Hoy cumple{cumplesHoy.length > 1 ? "n" : ""} años {cumplesHoy.map((c) => c.nombre.split(" ")[0]).join(", ")}</b>
-            <small>Un saludo hace la diferencia</small>
           </div>
         </div>
       )}

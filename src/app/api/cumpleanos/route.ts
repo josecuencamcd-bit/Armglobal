@@ -5,7 +5,7 @@ import { ok, fail, fromSupabaseError } from "@/lib/api-helpers";
 import { CAMPUS } from "@/lib/sesiones";
 import { identidadActuante } from "@/lib/identidad";
 
-type Persona = { nombre: string; campus: string | null; area: string; nacimiento: string; anos_iglesia: number | null };
+type Persona = { nombre: string; campus: string | null; area: string; nacimiento: string; anos_iglesia: number | null; foto_url: string | null };
 
 /** api_ecoCumples: próximos cumpleaños de integrantes + perfiles (pastores y
  * administradores no tienen ficha en "Mi equipo", su cumpleaños sale desde
@@ -36,32 +36,32 @@ export async function GET(req: NextRequest) {
 
   const vistos = new Set<string>();
   const personas: Persona[] = [];
-  const agregar = (nombre: string | null, campus: string | null, area: string, nacimiento: string | null, anosIglesia: number | null = null) => {
+  const agregar = (nombre: string | null, campus: string | null, area: string, nacimiento: string | null, anosIglesia: number | null = null, fotoUrl: string | null = null) => {
     if (!nombre || !nacimiento) return;
     const k = nombre.trim().toLowerCase();
     if (vistos.has(k)) return;
     vistos.add(k);
-    personas.push({ nombre, campus, area, nacimiento, anos_iglesia: anosIglesia });
+    personas.push({ nombre, campus, area, nacimiento, anos_iglesia: anosIglesia, foto_url: fotoUrl });
   };
 
   const admin = createAdminClient();
   const { data: integrantes, error: e1 } = await admin
     .from("integrantes")
-    .select("nombre, campus, area, nacimiento, anos_iglesia")
+    .select("nombre, campus, area, nacimiento, anos_iglesia, foto_url")
     .eq("estado", "Activo")
     .in("campus", campusVisibles)
     .not("nacimiento", "is", null);
   if (e1) return fromSupabaseError(e1);
-  for (const r of integrantes ?? []) agregar(r.nombre, r.campus, r.area, r.nacimiento, r.anos_iglesia);
+  for (const r of integrantes ?? []) agregar(r.nombre, r.campus, r.area, r.nacimiento, r.anos_iglesia, r.foto_url);
 
   const { data: perfiles, error: e2 } = await supabase
     .from("perfiles")
-    .select("nombre, campus, roles, nacimiento")
+    .select("nombre, campus, roles, nacimiento, foto_url")
     .not("nacimiento", "is", null);
   if (e2) return fromSupabaseError(e2);
   for (const r of perfiles ?? []) {
     const roles = ((r.roles as string[] | null) ?? []).filter((x) => x !== "Admin app");
-    agregar(r.nombre, r.campus, roles.join(", ") || "Liderazgo", r.nacimiento);
+    agregar(r.nombre, r.campus, roles.join(", ") || "Liderazgo", r.nacimiento, null, r.foto_url);
   }
 
   const diaHoy = hoy.getDate();
@@ -88,6 +88,7 @@ export async function GET(req: NextRequest) {
       dia: p.c.dia,
       edad: p.c.edad,
       anos_iglesia: p.anos_iglesia,
+      foto_url: p.foto_url,
       hoy: p.c.faltan === 0,
       faltan: todo ? p.c.faltan : mes === mesHoy ? p.c.dia - diaHoy : null,
     }))
