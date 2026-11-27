@@ -8,7 +8,7 @@ const MESES_LARGO = [
   "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
 ];
 
-type Item = { nombre: string; campus: string; area: string; mes: number; dia: number; edad: number; hoy: boolean; faltan: number | null };
+type Item = { nombre: string; campus: string; area: string; mes: number; dia: number; edad: number; anos_iglesia: number | null; hoy: boolean; faltan: number | null };
 type Datos = { hoy: string; mes: number; mesHoy: number; todo: boolean; lista: Item[] };
 type Propuesta = { id: number; nombres: string; fecha: string; mensaje: string | null; estado: string };
 
@@ -23,6 +23,7 @@ export default function CumpleanosPage() {
   const [propuestas, setPropuestas] = useState<Propuesta[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [resolviendo, setResolviendo] = useState<number | null>(null);
+  const [seleccionado, setSeleccionado] = useState<Item | null>(null);
 
   const cargar = useCallback(async (m: "todo" | "mes", mes: number) => {
     const qs = m === "todo" ? "?todo=1" : `?mes=${mes}`;
@@ -108,11 +109,32 @@ export default function CumpleanosPage() {
         grupos.map((g) => (
           <div className="cum-grupo" key={g.mes} style={{ marginBottom: 18 }}>
             <h3>{MESES_LARGO[g.mes - 1]}{g.mes === datos?.mesHoy ? " · Este mes" : ""}</h3>
-            {g.items.map((i, idx) => <ItemCumple key={i.nombre + idx} i={i} mostrarFaltan />)}
+            {g.items.map((i, idx) => <ItemCumple key={i.nombre + idx} i={i} mostrarFaltan onClick={() => setSeleccionado(i)} />)}
           </div>
         ))}
 
-      {modo === "mes" && datos && (datos.mes === datos.mesHoy ? <GruposMes datos={datos} /> : datos.lista.map((i, idx) => <ItemCumple key={i.nombre + idx} i={i} />))}
+      {modo === "mes" && datos && (datos.mes === datos.mesHoy
+        ? <GruposMes datos={datos} onSeleccionar={setSeleccionado} />
+        : datos.lista.map((i, idx) => <ItemCumple key={i.nombre + idx} i={i} onClick={() => setSeleccionado(i)} />))}
+
+      {seleccionado && (
+        <div
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 50, display: "flex", alignItems: "flex-end", justifyContent: "center" }}
+          onClick={() => setSeleccionado(null)}
+        >
+          <div className="tarjeta" style={{ width: "100%", maxWidth: 480, borderRadius: "16px 16px 0 0" }} onClick={(e) => e.stopPropagation()}>
+            <p style={{ fontWeight: 700, fontSize: "1.05rem", margin: "0 0 6px" }}>{seleccionado.nombre}</p>
+            <p className="muted" style={{ margin: "0 0 4px", fontSize: "0.86rem" }}>
+              Cumple el {seleccionado.dia} de {MESES_LARGO[seleccionado.mes - 1].toLowerCase()}{seleccionado.edad != null ? ` · cumple ${seleccionado.edad} años` : ""}
+            </p>
+            <p className="muted" style={{ margin: "0 0 4px", fontSize: "0.86rem" }}>Sirve en {seleccionado.area} · {seleccionado.campus}</p>
+            {seleccionado.anos_iglesia != null && (
+              <p className="muted" style={{ margin: "0 0 14px", fontSize: "0.86rem" }}>{seleccionado.anos_iglesia} años en la iglesia</p>
+            )}
+            <button type="button" className="boton-secundario" onClick={() => setSeleccionado(null)}>Cerrar</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -120,7 +142,7 @@ export default function CumpleanosPage() {
 /** Solo cuando se mira el mes actual: Hoy / Esta semana / Más adelante este
  * mes / Ya pasaron — igual que vCumples() de la app vieja (grupo() por
  * faltan/paso). Otro mes es una lista plana, sin subgrupos. */
-function GruposMes({ datos }: { datos: Datos }) {
+function GruposMes({ datos, onSeleccionar }: { datos: Datos; onSeleccionar: (i: Item) => void }) {
   const hoy = datos.lista.filter((i) => i.hoy);
   const estaSemana = datos.lista.filter((i) => !i.hoy && i.faltan != null && i.faltan > 0 && i.faltan <= 7);
   const masAdelante = datos.lista.filter((i) => !i.hoy && i.faltan != null && i.faltan > 7);
@@ -131,7 +153,7 @@ function GruposMes({ datos }: { datos: Datos }) {
     return (
       <div className="cum-grupo" style={{ marginBottom: 18 }}>
         <h3>{titulo}</h3>
-        {items.map((i, idx) => <ItemCumple key={i.nombre + idx} i={i} />)}
+        {items.map((i, idx) => <ItemCumple key={i.nombre + idx} i={i} onClick={() => onSeleccionar(i)} />)}
       </div>
     );
   }
@@ -146,9 +168,9 @@ function GruposMes({ datos }: { datos: Datos }) {
   );
 }
 
-function ItemCumple({ i, mostrarFaltan }: { i: Item; mostrarFaltan?: boolean }) {
+function ItemCumple({ i, mostrarFaltan, onClick }: { i: Item; mostrarFaltan?: boolean; onClick?: () => void }) {
   return (
-    <div className={`cum-card${i.hoy ? " hoy" : ""}`}>
+    <div className={`cum-card${i.hoy ? " hoy" : ""}`} onClick={onClick} style={{ cursor: onClick ? "pointer" : undefined }}>
       <div className="cum-dia">
         <i>{MESES[i.mes - 1]}</i>
         <b>{i.dia}</b>

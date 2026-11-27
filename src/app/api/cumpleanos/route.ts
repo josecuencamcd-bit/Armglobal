@@ -1,15 +1,32 @@
 import { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { ok, fromSupabaseError } from "@/lib/api-helpers";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { ok, fail, fromSupabaseError } from "@/lib/api-helpers";
+import { CAMPUS } from "@/lib/sesiones";
+import { identidadActuante } from "@/lib/identidad";
 
-type Persona = { nombre: string; campus: string | null; area: string; nacimiento: string };
+type Persona = { nombre: string; campus: string | null; area: string; nacimiento: string; anos_iglesia: number | null };
 
 /** api_ecoCumples: próximos cumpleaños de integrantes + perfiles (pastores y
  * administradores no tienen ficha en "Mi equipo", su cumpleaños sale desde
  * Mi perfil / Datos personales). Soporta "todo el año" (?todo=1) o un mes
- * puntual (?mes=1..12, por defecto el actual), igual que en la app vieja. */
+ * puntual (?mes=1..12, por defecto el actual), igual que en la app vieja.
+ *
+ * Cumpleaños es a propósito transversal a los equipos (José: "eso lo
+ * podemos ver en la tarjeta de cumpleaños", a diferencia de las
+ * estadísticas internas de un equipo que no es el propio) — por eso el
+ * lado de integrantes usa el cliente admin con su propio chequeo de campus
+ * (igual a auth_ve_campus), en vez de depender de integrantes_select, que
+ * sí está acotada por área. */
 export async function GET(req: NextRequest) {
   const supabase = await createClient();
+  const identidad = await identidadActuante(supabase);
+  if (!identidad) return fail("No autenticado.", 401);
+  const perfil = identidad.perfil;
+  const roles = (perfil.roles as string[] | null) ?? [];
+  const veTodoCampus = perfil.campus == null || roles.includes("Admin app");
+  const campusVisibles = veTodoCampus ? [...CAMPUS] : [perfil.campus as (typeof CAMPUS)[number]];
+
   const sp = req.nextUrl.searchParams;
   const hoy = new Date();
   const mesHoy = hoy.getMonth() + 1;
@@ -19,21 +36,23 @@ export async function GET(req: NextRequest) {
 
   const vistos = new Set<string>();
   const personas: Persona[] = [];
-  const agregar = (nombre: string | null, campus: string | null, area: string, nacimiento: string | null) => {
+  const agregar = (nombre: string | null, campus: string | null, area: string, nacimiento: string | null, anosIglesia: number | null = null) => {
     if (!nombre || !nacimiento) return;
     const k = nombre.trim().toLowerCase();
     if (vistos.has(k)) return;
     vistos.add(k);
-    personas.push({ nombre, campus, area, nacimiento });
+    personas.push({ nombre, campus, area, nacimiento, anos_iglesia: anosIglesia });
   };
 
-  const { data: integrantes, error: e1 } = await supabase
+  const admin = createAdminClient();
+  const { data: integrantes, error: e1 } = await admin
     .from("integrantes")
-    .select("nombre, campus, area, nacimiento")
+    .select("nombre, campus, area, nacimiento, anos_iglesia")
     .eq("estado", "Activo")
+    .in("campus", campusVisibles)
     .not("nacimiento", "is", null);
   if (e1) return fromSupabaseError(e1);
-  for (const r of integrantes ?? []) agregar(r.nombre, r.campus, r.area, r.nacimiento);
+  for (const r of integrantes ?? []) agregar(r.nombre, r.campus, r.area, r.nacimiento, r.anos_iglesia);
 
   const { data: perfiles, error: e2 } = await supabase
     .from("perfiles")
@@ -68,6 +87,7 @@ export async function GET(req: NextRequest) {
       mes: p.c.mes,
       dia: p.c.dia,
       edad: p.c.edad,
+      anos_iglesia: p.anos_iglesia,
       hoy: p.c.faltan === 0,
       faltan: todo ? p.c.faltan : mes === mesHoy ? p.c.dia - diaHoy : null,
     }))
