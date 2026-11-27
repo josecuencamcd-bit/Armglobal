@@ -123,7 +123,7 @@ export default function MerchCatalogoPage() {
       <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 10 }}>
         <h1 className="titulo" style={{ fontSize: "1.3rem", margin: 0 }}>Catálogo Merch</h1>
         {puedeGestionar && (
-          <Link href="/equipos" className="muted" style={{ fontSize: "0.82rem", textDecoration: "none", marginLeft: "auto" }}>
+          <Link href="/equipos?area=Merch" className="muted" style={{ fontSize: "0.82rem", textDecoration: "none", marginLeft: "auto" }}>
             Gestionar ›
           </Link>
         )}

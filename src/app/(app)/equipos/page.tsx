@@ -6,7 +6,7 @@ import { AREAS, TALLAS, proximaFecha } from "@/lib/sesiones";
 import { useCampus } from "@/lib/campus-context";
 import { VolverAdministracion } from "@/lib/volver-admin";
 import { AREAS_DISPONIBILIDAD, ENCUENTRO_DE_SERVICIO } from "@/lib/disponibilidad";
-import { FONDO_AREAS, esFin, esLider, fondosMios } from "@/lib/visibilidad-modulos";
+import { FONDO_AREAS, esFin, esLider, esPastorC, esAppAdmin, fondosMios } from "@/lib/visibilidad-modulos";
 import MerchInventario from "./merch-inventario";
 import MerchCatalogo from "./merch-catalogo";
 import VistaMiembro from "./vista-miembro";
@@ -282,19 +282,56 @@ export default function EquiposPage() {
   // el link "Fondo de equipo" de Reportes no aparece para quien solo está
   // revisando un área que no es la suya.
   const [misFondoAreas, setMisFondoAreas] = useState<string[]>([]);
+  // Áreas que esta persona lidera (perfil.areas de un Líder) — decide qué
+  // puede GESTIONAR dentro de la página grande (ver puedeGestionarAreaActual
+  // más abajo): un Administrador o Ministro que lidera "Kids" solo gestiona
+  // Kids, no cualquier otra que mire con el selector de Área.
+  const [misAreasLider, setMisAreasLider] = useState<string[]>([]);
+  // Pastor/Pastor de campus/Pastor principal y Admin app administran TODO
+  // por diseño (no "lideran" un área puntual) — ven y gestionan cualquiera.
+  const [altoResponsable, setAltoResponsable] = useState(false);
+  const areaInicialFijada = useRef(false);
 
   useEffect(() => {
     fetch("/api/perfil").then((r) => r.json()).then((json) => {
       if (!json.ok) return;
       setEsFinanzas(esFin(json.data));
       setMisFondoAreas(fondosMios(json.data));
-      if (!esLider(json.data) && !esFin(json.data)) {
+      const esAltoResp = esPastorC(json.data) || esAppAdmin(json.data);
+      setAltoResponsable(esAltoResp);
+      setMisAreasLider(json.data.areas ?? []);
+      // Quien no lidera ningún área y no administra todo (Ministro o
+      // Administrador "de a pie", o un Voluntario que solo sirve/forma
+      // parte de un equipo) ve la versión de solo lectura de "Mi equipo" —
+      // antes esto solo miraba esFin(), así que un Administrador o Ministro
+      // SIN equipo propio igual entraba a gestionar cualquier área, lo que
+      // José pidió corregir: "si no lidera, es parte de un equipo, no
+      // responsable de ninguno".
+      if (!esLider(json.data) && !esAltoResp) {
         setAreasDeMiembro([...new Set([...(json.data.areas ?? []), ...(json.data.sirve ?? [])])]);
       } else {
         setAreasDeMiembro([]);
       }
+      // Área inicial: la propia (si lidera alguna) en vez de la primera de
+      // la lista fija — y el link "Gestionar ›" de /merch puede forzar
+      // ?area=Merch sin que la persona tenga que buscarla en el selector.
+      if (!areaInicialFijada.current) {
+        areaInicialFijada.current = true;
+        const deLaUrl = new URLSearchParams(window.location.search).get("area");
+        const propia = (json.data.areas as string[] | undefined)?.[0];
+        const elegida = (AREAS as readonly string[]).includes(deLaUrl ?? "") ? deLaUrl : propia;
+        if (elegida) setArea(elegida as (typeof AREAS)[number]);
+      }
     });
   }, []);
+
+  // Puede gestionar (agregar/editar integrantes, resolver bajas, cargar
+  // Merch, etc.) el área que tiene seleccionada ahora mismo: Pastor/Admin
+  // app en cualquiera, cualquier otro Líder/Administrador/Ministro solo en
+  // la o las que lidera — fuera de esas, ve la misma vista de solo lectura
+  // que un integrante sin liderazgo (VistaMiembro), nunca gestiona "de
+  // paso" un equipo que no es su responsabilidad.
+  const puedeGestionarAreaActual = altoResponsable || misAreasLider.includes(area);
 
   const cargar = useCallback(async (c: string, a: string) => {
     const [res, resBajas] = await Promise.all([
@@ -777,6 +814,44 @@ export default function EquiposPage() {
   if (areasDeMiembro.length > 0) return <VistaMiembro campus={campus} areas={areasDeMiembro} />;
 
   if (!lista && !error) return <div className="contenedor">Cargando…</div>;
+
+  // Mirando un área que no lidera (y no es Pastor/Admin app): solo
+  // visualiza, igual que VistaMiembro — ver puedeGestionarAreaActual.
+  if (!puedeGestionarAreaActual) {
+    return (
+      <div className="contenedor" style={{ paddingTop: 24 }}>
+        <VolverAdministracion />
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
+          <h1 className="titulo" style={{ fontSize: "1.3rem" }}>Equipos</h1>
+          <span className="muted" style={{ fontSize: "0.82rem" }}>{campus}</span>
+        </div>
+        {error && <p className="aviso">{error}</p>}
+        <div className="campo">
+          <label>Área</label>
+          <select value={area} onChange={(e) => setArea(e.target.value as (typeof AREAS)[number])}>
+            {AREAS.map((a) => (
+              <option key={a} value={a}>{a}</option>
+            ))}
+          </select>
+        </div>
+        <p className="muted" style={{ fontSize: "0.82rem", margin: "0 0 14px" }}>
+          Solo visualización — {area} no es tu equipo, así que no puedes editarlo desde acá.
+        </p>
+        <div className="tarjeta">
+          {(lista ?? []).length === 0 && <p className="muted" style={{ fontSize: "0.82rem" }}>Sin integrantes cargados todavía.</p>}
+          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            {(lista ?? []).map((i) => (
+              <div key={i.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 4px" }}>
+                <AvatarIntegrante nombre={i.nombre} foto={i.foto_url} />
+                <span>{i.nombre}</span>
+                {i.rol_servicio && <span className="muted" style={{ fontSize: "0.78rem" }}>· {i.rol_servicio}</span>}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const activos = lista?.filter((i) => i.estado === "Activo") ?? [];
   const promIglesia = promedio(activos.map((i) => i.anos_iglesia));

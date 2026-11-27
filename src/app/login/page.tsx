@@ -158,9 +158,6 @@ function LoginForm() {
         <p style={{ margin: 0, fontSize: "0.9rem", color: "var(--accent)" }}>
           La <em style={{ fontStyle: "italic" }}>Iglesia</em> es mucho más de lo que te dijeron
         </p>
-        <p className="muted" style={{ margin: "8px 0 0", fontSize: "0.82rem" }}>
-          Campus Punta Arenas · Campus Puerto Natales
-        </p>
       </div>
 
       {paso === "correo" && (
