@@ -30,7 +30,6 @@ type Avisos = {
   autorizaciones: number;
   total: number;
 };
-type Resumen = { campus: string; historico: number; cuenta: number; mesActual: number; pct: number; tendencia: { mes: string; monto: number }[] };
 type ResumenLider = {
   area: string;
   campus: string;
@@ -54,7 +53,6 @@ export default function InicioPage() {
   const [perfil, setPerfil] = useState<PerfilVisibilidad | null>(null);
   const [miAdministracion, setMiAdministracion] = useState<MiAdministracion | null | undefined>(undefined);
   const [avisos, setAvisos] = useState<Avisos | null>(null);
-  const [resumen, setResumen] = useState<Resumen | null>(null);
   const [resumenLider, setResumenLider] = useState<ResumenLider | null>(null);
   const [equipo, setEquipo] = useState<EquipoStats | null>(null);
   const [cumplesHoy, setCumplesHoy] = useState<Cumple[]>([]);
@@ -102,7 +100,6 @@ export default function InicioPage() {
 
   useEffect(() => {
     fetch("/api/avisos").then((r) => r.json()).then((json) => { if (json.ok) setAvisos(json.data); });
-    fetch("/api/fondos/resumen").then((r) => r.json()).then((json) => { if (json.ok) setResumen(json.data); });
     fetch("/api/fondos/resumen-lider").then((r) => r.json()).then((json) => { if (json.ok) setResumenLider(json.data); });
     fetch("/api/integrantes/stats?dias=30").then((r) => r.json()).then((json) => { if (json.ok) setEquipo(json.data); });
     fetch("/api/cumpleanos").then((r) => r.json()).then((json) => {
@@ -231,25 +228,6 @@ export default function InicioPage() {
               </button>
             </>
           )}
-        </div>
-      )}
-
-      {resumen && (
-        <div className="tarjeta hero-card" style={{ marginBottom: 12 }}>
-          <div className="hero-tit">
-            <span className="hero-ic"><Icono id="panorama" size={18} /></span>
-            <div>
-              <b>Ingresos totales</b>
-              <small>Desde el inicio · Campus {resumen.campus}</small>
-            </div>
-          </div>
-          <p className="hero-num">{peso(resumen.historico)}</p>
-          <p className="eco-sub" style={{ margin: "0 0 2px" }}>{resumen.cuenta} registros en total</p>
-          <div className={`hero-chip ${resumen.pct >= 0 ? "ok" : "bad"}`}>
-            <b>{resumen.pct >= 0 ? "↗ +" : "↘ "}{Math.abs(resumen.pct)}%</b>
-            <span>Este mes: {peso(resumen.mesActual)}</span>
-          </div>
-          <GraficoLinea datos={resumen.tendencia} />
         </div>
       )}
 
