@@ -29,9 +29,23 @@ if ('serviceWorker' in navigator) {
 }
 `;
 
+// Por defecto la app es oscura; si la persona eligió "claro" en Mi perfil
+// queda guardado en localStorage. Esto corre ANTES de pintar la página
+// (bloqueante, en <head>) para que no se vea un parpadeo oscuro→claro.
+const THEME_INIT = `
+try {
+  if (localStorage.getItem('arm-tema') === 'claro') {
+    document.documentElement.setAttribute('data-tema', 'claro');
+  }
+} catch (e) {}
+`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es">
+    <html lang="es" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
+      </head>
       <body>
         {children}
         <script dangerouslySetInnerHTML={{ __html: SW_REGISTER }} />

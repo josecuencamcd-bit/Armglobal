@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
@@ -43,6 +43,23 @@ export default function MiPerfilPage() {
   const [correoNuevo, setCorreoNuevo] = useState("");
   const [cambiandoCorreo, setCambiandoCorreo] = useState(false);
   const [subiendoFoto, setSubiendoFoto] = useState(false);
+  const inputFotoRef = useRef<HTMLInputElement>(null);
+  const [tema, setTema] = useState<"oscuro" | "claro">("oscuro");
+
+  useEffect(() => {
+    if (document.documentElement.getAttribute("data-tema") === "claro") setTema("claro");
+  }, []);
+
+  function cambiarTema(t: "oscuro" | "claro") {
+    setTema(t);
+    if (t === "claro") {
+      document.documentElement.setAttribute("data-tema", "claro");
+      localStorage.setItem("arm-tema", "claro");
+    } else {
+      document.documentElement.removeAttribute("data-tema");
+      localStorage.removeItem("arm-tema");
+    }
+  }
 
   const cargar = useCallback(async () => {
     const res = await fetch("/api/perfil");
@@ -120,13 +137,27 @@ export default function MiPerfilPage() {
         <>
           <div className="tarjeta">
             <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
-              <label
+              <input
+                ref={inputFotoRef}
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  cambiarFoto(e.target.files?.[0]);
+                  e.target.value = "";
+                }}
+                disabled={subiendoFoto}
+                style={{ display: "none" }}
+              />
+              <button
+                type="button"
+                onClick={() => inputFotoRef.current?.click()}
+                disabled={subiendoFoto}
                 style={{
                   width: 64, height: 64, borderRadius: "50%", flex: "0 0 auto", overflow: "hidden",
                   background: perfil.foto_url ? undefined : "var(--gold-grad)",
                   display: "flex", alignItems: "center", justifyContent: "center",
                   color: "var(--accent-ink)", cursor: subiendoFoto ? "default" : "pointer",
-                  position: "relative",
+                  position: "relative", border: "none", padding: 0,
                 }}
               >
                 {perfil.foto_url ? (
@@ -151,33 +182,22 @@ export default function MiPerfilPage() {
                     …
                   </span>
                 )}
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => cambiarFoto(e.target.files?.[0])}
-                  disabled={subiendoFoto}
-                  style={{ display: "none" }}
-                />
-              </label>
+              </button>
               <div>
                 <p style={{ fontWeight: 700, margin: 0 }}>{perfil.nombre}</p>
                 <p className="muted" style={{ margin: "2px 0 8px", fontSize: "0.85rem" }}>{perfil.correo}</p>
                 {perfil.foto_url && (
-                  <label
+                  <button
+                    type="button"
+                    onClick={() => inputFotoRef.current?.click()}
+                    disabled={subiendoFoto}
                     style={{
                       display: "inline-block", fontSize: "0.78rem", color: "var(--accent)", cursor: "pointer",
-                      border: "1px solid var(--line)", borderRadius: 999, padding: "4px 10px",
+                      border: "1px solid var(--line)", borderRadius: 999, padding: "4px 10px", background: "none",
                     }}
                   >
                     {subiendoFoto ? "Subiendo…" : "Cambiar foto"}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => cambiarFoto(e.target.files?.[0])}
-                      disabled={subiendoFoto}
-                      style={{ display: "none" }}
-                    />
-                  </label>
+                  </button>
                 )}
               </div>
             </div>
@@ -193,6 +213,14 @@ export default function MiPerfilPage() {
             <button className="boton" onClick={guardar} disabled={guardando}>
               {guardando ? "Guardando…" : "Guardar mis datos"}
             </button>
+          </div>
+
+          <div className="tarjeta">
+            <p style={{ fontWeight: 600, margin: "0 0 10px" }}>Apariencia</p>
+            <div className="seg">
+              <button type="button" aria-pressed={tema === "oscuro"} onClick={() => cambiarTema("oscuro")}>Oscuro</button>
+              <button type="button" aria-pressed={tema === "claro"} onClick={() => cambiarTema("claro")}>Claro</button>
+            </div>
           </div>
 
           <Link href="/merch" className="tarjeta eco-row" style={{ textDecoration: "none", color: "inherit" }}>

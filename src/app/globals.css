@@ -30,10 +30,28 @@
   --gold-grad: linear-gradient(135deg, #ff9f1c, #ffd24c);
 }
 
+/* Tema claro — a elección de la persona en Mi perfil (por defecto, oscuro).
+ * Mismos nombres de variable que :root, así que el resto de la hoja y
+ * todos los estilos inline que usan var(--...) cambian solos. */
+:root[data-tema="claro"] {
+  --bg: #f6f4ef;
+  --surface: #ffffff;
+  --surface-2: #f0ede6;
+  --ink: #1c1a16;
+  --muted: #6b6a66;
+  --line: #e2ddd1;
+  --accent-ink: #141414;
+  --accent-soft: #fdecc8;
+  --on-solid: #141414;
+  --brand-ink: #1c1a16;
+  --hud-line: rgba(245, 166, 35, 0.22);
+  --hud-line-2: rgba(200, 130, 10, 0.4);
+}
+
 * { box-sizing: border-box; }
 
 html, body {
-  background-color: #060607;
+  background-color: var(--bg);
   color: var(--ink);
   font-family: var(--font-body);
   margin: 0;

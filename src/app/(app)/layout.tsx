@@ -73,6 +73,7 @@ function Shell({ children, impersonando }: { children: React.ReactNode; imperson
   const [perfil, setPerfil] = useState<Perfil | null>(null);
   const [masAbierto, setMasAbierto] = useState(false);
   const [menuAdminAbierto, setMenuAdminAbierto] = useState(false);
+  const [menuPerfilAbierto, setMenuPerfilAbierto] = useState(false);
   const [saliendo, setSaliendo] = useState(false);
   const { campusActivo, puedeElegir, elegirCampus } = useCampus();
 
@@ -223,8 +224,8 @@ function Shell({ children, impersonando }: { children: React.ReactNode; imperson
           </button>
           {perfil && (
             <button
-              onClick={salir}
-              title={`Salir (${perfil.nombre} · ${rol})`}
+              onClick={() => setMenuPerfilAbierto(true)}
+              title={`${perfil.nombre} · ${rol}`}
               className="avatar"
               style={{ cursor: "pointer" }}
             >
@@ -299,6 +300,38 @@ function Shell({ children, impersonando }: { children: React.ReactNode; imperson
             <span>Más</span>
           </button>
         </nav>
+      )}
+
+      {menuPerfilAbierto && perfil && (
+        <div
+          onClick={() => setMenuPerfilAbierto(false)}
+          className="nav-sheet"
+        >
+          <div onClick={(e) => e.stopPropagation()} className="nav-sheet-card">
+            <div className="nav-sheet-head">
+              <b>{perfil.nombre}</b>
+              <button type="button" onClick={() => setMenuPerfilAbierto(false)}>✕</button>
+            </div>
+            <button
+              onClick={() => {
+                setMenuPerfilAbierto(false);
+                ir("/perfil");
+              }}
+              className="nav-sheet-item"
+            >
+              <b>Mi perfil</b>
+            </button>
+            <button
+              onClick={() => {
+                setMenuPerfilAbierto(false);
+                salir();
+              }}
+              className="nav-sheet-item"
+            >
+              <b>Cerrar sesión</b>
+            </button>
+          </div>
+        </div>
       )}
 
       {menuAdminAbierto && (
