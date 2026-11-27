@@ -70,6 +70,100 @@ function Avatar({ nombre, foto, size = 40 }: { nombre: string; foto: string | nu
   );
 }
 
+type ProductoMerch = { id: number; nombre: string; precio: number; stock: number };
+
+function clp(n: number): string {
+  return n.toLocaleString("es-CL", { style: "currency", currency: "CLP", maximumFractionDigits: 0 });
+}
+
+/**
+ * Para quien SIRVE en Merch sin liderarlo: registrar una venta presencial
+ * (descuenta stock y queda en el informe de ingresos de la líder) sin
+ * exponer el resto del panel de gestión (fotos, precio, catálogo, vitrina).
+ * La RLS/RPC ya permite esto a cualquiera que figure en perfil.sirve.
+ */
+function VentaMerch({ campus }: { campus: string }) {
+  const [productos, setProductos] = useState<ProductoMerch[] | null>(null);
+  const [productoId, setProductoId] = useState<number | null>(null);
+  const [cantidad, setCantidad] = useState(1);
+  const [metodoPago, setMetodoPago] = useState<"Efectivo" | "Transferencia" | "Tarjeta">("Efectivo");
+  const [enviando, setEnviando] = useState(false);
+  const [mensaje, setMensaje] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const cargar = useCallback(async () => {
+    const res = await fetch(`/api/merch/productos?campus=${encodeURIComponent(campus)}&activos=1`);
+    const json = await res.json();
+    if (json.ok) {
+      setProductos(json.data);
+      if (!productoId && json.data.length > 0) setProductoId(json.data[0].id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [campus]);
+
+  useEffect(() => { cargar(); }, [cargar]);
+
+  async function registrarVenta() {
+    if (!productoId) return;
+    setEnviando(true);
+    setError(null);
+    setMensaje(null);
+    const res = await fetch(`/api/merch/productos/${productoId}/movimiento`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tipo_mov: "Venta", cantidad, metodo_pago: metodoPago }),
+    });
+    const json = await res.json();
+    setEnviando(false);
+    if (!json.ok) { setError(json.error); return; }
+    setMensaje("Venta registrada.");
+    setCantidad(1);
+    await cargar();
+  }
+
+  const elegido = productos?.find((p) => p.id === productoId);
+
+  return (
+    <div className="tarjeta" style={{ marginBottom: 14, display: "flex", flexDirection: "column", gap: 8 }}>
+      <p style={{ margin: 0, fontWeight: 700 }}>Registrar venta de Merch</p>
+      {productos === null && <p className="muted" style={{ fontSize: "0.82rem" }}>Cargando catálogo…</p>}
+      {productos?.length === 0 && <p className="muted" style={{ fontSize: "0.82rem" }}>No hay productos en el catálogo todavía.</p>}
+      {error && <p className="aviso">{error}</p>}
+      {mensaje && <p className="muted" style={{ fontSize: "0.82rem" }}>{mensaje}</p>}
+      {productos && productos.length > 0 && (
+        <>
+          <div className="campo">
+            <label>Producto</label>
+            <select value={productoId ?? ""} onChange={(e) => setProductoId(Number(e.target.value))}>
+              {productos.map((p) => (
+                <option key={p.id} value={p.id}>{p.nombre} — {clp(p.precio)} (stock {p.stock})</option>
+              ))}
+            </select>
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+            <input
+              type="number" min={1} max={elegido?.stock ?? 1} value={cantidad}
+              onChange={(e) => setCantidad(Math.max(1, Number(e.target.value) || 1))}
+              style={{ width: 70 }}
+            />
+            <select value={metodoPago} onChange={(e) => setMetodoPago(e.target.value as typeof metodoPago)} style={{ width: "auto", fontSize: "0.86rem" }}>
+              <option value="Efectivo">Efectivo</option>
+              <option value="Transferencia">Transferencia</option>
+              <option value="Tarjeta">Tarjeta</option>
+            </select>
+            <button
+              type="button" className="boton" style={{ width: "auto", padding: "8px 14px" }}
+              disabled={enviando || !elegido || elegido.stock < 1} onClick={registrarVenta}
+            >
+              {enviando ? "Guardando…" : "Registrar venta"}
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function PerfilModal({ persona, onCerrar, onActualizado }: { persona: IntegranteMini; onCerrar: () => void; onActualizado: (p: IntegranteMini) => void }) {
   const [subiendo, setSubiendo] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -248,6 +342,8 @@ export default function VistaMiembro({ campus, areas }: { campus: string; areas:
           ))}
         </div>
       )}
+
+      {areas.includes("Merch") && <VentaMerch campus={campus} />}
 
       {areas.map((area) => {
         const lideres = new Set((lideresPorArea[area] ?? []).map((n) => n.trim().toLowerCase()));

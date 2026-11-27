@@ -1047,6 +1047,7 @@ export type Database = {
           creado_en: string
           fecha: string
           id: number
+          metodo_pago: string | null
           monto: number | null
           nota: string | null
           por: string | null
@@ -1060,6 +1061,7 @@ export type Database = {
           creado_en?: string
           fecha?: string
           id?: never
+          metodo_pago?: string | null
           monto?: number | null
           nota?: string | null
           por?: string | null
@@ -1073,6 +1075,7 @@ export type Database = {
           creado_en?: string
           fecha?: string
           id?: never
+          metodo_pago?: string | null
           monto?: number | null
           nota?: string | null
           por?: string | null
@@ -1806,34 +1809,66 @@ export type Database = {
         }
         Returns: boolean
       }
-      merch_producto_registrar_movimiento: {
-        Args: {
-          p_cantidad: number
-          p_nota: string
-          p_por: string
-          p_producto_id: number
-          p_tipo_mov: string
-        }
-        Returns: {
-          campus: Database["public"]["Enums"]["campus_t"]
-          cantidad: number
-          creado_en: string
-          fecha: string
-          id: number
-          monto: number | null
-          nota: string | null
-          por: string | null
-          precio_unitario: number | null
-          producto_id: number
-          tipo_mov: string
-        }
-        SetofOptions: {
-          from: "*"
-          to: "merch_producto_movimientos"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
+      merch_producto_registrar_movimiento:
+        | {
+            Args: {
+              p_cantidad: number
+              p_nota: string
+              p_por: string
+              p_producto_id: number
+              p_tipo_mov: string
+            }
+            Returns: {
+              campus: Database["public"]["Enums"]["campus_t"]
+              cantidad: number
+              creado_en: string
+              fecha: string
+              id: number
+              metodo_pago: string | null
+              monto: number | null
+              nota: string | null
+              por: string | null
+              precio_unitario: number | null
+              producto_id: number
+              tipo_mov: string
+            }
+            SetofOptions: {
+              from: "*"
+              to: "merch_producto_movimientos"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
+        | {
+            Args: {
+              p_cantidad: number
+              p_metodo_pago?: string
+              p_nota: string
+              p_por: string
+              p_producto_id: number
+              p_tipo_mov: string
+            }
+            Returns: {
+              campus: Database["public"]["Enums"]["campus_t"]
+              cantidad: number
+              creado_en: string
+              fecha: string
+              id: number
+              metodo_pago: string | null
+              monto: number | null
+              nota: string | null
+              por: string | null
+              precio_unitario: number | null
+              producto_id: number
+              tipo_mov: string
+            }
+            SetofOptions: {
+              from: "*"
+              to: "merch_producto_movimientos"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
       merch_registrar_movimiento: {
         Args: {
           p_campus: Database["public"]["Enums"]["campus_t"]

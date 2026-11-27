@@ -14,6 +14,7 @@ type Producto = {
 };
 
 const MAX_FOTOS = 6;
+type MetodoPago = "Efectivo" | "Transferencia" | "Tarjeta";
 
 /** Compatibilidad: productos creados antes de "fotos" solo tienen foto_url. */
 function fotosDe(p: Producto): string[] {
@@ -204,14 +205,14 @@ export default function MerchCatalogo({ campus }: { campus: string }) {
     await cargar();
   }
 
-  async function registrarMovimiento(id: number, tipo_mov: "Entrada" | "Venta", cantidad: number) {
+  async function registrarMovimiento(id: number, tipo_mov: "Entrada" | "Venta", cantidad: number, metodoPago?: MetodoPago) {
     if (cantidad < 1) return;
     setOcupado(`mov-${id}`);
     setError(null);
     const res = await fetch(`/api/merch/productos/${id}/movimiento`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tipo_mov, cantidad }),
+      body: JSON.stringify(tipo_mov === "Venta" ? { tipo_mov, cantidad, metodo_pago: metodoPago } : { tipo_mov, cantidad }),
     });
     const json = await res.json();
     setOcupado(null);
@@ -404,7 +405,7 @@ export default function MerchCatalogo({ campus }: { campus: string }) {
             onAgregarFoto={(f) => agregarFotoProducto(p.id, fotosDe(p), f)}
             onQuitarFoto={(i) => quitarFotoProducto(p.id, fotosDe(p), i)}
             onActivo={(v) => cambiarActivo(p.id, v)}
-            onMovimiento={(tipo, cant) => registrarMovimiento(p.id, tipo, cant)}
+            onMovimiento={(tipo, cant, metodo) => registrarMovimiento(p.id, tipo, cant, metodo)}
           />
         ))}
         {productos?.length === 0 && <p className="muted">Todavía no hay productos en el catálogo.</p>}
@@ -459,9 +460,10 @@ function ProductoFila({
   onAgregarFoto: (file: File) => void;
   onQuitarFoto: (index: number) => void;
   onActivo: (v: boolean) => void;
-  onMovimiento: (tipo: "Entrada" | "Venta", cantidad: number) => void;
+  onMovimiento: (tipo: "Entrada" | "Venta", cantidad: number, metodoPago?: MetodoPago) => void;
 }) {
   const [cantidad, setCantidad] = useState(1);
+  const [metodoPago, setMetodoPago] = useState<MetodoPago>("Efectivo");
   const subiendoFoto = ocupado === `foto-${producto.id}`;
   const cambiandoActivo = ocupado === `activo-${producto.id}`;
   const moviendo = ocupado === `mov-${producto.id}`;
@@ -519,7 +521,7 @@ function ProductoFila({
         )}
       </div>
 
-      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
         <input
           type="number" min={1} value={cantidad}
           onChange={(e) => setCantidad(Math.max(1, Number(e.target.value) || 1))}
@@ -531,9 +533,14 @@ function ProductoFila({
         >
           + Cargar stock
         </button>
+        <select value={metodoPago} onChange={(e) => setMetodoPago(e.target.value as MetodoPago)} style={{ width: "auto", fontSize: "0.76rem", padding: "6px 8px" }}>
+          <option value="Efectivo">Efectivo</option>
+          <option value="Transferencia">Transferencia</option>
+          <option value="Tarjeta">Tarjeta</option>
+        </select>
         <button
           type="button" className="boton-secundario" style={{ width: "auto", padding: "6px 10px", fontSize: "0.76rem" }}
-          disabled={moviendo} onClick={() => onMovimiento("Venta", cantidad)}
+          disabled={moviendo} onClick={() => onMovimiento("Venta", cantidad, metodoPago)}
         >
           Registrar venta
         </button>
