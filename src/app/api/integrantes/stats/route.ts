@@ -17,11 +17,16 @@ function restarDias(f: string, n: number) {
 /**
  * api_ecoEquipoStats: cuántas veces sirvió cada integrante del equipo en los
  * últimos 7/15/30 días (Vino/Avisó/No vino/Sin marcar), contra
- * `integrante_seguimiento` (equivalente a la hoja "Programa"). La ve el
- * líder de su área (solo su equipo) o alguien de finanzas que no sea líder
- * (Pastor/Ministro/Administrador/Admin app ven todas las áreas del campus)
- * — mismo gate que ADMIN_SUBNAV["equipostats"] en Code.gs. Si hay una
- * "vista como X" activa, el gate y el equipo son los de X.
+ * `integrante_seguimiento` (equivalente a la hoja "Programa").
+ *
+ * José (27-nov): las estadísticas internas de un equipo son responsabilidad
+ * exclusiva de quien lo lidera — solo Pastor de campus/Pastor ve las de
+ * TODOS los equipos del campus. Un Ministro, Administrador o Admin app que
+ * no lidera ningún área no debe caer "por defecto" en la primera (antes
+ * esFinanzas lo mandaba a ver TODAS las áreas, lo que en la práctica
+ * mostraba la primera — ej. Mario, que es Administrador sin área propia,
+ * veía estadísticas de Kids sin liderarlo). Si hay una "vista como X"
+ * activa, el gate y el equipo son los de X.
  */
 export async function GET(req: Request) {
   const supabase = await createClient();
@@ -31,18 +36,12 @@ export async function GET(req: Request) {
   const perfil = identidad.perfil;
   const roles = (perfil.roles as string[] | null) ?? [];
   const areasPerfil = (perfil.areas as string[] | null) ?? [];
-  const esLider = roles.includes("Líder");
-  const esFinanzas =
-    roles.includes("Pastor principal") ||
-    roles.includes("Pastor de campus") ||
-    roles.includes("Pastor") ||
-    roles.includes("Ministro") ||
-    roles.includes("Administrador") ||
-    roles.includes("Admin app");
-  if (!esLider && !esFinanzas) return fail("Tu perfil no tiene acceso a las estadísticas del equipo.", 403);
+  const esPastor =
+    roles.includes("Pastor principal") || roles.includes("Pastor de campus") || roles.includes("Pastor");
+  if (!esPastor && !areasPerfil.length) return fail("No lideras ningún equipo.", 403);
 
   const areasVisibles =
-    esFinanzas && !esLider ? [...AREAS] : areasPerfil.filter((a) => AREAS.includes(a as (typeof AREAS)[number]));
+    esPastor ? [...AREAS] : areasPerfil.filter((a) => AREAS.includes(a as (typeof AREAS)[number]));
   if (!areasVisibles.length) return fail("No lideras ningún equipo.", 403);
 
   const { searchParams } = new URL(req.url);

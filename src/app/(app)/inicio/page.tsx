@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { useCampus } from "@/lib/campus-context";
 import { esFin, esPastorC, puedeSoporte, puedeVerEquipo, tiene, type PerfilVisibilidad } from "@/lib/visibilidad-modulos";
 import { GraficoLinea, peso } from "@/lib/grafico-linea";
@@ -50,7 +49,6 @@ function mesTitulo(mes: string): string {
 
 export default function InicioPage() {
   const router = useRouter();
-  const supabase = createClient();
   const [nombre, setNombre] = useState("");
   const { campusActivo } = useCampus();
   const [perfil, setPerfil] = useState<PerfilVisibilidad | null>(null);
@@ -69,23 +67,21 @@ export default function InicioPage() {
   useEffect(() => {
     let cancelado = false;
     (async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data } = await supabase
-        .from("perfiles")
-        .select("nombre, roles, areas, sirve, modulos_on, modulos_off")
-        .eq("id", user.id)
-        .maybeSingle();
-      if (cancelado || !data) return;
-      setNombre(data.nombre.split(" ")[0]);
-      setPerfil(data as unknown as PerfilVisibilidad);
+      // Antes esto leía directo de Supabase con el usuario REAL de la
+      // sesión — si había una "vista como X" activa, Inicio decidía qué
+      // tarjetas mostrar (Tu equipo, Administración, etc.) según quien
+      // administra la vista, no según X. /api/perfil ya resuelve esto
+      // (identidadActuante), igual que el resto de la app.
+      const res = await fetch("/api/perfil");
+      const json = await res.json();
+      if (cancelado || !json.ok) return;
+      setNombre(json.data.nombre.split(" ")[0]);
+      setPerfil(json.data as unknown as PerfilVisibilidad);
     })();
     return () => {
       cancelado = true;
     };
-  }, [supabase]);
+  }, []);
 
   useEffect(() => {
     let cancelado = false;
