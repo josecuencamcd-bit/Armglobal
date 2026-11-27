@@ -3,14 +3,15 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCampus } from "@/lib/campus-context";
-import { esFin, esPastorC, puedeSoporte, puedeVerEquipo, tiene, type PerfilVisibilidad } from "@/lib/visibilidad-modulos";
-import { GraficoLinea, peso } from "@/lib/grafico-linea";
+import { esFin, puedeSoporte, type PerfilVisibilidad } from "@/lib/visibilidad-modulos";
 import { Icono } from "@/lib/iconos";
 
-/** Reemplaza vInicio() de Code.gs: solo el panel (tarjetas de ingresos,
- * fondo, tu equipo, pendientes, administración semanal, cumpleaños) — la app vieja no tenía
- * una grilla de botones acá, la navegación es por la barra inferior
- * (Inicio + hasta 4 accesos según rol + "Más"). */
+/** Reemplaza vInicio() de Code.gs. A pedido de José (27-11), Home quedó
+ * reducido a lo informativo/accionable: saludo + cumpleaños del día (ícono
+ * en la esquina), acceso a Merch, pendientes y el aviso de administración
+ * semanal — Fondo, Mi equipo (estadísticas) y Administración se sacaron de
+ * acá (quedan solo en la barra de abajo / "Más"), para no repetir accesos
+ * en dos lugares distintos. */
 const TIPOS_AYUDA = ["Algo no funciona", "No entiendo cómo usarlo", "Falta un dato", "Otro"];
 
 /** Lunes ISO de la semana que contiene `fecha` (mismo criterio que
@@ -30,15 +31,6 @@ type Avisos = {
   autorizaciones: number;
   total: number;
 };
-type ResumenLider = {
-  area: string;
-  campus: string;
-  saldo: number;
-  ultimo: { tipo: string; monto: number; fecha: string } | null;
-  proximo: { encuentro: string; fecha: string; hoy: boolean } | null;
-  tendencia: { mes: string; monto: number }[];
-};
-type EquipoStats = { area: string; dias: number; pct: number | null; servicios: number; sinServir: number; personas: { nombre: string; pct: number | null }[] };
 type Cumple = { nombre: string; area: string; anos_iglesia: number | null; foto_url: string | null; hoy?: boolean };
 
 function mesTitulo(mes: string): string {
@@ -53,8 +45,6 @@ export default function InicioPage() {
   const [perfil, setPerfil] = useState<PerfilVisibilidad | null>(null);
   const [miAdministracion, setMiAdministracion] = useState<MiAdministracion | null | undefined>(undefined);
   const [avisos, setAvisos] = useState<Avisos | null>(null);
-  const [resumenLider, setResumenLider] = useState<ResumenLider | null>(null);
-  const [equipo, setEquipo] = useState<EquipoStats | null>(null);
   const [cumplesHoy, setCumplesHoy] = useState<Cumple[]>([]);
   const [cumpleModalAbierto, setCumpleModalAbierto] = useState(false);
   const [ayudaAbierta, setAyudaAbierta] = useState(false);
@@ -100,8 +90,6 @@ export default function InicioPage() {
 
   useEffect(() => {
     fetch("/api/avisos").then((r) => r.json()).then((json) => { if (json.ok) setAvisos(json.data); });
-    fetch("/api/fondos/resumen-lider").then((r) => r.json()).then((json) => { if (json.ok) setResumenLider(json.data); });
-    fetch("/api/integrantes/stats?dias=30").then((r) => r.json()).then((json) => { if (json.ok) setEquipo(json.data); });
     fetch("/api/cumpleanos").then((r) => r.json()).then((json) => {
       if (json.ok) setCumplesHoy((json.data.lista as Cumple[]).filter((p) => p.hoy));
     });
@@ -129,11 +117,6 @@ export default function InicioPage() {
 
   const mostrarCampus = perfil ? !esFin(perfil) : false;
   const mostrarSoporte = perfil ? puedeSoporte(perfil) : false;
-  const mostrarEquipo = perfil ? puedeVerEquipo(perfil) : false;
-  // Acceso directo a Administración desde Inicio — no depende de la hoja
-  // "Más" (su propio scroll venía fallando en algunos celulares). Mismo
-  // criterio que modulosVisibles(): esPastorC() || Ministro || Administrador.
-  const mostrarAdministracion = perfil ? (esPastorC(perfil) || tiene(perfil, "Ministro") || tiene(perfil, "Administrador")) : false;
   const totalAvisos = (avisos?.encuentros.length ?? 0) + (avisos?.notas.length ?? 0) + (avisos?.cierres.length ?? 0) + (avisos?.autorizaciones ? 1 : 0);
 
   return (
@@ -202,6 +185,19 @@ export default function InicioPage() {
       )}
       {!mostrarCampus && <div style={{ marginBottom: 12 }} />}
 
+      <button
+        type="button"
+        onClick={() => router.push("/merch")}
+        className="tarjeta eco-row"
+        style={{ width: "100%", cursor: "pointer", textAlign: "left", border: "none" }}
+      >
+        <div>
+          <b>🛍️ Catálogo Merch</b>
+          <small className="muted" style={{ display: "block" }}>Mira qué hay disponible y pide comprar</small>
+        </div>
+        <span className="muted">Ver →</span>
+      </button>
+
       {ayudaAbierta && (
         <div className="tarjeta" style={{ marginBottom: 12 }}>
           {ayudaOk ? (
@@ -230,90 +226,6 @@ export default function InicioPage() {
           )}
         </div>
       )}
-
-      {resumenLider && (
-        <div className="tarjeta hero-card" style={{ marginBottom: 12 }}>
-          <div className="hero-tit">
-            <span className="hero-ic"><Icono id="fondo" size={18} /></span>
-            <div>
-              <b>Fondo de {resumenLider.area}</b>
-              <small>Saldo disponible</small>
-            </div>
-          </div>
-          <p className="hero-num">{peso(resumenLider.saldo)}</p>
-          <p className="eco-sub">
-            {resumenLider.ultimo
-              ? `Último ${resumenLider.ultimo.tipo}: ${peso(resumenLider.ultimo.monto)} · ${resumenLider.ultimo.fecha}`
-              : "Aún no hay movimientos este mes"}
-          </p>
-          <GraficoLinea datos={resumenLider.tendencia} />
-          {resumenLider.proximo && (
-            <div className="hero-chip">
-              <b>{resumenLider.proximo.hoy ? "Hoy" : resumenLider.proximo.fecha}</b>
-              <span>Próximo encuentro: {resumenLider.proximo.encuentro}</span>
-            </div>
-          )}
-          <button className="boton-secundario" style={{ marginTop: 10 }} onClick={() => router.push("/fondos")}>Ver fondo</button>
-        </div>
-      )}
-
-      {mostrarEquipo && equipo && (
-        <div className="tarjeta" style={{ marginBottom: 12 }}>
-          <p className="muted" style={{ margin: "0 0 10px", fontSize: "0.75rem" }}>
-            TU EQUIPO · {equipo.area.toUpperCase()} · Últimos {equipo.dias} días
-          </p>
-          <div className="eco-cards" style={{ marginBottom: equipo.personas.length ? 10 : 0 }}>
-            <div className={`eco-card${(equipo.pct ?? 0) < 60 ? " warn" : " ok"}`}>
-              <b>{equipo.pct == null ? "–" : `${equipo.pct}%`}</b>
-              <span>Asistencia</span>
-            </div>
-            <div className="eco-card">
-              <b>{equipo.servicios}</b>
-              <span>Sirvieron</span>
-            </div>
-            <div className={`eco-card${equipo.sinServir ? " warn" : ""}`}>
-              <b>{equipo.sinServir}</b>
-              <span>Sin servir</span>
-            </div>
-          </div>
-          {equipo.personas.slice(0, 3).map((p) => (
-            <p key={p.nombre} style={{ margin: "2px 0", fontSize: "0.82rem" }}>
-              {p.nombre} <span className="muted">· {p.pct != null ? `${p.pct}% asistencia` : "—"}</span>
-            </p>
-          ))}
-          <button className="boton-secundario" style={{ marginTop: 10 }} onClick={() => router.push("/estadisticas")}>Ver estadísticas del equipo</button>
-        </div>
-      )}
-
-      {mostrarAdministracion && (
-        <button
-          type="button"
-          onClick={() => router.push("/administracion")}
-          className="tarjeta"
-          style={{
-            display: "flex", alignItems: "center", gap: 10, width: "100%",
-            padding: "12px 16px", marginBottom: 12, cursor: "pointer", textAlign: "left",
-            background: "var(--gold-grad)", color: "#1a1203", border: "none",
-          }}
-        >
-          <Icono id="administracion" size={20} />
-          <span style={{ fontWeight: 700, flex: 1 }}>Administración</span>
-          <span>›</span>
-        </button>
-      )}
-
-      <button
-        type="button"
-        onClick={() => router.push("/merch")}
-        className="tarjeta eco-row"
-        style={{ width: "100%", cursor: "pointer", textAlign: "left", border: "none" }}
-      >
-        <div>
-          <b>🛍️ Catálogo Merch</b>
-          <small className="muted" style={{ display: "block" }}>Mira qué hay disponible y pide comprar</small>
-        </div>
-        <span className="muted">Ver →</span>
-      </button>
 
       {!!totalAvisos && (
         <div className="tarjeta" style={{ marginBottom: 12, borderColor: "var(--danger)" }}>
