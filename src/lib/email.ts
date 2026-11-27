@@ -126,6 +126,30 @@ export async function avisarResultadoAcceso(correo: string, nombre: string, apro
   });
 }
 
+/** Cuando un líder agrega a alguien a su equipo (POST /api/integrantes) con
+ * correo, se le crea la cuenta sola (bloqueado:false, clave al azar que
+ * nadie conoce) y se le manda este correo — entra con su correo, toca
+ * "¿Olvidaste tu clave?" y define la suya con el código de 6 dígitos que ya
+ * manda /api/auth/codigo. No hace falta una clave inicial ni un link de
+ * recuperación distinto: reusa ese mismo flujo ya construido. */
+export async function enviarBienvenidaIntegrante(correo: string, nombre: string, equipo: string) {
+  return enviar({
+    from: FROM,
+    to: correo,
+    subject: "Te invitaron a la app de armglobal",
+    html: layout({
+      etiqueta: "BIENVENIDA",
+      titulo: `¡Hola, ${nombre}!`,
+      parrafos: [
+        `Te agregaron al equipo de ${equipo} en armglobal y ya tienes tu cuenta lista.`,
+        "Para entrar: toca el botón, escribe este mismo correo y elige \"¿Olvidaste tu clave?\" — te va a llegar un código de 6 dígitos para que definas tu propia clave.",
+      ],
+      botonTexto: "Entrar a la app",
+      botonUrl: `${APP_URL}/login?correo=${encodeURIComponent(correo)}`,
+    }),
+  });
+}
+
 /** Reemplaza avisoAdmin_: notifica a uno o más admins de algo que necesita su acción. */
 export async function avisarAdmins(opts: {
   destinatarios: string[];

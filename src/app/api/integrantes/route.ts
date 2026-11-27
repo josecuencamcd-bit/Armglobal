@@ -1,9 +1,12 @@
+import crypto from "crypto";
+import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ok, fail, fromSupabaseError, parseBody } from "@/lib/api-helpers";
 import { CAMPUS, AREAS, TALLAS } from "@/lib/sesiones";
 import { identidadActuante } from "@/lib/identidad";
 import { esFin } from "@/lib/visibilidad-modulos";
+import { enviarBienvenidaIntegrante } from "@/lib/email";
 import { z } from "zod";
 
 /**
@@ -119,6 +122,52 @@ export async function POST(req: Request) {
       .select()
       .single();
     if (error) throw error;
+
+    // Si viene con correo y ese correo todavía no tiene cuenta, se la
+    // creamos sola (clave al azar que nadie conoce) y le avisamos por
+    // correo — José pidió esto explícitamente (caso Magali): agregar a
+    // alguien al equipo le da acceso a la app sin un paso aparte. Va en
+    // after() para no demorar la respuesta ni tumbar la creación del
+    // integrante si falla el correo o la cuenta ya existía.
+    const { campus, area, correo, nombre, telefono, nacimiento } = parsedBody.data;
+    if (correo) {
+      after(async () => {
+        try {
+          const admin = createAdminClient();
+          const { data: yaPerfil } = await admin.from("perfiles").select("id").eq("correo", correo).maybeSingle();
+          if (yaPerfil) return; // ya tiene acceso — no tocamos su cuenta
+
+          const claveAlAzar = crypto.randomBytes(24).toString("base64url");
+          const { data: nuevo, error: errAuth } = await admin.auth.admin.createUser({
+            email: correo,
+            password: claveAlAzar,
+            email_confirm: true,
+          });
+          if (errAuth || !nuevo?.user) throw errAuth ?? new Error("No se pudo crear la cuenta.");
+
+          const { error: errPerfil } = await admin.from("perfiles").insert({
+            id: nuevo.user.id,
+            correo,
+            nombre,
+            telefono: telefono || null,
+            nacimiento: nacimiento || null,
+            campus,
+            roles: ["Voluntario"],
+            sirve: [area],
+            bloqueado: false,
+          });
+          if (errPerfil) {
+            await admin.auth.admin.deleteUser(nuevo.user.id);
+            throw errPerfil;
+          }
+
+          await enviarBienvenidaIntegrante(correo, nombre, area);
+        } catch (eAuto) {
+          console.error("[integrantes] error en auto-registro:", eAuto);
+        }
+      });
+    }
+
     return ok(data, 201);
   } catch (e) {
     return fromSupabaseError(e as { message: string; code?: string });

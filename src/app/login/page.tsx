@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
@@ -27,8 +27,9 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const supabase = createClient();
 
+  const correoInicial = searchParams.get("correo") ?? "";
   const [paso, setPaso] = useState<Paso>(searchParams.get("bloqueado") === "1" ? "pendiente" : "correo");
-  const [correo, setCorreo] = useState("");
+  const [correo, setCorreo] = useState(correoInicial);
   const [clave, setClave] = useState("");
   const [nombre, setNombre] = useState("");
   const [claveNueva, setClaveNueva] = useState("");
@@ -40,6 +41,26 @@ function LoginForm() {
   const [mensaje, setMensaje] = useState<string | null>(
     searchParams.get("bloqueado") === "1" ? "Tu acceso está pendiente de aprobación." : null
   );
+
+  // Link de bienvenida (/login?correo=...): entra directo al paso "entrar"
+  // con el correo ya puesto, como si lo hubiera escrito — así solo le
+  // queda tocar "¿Olvidaste tu clave?" para crear la suya.
+  useEffect(() => {
+    if (!correoInicial) return;
+    (async () => {
+      const res = await fetch("/api/auth/correo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ correo: correoInicial }),
+      });
+      const json = await res.json();
+      if (json.ok && json.data.estado === "entrar") {
+        setMensaje("¡Bienvenido! Toca \"¿Olvidaste tu clave?\" para crear la tuya.");
+        setPaso("entrar");
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function volver() {
     setError(null);
