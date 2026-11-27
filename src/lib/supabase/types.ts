@@ -1154,6 +1154,7 @@ export type Database = {
           creado_en: string
           descripcion: string | null
           foto_url: string | null
+          fotos: Json
           id: number
           nombre: string
           precio: number
@@ -1166,6 +1167,7 @@ export type Database = {
           creado_en?: string
           descripcion?: string | null
           foto_url?: string | null
+          fotos?: Json
           id?: never
           nombre: string
           precio: number
@@ -1178,6 +1180,7 @@ export type Database = {
           creado_en?: string
           descripcion?: string | null
           foto_url?: string | null
+          fotos?: Json
           id?: never
           nombre?: string
           precio?: number

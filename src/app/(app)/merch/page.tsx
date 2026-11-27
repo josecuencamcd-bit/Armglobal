@@ -10,9 +10,16 @@ type Producto = {
   descripcion: string | null;
   precio: number;
   foto_url: string | null;
+  fotos: string[] | null;
   stock: number;
   activo: boolean;
 };
+
+/** Compatibilidad: productos creados antes de "fotos" solo tienen foto_url. */
+function fotosDe(p: Producto): string[] {
+  if (p.fotos && p.fotos.length > 0) return p.fotos;
+  return p.foto_url ? [p.foto_url] : [];
+}
 
 type SolicitudPropia = {
   id: number;
@@ -165,9 +172,9 @@ export default function MerchCatalogoPage() {
                   background: "var(--surface-2)", display: "flex", alignItems: "center", justifyContent: "center",
                 }}
               >
-                {p.foto_url ? (
+                {fotosDe(p)[0] ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={p.foto_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  <img src={fotosDe(p)[0]} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 ) : (
                   <span className="muted" style={{ fontSize: "0.75rem" }}>Sin foto</span>
                 )}
@@ -223,6 +230,14 @@ export default function MerchCatalogoPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <b>{seleccionado.nombre}</b>
+            {fotosDe(seleccionado).length > 0 && (
+              <div style={{ display: "flex", gap: 8, overflowX: "auto" }}>
+                {fotosDe(seleccionado).map((foto, i) => (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img key={i} src={foto} alt="" style={{ width: 90, height: 90, borderRadius: 8, objectFit: "cover", flexShrink: 0 }} />
+                ))}
+              </div>
+            )}
             <p className="muted" style={{ margin: 0 }}>{clp(seleccionado.precio)} · quedan {seleccionado.stock}</p>
             {error && <p className="aviso">{error}</p>}
             <div className="campo">

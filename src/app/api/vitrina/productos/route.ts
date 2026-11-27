@@ -20,7 +20,7 @@ export async function GET(req: Request) {
   const [{ data: productos, error: errProd }, { data: config }] = await Promise.all([
     admin
       .from("merch_productos")
-      .select("id, nombre, descripcion, precio, foto_url, stock")
+      .select("id, nombre, descripcion, precio, foto_url, fotos, stock")
       .eq("campus", campus)
       .eq("activo", true)
       .order("nombre"),

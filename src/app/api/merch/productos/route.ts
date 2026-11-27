@@ -23,22 +23,31 @@ export async function GET(req: Request) {
   return ok(data ?? []);
 }
 
+const FOTO_REGEX = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/;
+
 const ProductoSchema = z.object({
   campus: z.enum(CAMPUS, { error: () => "Campus no válido." }),
   nombre: z.string().trim().min(1, "Falta el nombre.").max(80),
   descripcion: z.string().trim().max(200).optional(),
   precio: z.number().int().min(0).max(100_000_000),
   stock: z.number().int().min(0).max(1_000_000).default(0),
-  // Igual formato/tope que integrantes.foto_url y perfiles.foto_url.
-  foto_url: z.string().regex(/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/).max(45_000).optional(),
+  // Varias fotos por producto (hasta 6); cada una con el mismo formato/tope
+  // que integrantes.foto_url y perfiles.foto_url. foto_url (legado, una sola
+  // foto) se mantiene sincronizado con fotos[0] para lo que todavía lo lea.
+  fotos: z.array(z.string().regex(FOTO_REGEX).max(45_000)).max(6).optional(),
 });
 
 export async function POST(req: Request) {
   const parsedBody = await parseBody(req, ProductoSchema);
   if ("error" in parsedBody) return parsedBody.error;
 
+  const { fotos, ...resto } = parsedBody.data;
   const supabase = await createClient();
-  const { data, error } = await supabase.from("merch_productos").insert(parsedBody.data).select().single();
+  const { data, error } = await supabase
+    .from("merch_productos")
+    .insert({ ...resto, fotos: fotos ?? [], foto_url: fotos?.[0] ?? null })
+    .select()
+    .single();
   if (error) return fromSupabaseError(error);
   return ok(data, 201);
 }

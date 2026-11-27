@@ -8,9 +8,18 @@ type Producto = {
   descripcion: string | null;
   precio: number;
   foto_url: string | null;
+  fotos: string[] | null;
   stock: number;
   activo: boolean;
 };
+
+const MAX_FOTOS = 6;
+
+/** Compatibilidad: productos creados antes de "fotos" solo tienen foto_url. */
+function fotosDe(p: Producto): string[] {
+  if (p.fotos && p.fotos.length > 0) return p.fotos;
+  return p.foto_url ? [p.foto_url] : [];
+}
 type SolicitudProducto = {
   id: number;
   producto_id: number;
@@ -80,7 +89,7 @@ export default function MerchCatalogo({ campus }: { campus: string }) {
   const [ocupado, setOcupado] = useState<number | string | null>(null);
 
   const [creando, setCreando] = useState(false);
-  const [fotoNueva, setFotoNueva] = useState<string | undefined>(undefined);
+  const [fotosNuevas, setFotosNuevas] = useState<string[]>([]);
 
   const [desde, setDesde] = useState(hace30DiasISO());
   const [hasta, setHasta] = useState(hoyISO());
@@ -130,26 +139,33 @@ export default function MerchCatalogo({ campus }: { campus: string }) {
         descripcion: (fd.get("descripcion") as string)?.trim() || undefined,
         precio: Number(fd.get("precio") || 0),
         stock: Number(fd.get("stock") || 0),
-        foto_url: fotoNueva,
+        fotos: fotosNuevas,
       }),
     });
     const json = await res.json();
     setCreando(false);
     if (!json.ok) { setError(json.error); return; }
-    setFotoNueva(undefined);
+    setFotosNuevas([]);
     (document.getElementById("form-nuevo-producto") as HTMLFormElement | null)?.reset();
     await cargar();
   }
 
-  async function subirFotoProducto(id: number, file: File) {
+  async function agregarFotoNueva(file: File) {
+    if (fotosNuevas.length >= MAX_FOTOS) { setError(`Máximo ${MAX_FOTOS} fotos por producto.`); return; }
+    const foto = await fotoProductoADataUrl(file);
+    setFotosNuevas((prev) => [...prev, foto]);
+  }
+
+  async function agregarFotoProducto(id: number, fotosActuales: string[], file: File) {
+    if (fotosActuales.length >= MAX_FOTOS) { setError(`Máximo ${MAX_FOTOS} fotos por producto.`); return; }
     setOcupado(`foto-${id}`);
     setError(null);
     try {
-      const foto_url = await fotoProductoADataUrl(file);
+      const foto = await fotoProductoADataUrl(file);
       const res = await fetch(`/api/merch/productos/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ foto_url }),
+        body: JSON.stringify({ fotos: [...fotosActuales, foto] }),
       });
       const json = await res.json();
       if (!json.ok) { setError(json.error); return; }
@@ -159,6 +175,20 @@ export default function MerchCatalogo({ campus }: { campus: string }) {
     } finally {
       setOcupado(null);
     }
+  }
+
+  async function quitarFotoProducto(id: number, fotosActuales: string[], index: number) {
+    setOcupado(`foto-${id}`);
+    setError(null);
+    const res = await fetch(`/api/merch/productos/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fotos: fotosActuales.filter((_, i) => i !== index) }),
+    });
+    const json = await res.json();
+    setOcupado(null);
+    if (!json.ok) { setError(json.error); return; }
+    await cargar();
   }
 
   async function cambiarActivo(id: number, activo: boolean) {
@@ -308,27 +338,41 @@ export default function MerchCatalogo({ campus }: { campus: string }) {
         action={(fd) => crearProducto(fd)}
       >
         <p className="muted" style={{ margin: 0, fontSize: "0.8rem" }}>Nuevo producto</p>
-        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          {fotoNueva ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={fotoNueva} alt="" style={{ width: 56, height: 56, borderRadius: 8, objectFit: "cover" }} />
-          ) : (
-            <div style={{ width: 56, height: 56, borderRadius: 8, background: "var(--surface-2)" }} />
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+          {fotosNuevas.map((foto, i) => (
+            <div key={i} style={{ position: "relative" }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={foto} alt="" style={{ width: 56, height: 56, borderRadius: 8, objectFit: "cover" }} />
+              <button
+                type="button" onClick={() => setFotosNuevas((prev) => prev.filter((_, j) => j !== i))}
+                style={{
+                  position: "absolute", top: -6, right: -6, width: 20, height: 20, borderRadius: "50%",
+                  background: "var(--ink)", color: "var(--fondo)", border: "none", cursor: "pointer", fontSize: "0.7rem", lineHeight: 1,
+                }}
+              >
+                ×
+              </button>
+            </div>
+          ))}
+          {fotosNuevas.length === 0 && <div style={{ width: 56, height: 56, borderRadius: 8, background: "var(--surface-2)" }} />}
+          {fotosNuevas.length < MAX_FOTOS && (
+            <>
+              <label className="boton-secundario" style={{ display: "inline-block", width: "auto", fontSize: "0.8rem", cursor: "pointer" }}>
+                Tomar foto
+                <input
+                  type="file" accept="image/*" capture="environment" style={{ display: "none" }}
+                  onChange={async (e) => { const f = e.target.files?.[0]; if (f) await agregarFotoNueva(f); e.target.value = ""; }}
+                />
+              </label>
+              <label className="boton-secundario" style={{ display: "inline-block", width: "auto", fontSize: "0.8rem", cursor: "pointer" }}>
+                Galería
+                <input
+                  type="file" accept="image/*" style={{ display: "none" }}
+                  onChange={async (e) => { const f = e.target.files?.[0]; if (f) await agregarFotoNueva(f); e.target.value = ""; }}
+                />
+              </label>
+            </>
           )}
-          <label className="boton-secundario" style={{ display: "inline-block", width: "auto", fontSize: "0.8rem", cursor: "pointer" }}>
-            Tomar foto
-            <input
-              type="file" accept="image/*" capture="environment" style={{ display: "none" }}
-              onChange={async (e) => { const f = e.target.files?.[0]; if (f) setFotoNueva(await fotoProductoADataUrl(f)); e.target.value = ""; }}
-            />
-          </label>
-          <label className="boton-secundario" style={{ display: "inline-block", width: "auto", fontSize: "0.8rem", cursor: "pointer" }}>
-            {fotoNueva ? "Cambiar" : "Galería"}
-            <input
-              type="file" accept="image/*" style={{ display: "none" }}
-              onChange={async (e) => { const f = e.target.files?.[0]; if (f) setFotoNueva(await fotoProductoADataUrl(f)); e.target.value = ""; }}
-            />
-          </label>
         </div>
         <div className="campo">
           <label>Nombre</label>
@@ -357,7 +401,8 @@ export default function MerchCatalogo({ campus }: { campus: string }) {
             key={p.id}
             producto={p}
             ocupado={ocupado}
-            onFoto={(f) => subirFotoProducto(p.id, f)}
+            onAgregarFoto={(f) => agregarFotoProducto(p.id, fotosDe(p), f)}
+            onQuitarFoto={(i) => quitarFotoProducto(p.id, fotosDe(p), i)}
             onActivo={(v) => cambiarActivo(p.id, v)}
             onMovimiento={(tipo, cant) => registrarMovimiento(p.id, tipo, cant)}
           />
@@ -407,11 +452,12 @@ export default function MerchCatalogo({ campus }: { campus: string }) {
 }
 
 function ProductoFila({
-  producto, ocupado, onFoto, onActivo, onMovimiento,
+  producto, ocupado, onAgregarFoto, onQuitarFoto, onActivo, onMovimiento,
 }: {
   producto: Producto;
   ocupado: number | string | null;
-  onFoto: (file: File) => void;
+  onAgregarFoto: (file: File) => void;
+  onQuitarFoto: (index: number) => void;
   onActivo: (v: boolean) => void;
   onMovimiento: (tipo: "Entrada" | "Venta", cantidad: number) => void;
 }) {
@@ -419,34 +465,15 @@ function ProductoFila({
   const subiendoFoto = ocupado === `foto-${producto.id}`;
   const cambiandoActivo = ocupado === `activo-${producto.id}`;
   const moviendo = ocupado === `mov-${producto.id}`;
+  const fotos = fotosDe(producto);
 
   return (
     <div className="tarjeta" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-        <div style={{ width: 48, height: 48, borderRadius: 8, overflow: "hidden", background: "var(--surface-2)", flexShrink: 0 }}>
-          {producto.foto_url && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={producto.foto_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-          )}
-        </div>
+      <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
         <div style={{ flex: 1 }}>
           <b>{producto.nombre}</b>{!producto.activo && <span className="muted"> · oculto de la vitrina</span>}
           <div className="muted" style={{ fontSize: "0.78rem" }}>{clp(producto.precio)} · stock {producto.stock}</div>
         </div>
-        <label className="boton-secundario" style={{ display: "inline-block", width: "auto", fontSize: "0.76rem", padding: "6px 10px", cursor: "pointer" }}>
-          {subiendoFoto ? "…" : "Cámara"}
-          <input
-            type="file" accept="image/*" capture="environment" disabled={subiendoFoto} style={{ display: "none" }}
-            onChange={(e) => { const f = e.target.files?.[0]; if (f) onFoto(f); e.target.value = ""; }}
-          />
-        </label>
-        <label className="boton-secundario" style={{ display: "inline-block", width: "auto", fontSize: "0.76rem", padding: "6px 10px", cursor: "pointer" }}>
-          {subiendoFoto ? "…" : "Galería"}
-          <input
-            type="file" accept="image/*" disabled={subiendoFoto} style={{ display: "none" }}
-            onChange={(e) => { const f = e.target.files?.[0]; if (f) onFoto(f); e.target.value = ""; }}
-          />
-        </label>
         <button
           type="button" className="boton-secundario" style={{ width: "auto", padding: "6px 10px", fontSize: "0.76rem" }}
           disabled={cambiandoActivo} onClick={() => onActivo(!producto.activo)}
@@ -454,6 +481,44 @@ function ProductoFila({
           {producto.activo ? "Ocultar" : "Mostrar"}
         </button>
       </div>
+
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+        {fotos.map((foto, i) => (
+          <div key={i} style={{ position: "relative" }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={foto} alt="" style={{ width: 48, height: 48, borderRadius: 8, objectFit: "cover" }} />
+            <button
+              type="button" disabled={subiendoFoto} onClick={() => onQuitarFoto(i)}
+              style={{
+                position: "absolute", top: -6, right: -6, width: 18, height: 18, borderRadius: "50%",
+                background: "var(--ink)", color: "var(--fondo)", border: "none", cursor: "pointer", fontSize: "0.65rem", lineHeight: 1,
+              }}
+            >
+              ×
+            </button>
+          </div>
+        ))}
+        {fotos.length === 0 && <div style={{ width: 48, height: 48, borderRadius: 8, background: "var(--surface-2)" }} />}
+        {fotos.length < MAX_FOTOS && (
+          <>
+            <label className="boton-secundario" style={{ display: "inline-block", width: "auto", fontSize: "0.76rem", padding: "6px 10px", cursor: "pointer" }}>
+              {subiendoFoto ? "…" : "Cámara"}
+              <input
+                type="file" accept="image/*" capture="environment" disabled={subiendoFoto} style={{ display: "none" }}
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) onAgregarFoto(f); e.target.value = ""; }}
+              />
+            </label>
+            <label className="boton-secundario" style={{ display: "inline-block", width: "auto", fontSize: "0.76rem", padding: "6px 10px", cursor: "pointer" }}>
+              {subiendoFoto ? "…" : "Galería"}
+              <input
+                type="file" accept="image/*" disabled={subiendoFoto} style={{ display: "none" }}
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) onAgregarFoto(f); e.target.value = ""; }}
+              />
+            </label>
+          </>
+        )}
+      </div>
+
       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
         <input
           type="number" min={1} value={cantidad}
