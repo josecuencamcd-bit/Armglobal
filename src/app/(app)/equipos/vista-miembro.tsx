@@ -1,6 +1,10 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { proximaFecha } from "@/lib/sesiones";
+import { SERVICIO_DE_ENCUENTRO } from "@/lib/disponibilidad";
+
+type TuServicio = { servicio: string; fecha: string; area: string; puesto: string };
 
 type IntegranteMini = {
   id: number;
@@ -162,20 +166,56 @@ function PerfilModal({ persona, onCerrar, onActualizado }: { persona: Integrante
  */
 export default function VistaMiembro({ campus, areas }: { campus: string; areas: string[] }) {
   const [porArea, setPorArea] = useState<Record<string, IntegranteMini[]> | null>(null);
+  const [lideresPorArea, setLideresPorArea] = useState<Record<string, string[]>>({});
+  const [misServicios, setMisServicios] = useState<TuServicio[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [seleccionado, setSeleccionado] = useState<{ area: string; persona: IntegranteMini } | null>(null);
 
   const cargar = useCallback(async () => {
-    const resultados = await Promise.all(
-      areas.map(async (a) => {
-        const res = await fetch(`/api/integrantes?campus=${encodeURIComponent(campus)}&area=${encodeURIComponent(a)}`);
-        const json = await res.json();
-        return [a, json.ok ? (json.data as IntegranteMini[]) : []] as const;
-      })
-    );
+    const [resultados, resultadosLideres] = await Promise.all([
+      Promise.all(
+        areas.map(async (a) => {
+          const res = await fetch(`/api/integrantes?campus=${encodeURIComponent(campus)}&area=${encodeURIComponent(a)}`);
+          const json = await res.json();
+          return [a, json.ok ? (json.data as IntegranteMini[]) : []] as const;
+        })
+      ),
+      Promise.all(
+        areas.map(async (a) => {
+          const res = await fetch(`/api/integrantes/lideres-equipo?campus=${encodeURIComponent(campus)}&area=${encodeURIComponent(a)}`);
+          const json = await res.json();
+          return [a, json.ok ? (json.data as string[]) : []] as const;
+        })
+      ),
+    ]);
     setPorArea(Object.fromEntries(resultados));
+    setLideresPorArea(Object.fromEntries(resultadosLideres));
     setError(null);
   }, [campus, areas]);
+
+  // "Tu próximo servicio": de las 3 fichas de la semana (Jueves/Domingo AM/
+  // Domingo PM), busca filas donde el nombre coincida con el propio —
+  // fichas_servicio es de lectura abierta, así que no hace falta una ruta
+  // nueva; solo cruzar con el nombre que ya trae /api/perfil.
+  useEffect(() => {
+    fetch("/api/perfil").then((r) => r.json()).then(async (jPerfil) => {
+      if (!jPerfil.ok) return;
+      const miNombre = (jPerfil.data.nombre as string | undefined)?.trim().toLowerCase();
+      if (!miNombre) return;
+      const resultados = await Promise.all(
+        Object.entries(SERVICIO_DE_ENCUENTRO).map(async ([encuentro, servicio]) => {
+          const fecha = proximaFecha(encuentro);
+          const res = await fetch(`/api/fichas-servicio?servicio=${encodeURIComponent(servicio)}&fecha=${fecha}`);
+          const json = await res.json();
+          if (!json.ok) return [];
+          return (json.data as { servicio: string; fecha: string; area: string; puesto: string; nombre: string | null }[])
+            .filter((f) => f.nombre?.trim().toLowerCase() === miNombre)
+            .map((f) => ({ servicio: f.servicio, fecha: f.fecha, area: f.area, puesto: f.puesto }));
+        })
+      );
+      setMisServicios(resultados.flat());
+    });
+  }, []);
 
   useEffect(() => {
     cargar();
@@ -189,28 +229,48 @@ export default function VistaMiembro({ campus, areas }: { campus: string; areas:
       <p className="muted" style={{ margin: "0 0 16px", fontSize: "0.82rem" }}>Campus {campus}</p>
       {error && <p className="aviso">{error}</p>}
 
-      {areas.map((area) => (
-        <div key={area} className="tarjeta" style={{ marginBottom: 14 }}>
-          <p style={{ margin: "0 0 10px", fontWeight: 700 }}>{area}</p>
-          {(porArea[area] ?? []).length === 0 && <p className="muted" style={{ fontSize: "0.82rem" }}>Sin compañeros cargados todavía.</p>}
-          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            {(porArea[area] ?? []).map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => setSeleccionado({ area, persona: p })}
-                style={{
-                  display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left",
-                  padding: "8px 4px", background: "none", border: "none", cursor: "pointer", color: "inherit",
-                }}
-              >
-                <Avatar nombre={p.nombre} foto={p.foto_url} />
-                <span>{p.nombre}</span>
-              </button>
-            ))}
-          </div>
+      {misServicios.length > 0 && (
+        <div className="tarjeta" style={{ marginBottom: 14 }}>
+          <p style={{ margin: "0 0 8px", fontWeight: 700 }}>Tu próximo servicio</p>
+          {misServicios.map((s, i) => (
+            <p key={i} style={{ margin: "0 0 4px", fontSize: "0.86rem" }}>
+              <b>{s.servicio}</b> ({new Date(`${s.fecha}T12:00:00`).toLocaleDateString("es-CL", { day: "2-digit", month: "2-digit" })}) · {s.area} · {s.puesto}
+            </p>
+          ))}
         </div>
-      ))}
+      )}
+
+      {areas.map((area) => {
+        const lideres = new Set((lideresPorArea[area] ?? []).map((n) => n.trim().toLowerCase()));
+        return (
+          <div key={area} className="tarjeta" style={{ marginBottom: 14 }}>
+            <p style={{ margin: "0 0 10px", fontWeight: 700 }}>{area}</p>
+            {(porArea[area] ?? []).length === 0 && <p className="muted" style={{ fontSize: "0.82rem" }}>Sin compañeros cargados todavía.</p>}
+            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              {(porArea[area] ?? []).map((p) => {
+                const esLider = lideres.has(p.nombre.trim().toLowerCase());
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => setSeleccionado({ area, persona: p })}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left",
+                      padding: "8px 4px", background: "none", border: "none", cursor: "pointer", color: "inherit",
+                    }}
+                  >
+                    <Avatar nombre={p.nombre} foto={p.foto_url} />
+                    <span style={{ fontWeight: esLider ? 700 : 400 }}>{p.nombre}</span>
+                    {esLider && (
+                      <span className="chip" style={{ fontSize: "0.68rem", padding: "2px 8px", minHeight: "auto" }}>Líder</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
 
       {seleccionado && (
         <PerfilModal
