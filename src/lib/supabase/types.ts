@@ -1809,6 +1809,47 @@ export type Database = {
         }
         Returns: boolean
       }
+      fondos_equipo_registrar_aporte_voluntario: {
+        Args: {
+          p_area: Database["public"]["Enums"]["area_t"]
+          p_campus: Database["public"]["Enums"]["campus_t"]
+          p_descripcion: string
+          p_fecha: string
+          p_foto_url: string
+          p_metodo: string
+          p_monto: number
+          p_nombre: string
+          p_por: string
+        }
+        Returns: {
+          anulado_en: string | null
+          anulado_por: string | null
+          area: Database["public"]["Enums"]["area_t"]
+          boleta: string | null
+          campus: Database["public"]["Enums"]["campus_t"]
+          categoria: string | null
+          comercio: string | null
+          creado_en: string
+          descripcion: string | null
+          estado: string
+          fecha: string
+          foto_url: string | null
+          id: number
+          metodo: string | null
+          monto: number
+          motivo: string | null
+          nombre: string | null
+          por: string | null
+          tardio: boolean
+          tipo: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "fondos_equipo"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       merch_producto_registrar_movimiento:
         | {
             Args: {

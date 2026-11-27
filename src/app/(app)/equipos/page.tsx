@@ -9,7 +9,7 @@ import { AREAS_DISPONIBILIDAD, ENCUENTRO_DE_SERVICIO } from "@/lib/disponibilida
 import { FONDO_AREAS, esFin, esLider, esPastorC, esAppAdmin, fondosMios } from "@/lib/visibilidad-modulos";
 import MerchInventario from "./merch-inventario";
 import MerchCatalogo from "./merch-catalogo";
-import VistaMiembro from "./vista-miembro";
+import VistaMiembro, { AporteEquipo } from "./vista-miembro";
 
 type Integrante = {
   id: number;
@@ -287,6 +287,10 @@ export default function EquiposPage() {
   // más abajo): un Administrador o Ministro que lidera "Kids" solo gestiona
   // Kids, no cualquier otra que mire con el selector de Área.
   const [misAreasLider, setMisAreasLider] = useState<string[]>([]);
+  // Para mostrar "+ Aportar al fondo" en la vista de solo lectura: alguien
+  // que lidera OTRA área pero también SIRVE en esta (sin liderarla) — ver
+  // AporteEquipo en vista-miembro.tsx.
+  const [misAreasSirve, setMisAreasSirve] = useState<string[]>([]);
   // Pastor/Pastor de campus/Pastor principal y Admin app administran TODO
   // por diseño (no "lideran" un área puntual) — ven y gestionan cualquiera.
   const [altoResponsable, setAltoResponsable] = useState(false);
@@ -300,6 +304,7 @@ export default function EquiposPage() {
       const esAltoResp = esPastorC(json.data) || esAppAdmin(json.data);
       setAltoResponsable(esAltoResp);
       setMisAreasLider(json.data.areas ?? []);
+      setMisAreasSirve(json.data.sirve ?? []);
       // Quien no lidera ningún área y no administra todo (Ministro o
       // Administrador "de a pie", o un Voluntario que solo sirve/forma
       // parte de un equipo) ve la versión de solo lectura de "Mi equipo" —
@@ -837,6 +842,7 @@ export default function EquiposPage() {
         <p className="muted" style={{ fontSize: "0.82rem", margin: "0 0 14px" }}>
           Solo visualización — {area} no es tu equipo, así que no puedes editarlo desde acá.
         </p>
+        {misAreasSirve.includes(area) && <AporteEquipo campus={campus} area={area} />}
         <div className="tarjeta">
           {(lista ?? []).length === 0 && <p className="muted" style={{ fontSize: "0.82rem" }}>Sin integrantes cargados todavía.</p>}
           <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>

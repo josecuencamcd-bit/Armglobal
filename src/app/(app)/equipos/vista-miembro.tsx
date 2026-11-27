@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { proximaFecha } from "@/lib/sesiones";
+import { proximaFecha, METODOS_FONDO } from "@/lib/sesiones";
 import { SERVICIO_DE_ENCUENTRO } from "@/lib/disponibilidad";
 
 type TuServicio = { servicio: string; fecha: string; area: string; puesto: string };
@@ -160,6 +160,107 @@ function VentaMerch({ campus }: { campus: string }) {
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+/** Mismo achique que el comprobante de Merch — jpeg liviano, no el base64
+ * de 45000 que usan las fotos de perfil/producto. */
+async function comprobanteADataUrl(file: File): Promise<string> {
+  const bitmap = await createImageBitmap(file);
+  const maxLado = 1000;
+  const escala = Math.min(1, maxLado / Math.max(bitmap.width, bitmap.height));
+  const w = bitmap.width * escala;
+  const h = bitmap.height * escala;
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  canvas.getContext("2d")!.drawImage(bitmap, 0, 0, w, h);
+  return canvas.toDataURL("image/jpeg", 0.75);
+}
+
+/**
+ * "Aportar al fondo de equipo": cualquiera que SIRVA en un área (lidere o
+ * no) puede dejar registrado un aporte para los gastos internos de ESE
+ * equipo — distinto del aporte de ofrenda/diezmo de los encuentros. Se usa
+ * tanto acá (quien no lidera nada) como en la vista de solo lectura de
+ * /equipos (quien lidera OTRA área y está mirando esta de paso).
+ */
+export function AporteEquipo({ campus, area }: { campus: string; area: string }) {
+  const [abierto, setAbierto] = useState(false);
+  const [monto, setMonto] = useState("");
+  const [metodo, setMetodo] = useState<(typeof METODOS_FONDO)[number]>("Efectivo");
+  const [descripcion, setDescripcion] = useState("");
+  const [foto, setFoto] = useState<string | undefined>(undefined);
+  const [enviando, setEnviando] = useState(false);
+  const [mensaje, setMensaje] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function enviar() {
+    const montoNum = Math.floor(Number(monto));
+    if (!montoNum || montoNum <= 0) { setError("Escribe un monto válido."); return; }
+    setEnviando(true);
+    setError(null);
+    setMensaje(null);
+    const res = await fetch("/api/fondos/aporte-voluntario", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ campus, area, monto: montoNum, metodo, descripcion: descripcion || undefined, foto }),
+    });
+    const json = await res.json();
+    setEnviando(false);
+    if (!json.ok) { setError(json.error); return; }
+    setMensaje("Aporte registrado — tu líder ya fue avisada.");
+    setMonto("");
+    setDescripcion("");
+    setFoto(undefined);
+  }
+
+  if (!abierto) {
+    return (
+      <button type="button" className="boton-secundario" style={{ width: "auto", padding: "6px 10px", fontSize: "0.78rem", marginTop: 8 }} onClick={() => setAbierto(true)}>
+        + Aportar al fondo de {area}
+      </button>
+    );
+  }
+
+  return (
+    <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid var(--line)", display: "flex", flexDirection: "column", gap: 8 }}>
+      <p style={{ margin: 0, fontWeight: 700, fontSize: "0.86rem" }}>Aportar al fondo de {area}</p>
+      {error && <p className="aviso">{error}</p>}
+      {mensaje && <p className="muted" style={{ fontSize: "0.82rem" }}>{mensaje}</p>}
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+        <input type="number" min={1} placeholder="Monto" value={monto} onChange={(e) => setMonto(e.target.value)} style={{ width: 110 }} />
+        <select value={metodo} onChange={(e) => setMetodo(e.target.value as typeof metodo)} style={{ width: "auto" }}>
+          {METODOS_FONDO.map((m) => <option key={m} value={m}>{m}</option>)}
+        </select>
+      </div>
+      <input type="text" placeholder="Nota (opcional)" maxLength={120} value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+        {foto ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={foto} alt="" style={{ width: 48, height: 48, borderRadius: 8, objectFit: "cover" }} />
+        ) : (
+          <label className="boton-secundario" style={{ display: "inline-block", width: "auto", fontSize: "0.76rem", padding: "6px 10px", cursor: "pointer" }}>
+            Cámara
+            <input type="file" accept="image/*" capture="environment" style={{ display: "none" }}
+              onChange={async (e) => { const f = e.target.files?.[0]; if (f) setFoto(await comprobanteADataUrl(f)); e.target.value = ""; }} />
+          </label>
+        )}
+        <label className="boton-secundario" style={{ display: "inline-block", width: "auto", fontSize: "0.76rem", padding: "6px 10px", cursor: "pointer" }}>
+          Galería
+          <input type="file" accept="image/*" style={{ display: "none" }}
+            onChange={async (e) => { const f = e.target.files?.[0]; if (f) setFoto(await comprobanteADataUrl(f)); e.target.value = ""; }} />
+        </label>
+      </div>
+      <div style={{ display: "flex", gap: 8 }}>
+        <button type="button" className="boton" style={{ width: "auto", padding: "8px 14px" }} disabled={enviando} onClick={enviar}>
+          {enviando ? "Guardando…" : "Registrar aporte"}
+        </button>
+        <button type="button" className="boton-secundario" style={{ width: "auto", padding: "8px 14px" }} onClick={() => setAbierto(false)}>
+          Cancelar
+        </button>
+      </div>
     </div>
   );
 }
@@ -373,6 +474,7 @@ export default function VistaMiembro({ campus, areas }: { campus: string; areas:
                 );
               })}
             </div>
+            <AporteEquipo campus={campus} area={area} />
           </div>
         );
       })}
