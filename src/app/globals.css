@@ -781,6 +781,9 @@ button.reu-chip { cursor: pointer; }
 .home-action-card small { font-size: 0.74rem; opacity: 0.85; }
 .home-action-emoji { font-size: 1.5rem; margin-bottom: 4px; }
 .home-action-img { position: absolute; top: 10px; right: 10px; width: 36px; height: 36px; border-radius: 9px; object-fit: cover; }
-.home-action-gold { background: var(--gold-grad); color: var(--accent-ink); border: none; }
-.home-action-dark { background: var(--surface-2); color: var(--ink); }
-.home-action-dark .home-action-emoji { color: var(--gold); }
+/* José (28-nov): "lo anaranjado está sobrecargado" — el banner de arriba
+ * ya es dorado fuerte, así que las dos tarjetas de acción bajan a un tono
+ * neutro (solo un borde/ícono dorado), en vez de repetir el gradiente. */
+.home-action-gold, .home-action-dark { background: var(--surface-2); color: var(--ink); border: 1px solid var(--line); }
+.home-action-gold { border-color: var(--hud-line-2); }
+.home-action-gold .home-action-emoji, .home-action-dark .home-action-emoji { color: var(--gold); }
