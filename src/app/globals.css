@@ -732,3 +732,55 @@ button.reu-chip { cursor: pointer; }
 .nav-sheet-item[aria-current="true"] { background: rgba(245, 166, 35, 0.1); }
 .nav-sheet-item .ic { width: 32px; height: 32px; border-radius: var(--r-sm); background: rgba(245, 166, 35, 0.12); color: var(--accent); display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; border: 1px solid var(--line); }
 .nav-sheet-item b { font-weight: 600; }
+
+/* Home rediseñado (José, 28-nov): estilo con banner curvo de bienvenida
+ * arriba (como el home de referencia que mandó), con nuestros colores
+ * (dorado/negro) y la misma información que ya teníamos — saludo,
+ * cumpleaños de hoy, próximos cumpleaños en tira horizontal, y Merch/
+ * Próximo encuentro como tarjetas grandes de acción en vez de filas. */
+.home-banner {
+  background: var(--gold-grad);
+  padding: 18px 16px 34px;
+  border-radius: 0 0 28px 28px;
+  box-shadow: 0 16px 40px -20px rgba(245, 166, 35, 0.5);
+}
+@media (min-width: 900px) { .home-banner { max-width: 720px; margin: 0 auto; border-radius: 0 0 28px 28px; } }
+.home-banner-btn.soporte-btn, .home-banner-btn.ayuda-btn {
+  background: rgba(20, 20, 20, 0.16); border-color: rgba(20, 20, 20, 0.28); color: var(--accent-ink);
+}
+.home-banner-btn.soporte-btn:hover, .home-banner-btn.ayuda-btn:hover { border-color: rgba(20, 20, 20, 0.5); box-shadow: none; }
+.home-birthday {
+  display: flex; align-items: center; gap: 12px; width: 100%; margin-top: 16px;
+  background: rgba(20, 20, 20, 0.14); border: 1px solid rgba(20, 20, 20, 0.2);
+  border-radius: var(--r-lg); padding: 12px 14px; cursor: pointer; text-align: left; color: var(--accent-ink);
+}
+.home-birthday-ic { font-size: 1.6rem; flex: 0 0 auto; }
+.home-birthday b { display: block; }
+.home-birthday small { opacity: 0.8; }
+
+.home-cumples-strip { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch; }
+.home-cumple-chip {
+  flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 4px; width: 60px;
+  background: none; border: 0; color: var(--ink); cursor: pointer; padding: 0;
+}
+.home-cumple-chip small { font-size: 0.68rem; line-height: 1.1; max-width: 60px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.home-cumple-avatar {
+  width: 52px; height: 52px; border-radius: 50%; overflow: hidden; display: flex; align-items: center; justify-content: center;
+  background: var(--surface-2); border: 2px solid var(--accent); color: var(--gold); font-weight: 700; font-size: 0.85rem;
+}
+.home-cumple-avatar-mas { border-style: dashed; color: var(--muted); font-size: 0.72rem; font-weight: 600; }
+
+.home-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.home-action-card {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 4px; text-align: left; cursor: pointer;
+  border-radius: var(--r-lg); padding: 16px 14px; min-height: 108px; justify-content: flex-end;
+  border: 1px solid var(--line); position: relative; overflow: hidden;
+}
+.home-action-card:disabled { cursor: default; opacity: 0.6; }
+.home-action-card b { font-size: 0.92rem; }
+.home-action-card small { font-size: 0.74rem; opacity: 0.85; }
+.home-action-emoji { font-size: 1.5rem; margin-bottom: 4px; }
+.home-action-img { position: absolute; top: 10px; right: 10px; width: 36px; height: 36px; border-radius: 9px; object-fit: cover; }
+.home-action-gold { background: var(--gold-grad); color: var(--accent-ink); border: none; }
+.home-action-dark { background: var(--surface-2); color: var(--ink); }
+.home-action-dark .home-action-emoji { color: var(--gold); }

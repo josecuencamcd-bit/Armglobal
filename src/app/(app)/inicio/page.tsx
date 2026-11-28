@@ -33,6 +33,11 @@ type Avisos = {
   total: number;
 };
 type Cumple = { nombre: string; area: string; anos_iglesia: number | null; foto_url: string | null; hoy: boolean; faltan: number | null };
+
+function iniciales(nombre: string): string {
+  const partes = nombre.trim().split(/\s+/);
+  return ((partes[0]?.[0] ?? "") + (partes[1]?.[0] ?? "")).toUpperCase();
+}
 type Proximo = { encuentro: string; fecha: string; hoy: boolean } | null;
 type ProductoMerch = { id: string; nombre: string; precio: number; foto_url: string | null; fotos: string[] | null };
 
@@ -57,6 +62,7 @@ export default function InicioPage() {
   const [proximo, setProximo] = useState<Proximo>(null);
   const [cumplesHoy, setCumplesHoy] = useState<Cumple[]>([]);
   const [proximoCumple, setProximoCumple] = useState<Cumple | null>(null);
+  const [proximosCumples, setProximosCumples] = useState<Cumple[]>([]);
   const [productoMerch, setProductoMerch] = useState<ProductoMerch | null>(null);
   const [ayudaAbierta, setAyudaAbierta] = useState(false);
   const [ayudaTipo, setAyudaTipo] = useState(TIPOS_AYUDA[0]);
@@ -111,6 +117,10 @@ export default function InicioPage() {
       const lista = json.data.lista as Cumple[];
       setCumplesHoy(lista.filter((p) => p.hoy));
       setProximoCumple(lista[0] ?? null);
+      // Tira horizontal "Próximos cumpleaños" (estilo referencia de José,
+      // 28-nov) — los que faltan, sin repetir a quien ya sale en el banner
+      // grande de "hoy".
+      setProximosCumples(lista.filter((p) => !p.hoy).slice(0, 8));
     });
   }, []);
 
@@ -155,101 +165,98 @@ export default function InicioPage() {
   const totalAvisos = (avisos?.encuentros.length ?? 0) + (avisos?.notas.length ?? 0) + (avisos?.cierres.length ?? 0) + (avisos?.autorizaciones ? 1 : 0);
 
   return (
-    <div className="contenedor" style={{ paddingTop: 28 }}>
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10, marginBottom: 4 }}>
-        <h1 className="titulo" style={{ fontSize: "1.5rem", margin: 0 }}>
-          Hola{nombre ? `, ${nombre}` : ""}
-        </h1>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-          {mostrarSoporte && (
-            <button onClick={() => router.push("/soporte")} className="soporte-btn">
-              ⚙ Soporte
-              {!!avisos?.autorizaciones && <span className="nb">{avisos.autorizaciones}</span>}
+    <div>
+      {/* Banner curvo (José, 28-nov: "home estilo Talana, con nuestros
+       * colores y la info que ya tenemos") — saludo + soporte/ayuda arriba,
+       * y si alguien cumple hoy, el festejo grande acá mismo en vez de una
+       * fila más abajo. */}
+      <div className="home-banner">
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
+          <div style={{ minWidth: 0 }}>
+            <h1 className="titulo" style={{ fontSize: "1.5rem", margin: 0, color: "var(--accent-ink)" }}>
+              Hola{nombre ? `, ${nombre}` : ""}
+            </h1>
+            {mostrarCampus && (
+              <p style={{ margin: "2px 0 0", fontSize: "0.8rem", color: "var(--accent-ink)", opacity: 0.75 }}>Campus {campusActivo}</p>
+            )}
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+            {mostrarSoporte && (
+              <button onClick={() => router.push("/soporte")} className="soporte-btn home-banner-btn">
+                ⚙ Soporte
+                {!!avisos?.autorizaciones && <span className="nb">{avisos.autorizaciones}</span>}
+              </button>
+            )}
+            <button onClick={() => setAyudaAbierta((v) => !v)} className="ayuda-btn home-banner-btn">
+              ? Ayuda
             </button>
-          )}
-          <button onClick={() => setAyudaAbierta((v) => !v)} className="ayuda-btn">
-            ? Ayuda
-          </button>
+          </div>
         </div>
+
+        {cumplesHoy.length > 0 && (
+          <button type="button" onClick={() => router.push("/cumpleanos")} className="home-birthday">
+            <span className="home-birthday-ic">🎂</span>
+            <div style={{ minWidth: 0 }}>
+              <b>¡Feliz cumpleaños, {cumplesHoy[0].nombre.split(" ")[0]}!</b>
+              <small style={{ display: "block" }}>
+                Sirve en {cumplesHoy[0].area}
+                {cumplesHoy.length > 1 ? ` · +${cumplesHoy.length - 1} más hoy` : ""} · Ver saludos →
+              </small>
+            </div>
+          </button>
+        )}
       </div>
 
-      {mostrarCampus && (
-        <p className="muted" style={{ margin: "0 0 16px", fontSize: "0.8rem" }}>Campus {campusActivo}</p>
-      )}
-      {!mostrarCampus && <div style={{ marginBottom: 12 }} />}
-
-      <button
-        type="button"
-        onClick={() => router.push("/merch")}
-        className="tarjeta eco-row"
-        style={{ width: "100%", cursor: "pointer", textAlign: "left", border: "none" }}
-      >
-        {productoMerch ? (
-          <>
-            {(() => {
-              const foto = productoMerch.fotos?.[0] ?? productoMerch.foto_url;
-              return foto ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={foto} alt="" style={{ width: 48, height: 48, borderRadius: 10, objectFit: "cover", flexShrink: 0 }} />
-              ) : null;
-            })()}
-            <div style={{ minWidth: 0 }}>
-              <b>🛍️ {productoMerch.nombre}</b>
-              <small className="muted" style={{ display: "block" }}>{peso(productoMerch.precio)} · Catálogo Merch</small>
+      <div className="contenedor" style={{ paddingTop: 16, marginTop: -18 }}>
+        {proximosCumples.length > 0 && (
+          <div style={{ marginBottom: 14 }}>
+            <p className="muted" style={{ margin: "0 0 8px", fontSize: "0.75rem", fontWeight: 700, letterSpacing: "0.04em" }}>🎁 PRÓXIMOS CUMPLEAÑOS</p>
+            <div className="home-cumples-strip">
+              {proximosCumples.map((c, i) => (
+                <button key={i} type="button" onClick={() => router.push("/cumpleanos")} className="home-cumple-chip">
+                  <span className="home-cumple-avatar">
+                    {c.foto_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={c.foto_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} />
+                    ) : (
+                      iniciales(c.nombre)
+                    )}
+                  </span>
+                  <small>{c.nombre.split(" ")[0]}</small>
+                  <small className="muted">{c.faltan === 1 ? "mañana" : `en ${c.faltan}d`}</small>
+                </button>
+              ))}
+              <button type="button" onClick={() => router.push("/cumpleanos")} className="home-cumple-chip">
+                <span className="home-cumple-avatar home-cumple-avatar-mas">Ver</span>
+                <small>todos</small>
+              </button>
             </div>
-          </>
-        ) : (
-          <div>
-            <b>🛍️ Catálogo Merch</b>
-            <small className="muted" style={{ display: "block" }}>Mira qué hay disponible y pide comprar</small>
           </div>
         )}
-        <span className="muted">Ver →</span>
-      </button>
 
-      {proximo && (
-        <button
-          type="button"
-          onClick={() => router.push("/encuentros")}
-          className="tarjeta eco-row"
-          style={{ width: "100%", cursor: "pointer", textAlign: "left", border: "none" }}
-        >
-          <div>
-            <b>📅 Próximo encuentro</b>
-            <small className="muted" style={{ display: "block" }}>
-              {proximo.encuentro} · {proximo.hoy ? "Hoy" : fechaLarga(proximo.fecha)}
-            </small>
-          </div>
-          <span className="muted">Ver →</span>
-        </button>
-      )}
+        <div className="home-actions">
+          <button type="button" onClick={() => router.push("/merch")} className="home-action-card home-action-gold">
+            {productoMerch?.fotos?.[0] ?? productoMerch?.foto_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={productoMerch!.fotos?.[0] ?? productoMerch!.foto_url!} alt="" className="home-action-img" />
+            ) : (
+              <span className="home-action-emoji">🛍️</span>
+            )}
+            <b>{productoMerch ? productoMerch.nombre : "Catálogo Merch"}</b>
+            <small>{productoMerch ? peso(productoMerch.precio) : "Mira qué hay disponible"}</small>
+          </button>
 
-      {(cumplesHoy.length > 0 || proximoCumple) && (
-        <button
-          type="button"
-          onClick={() => router.push("/cumpleanos")}
-          className="tarjeta eco-row"
-          style={{ width: "100%", cursor: "pointer", textAlign: "left", border: "none" }}
-        >
-          {cumplesHoy.length > 0 ? (
-            <div>
-              <b>🎂 ¡Feliz cumpleaños, {cumplesHoy[0].nombre.split(" ")[0]}!</b>
-              <small className="muted" style={{ display: "block" }}>
-                Sirve en {cumplesHoy[0].area}
-                {cumplesHoy.length > 1 ? ` · +${cumplesHoy.length - 1} más hoy` : ""}
-              </small>
-            </div>
-          ) : proximoCumple ? (
-            <div>
-              <b>🎂 Próximo cumpleaños: {proximoCumple.nombre.split(" ")[0]}</b>
-              <small className="muted" style={{ display: "block" }}>
-                En {proximoCumple.faltan} día{proximoCumple.faltan === 1 ? "" : "s"} · {proximoCumple.area}
-              </small>
-            </div>
-          ) : null}
-          <span className="muted">Ver →</span>
-        </button>
-      )}
+          <button
+            type="button"
+            onClick={() => router.push(proximo ? "/encuentros" : "/merch")}
+            className="home-action-card home-action-dark"
+            disabled={!proximo}
+          >
+            <span className="home-action-emoji">📅</span>
+            <b>Próximo encuentro</b>
+            <small>{proximo ? `${proximo.encuentro} · ${proximo.hoy ? "Hoy" : fechaLarga(proximo.fecha)}` : "Nada agendado"}</small>
+          </button>
+        </div>
 
       {ayudaAbierta && (
         <div className="tarjeta" style={{ marginBottom: 12 }}>
@@ -341,7 +348,7 @@ export default function InicioPage() {
           </div>
         </div>
       )}
-
+      </div>
     </div>
   );
 }
