@@ -60,19 +60,11 @@ html, body {
   overflow-x: hidden;
 }
 
-/* ---- Acabados generales: ambiente "HUD" sutil detrás de todo el
- * contenido (resplandor superior + grilla tenue), selección de texto y
- * scrollbar con la identidad dorada, y feedback táctil consistente —
- * nada de esto existía antes y el resultado se sentía "plano". */
+/* ---- Acabados generales: selección de texto y scrollbar con la
+ * identidad dorada, y feedback táctil consistente. Fondo negro sólido,
+ * sin grilla ni resplandor — José pidió que no se vea cuadriculado. */
 body {
   position: relative;
-  background-image:
-    radial-gradient(900px 480px at 50% -120px, rgba(245, 166, 35, 0.10), transparent 70%),
-    linear-gradient(rgba(245, 166, 35, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(245, 166, 35, 0.05) 1px, transparent 1px);
-  background-size: auto, 34px 34px, 34px 34px;
-  background-position: top center, center, center;
-  background-attachment: fixed;
   -webkit-tap-highlight-color: transparent;
 }
 
