@@ -84,8 +84,15 @@ export default function MerchCatalogoPage() {
     if (jConfig.ok) setDatosTransferencia(jConfig.data.datos_transferencia ?? null);
     if (jPerfil.ok) {
       const p = jPerfil.data as { roles: string[]; areas: string[]; sirve: string[] };
-      const esFin = p.roles.some((r) => ["Pastor principal", "Pastor de campus", "Pastor", "Ministro", "Administrador"].includes(r));
-      setPuedeGestionar(esFin || p.areas.includes("Merch") || p.sirve.includes("Merch"));
+      // Ojo: NO es esFin() (eso incluiría a cualquier Administrador, sea
+      // cual sea su área). José (27-11): un Administrador que no
+      // sirve/lidera en Merch no debe ver este botón — caso detectado en
+      // el perfil de Aline (Administrador + Líder de Conexión, sirve en
+      // Worship). Visión total solo para Pastor*/Ministro/Admin app, que
+      // sí ven todas las áreas; el resto solo si de verdad está en Merch.
+      const esAlto = p.roles.some((r) => ["Pastor principal", "Pastor de campus", "Pastor", "Ministro"].includes(r));
+      const esAdminApp = p.roles.includes("Admin app");
+      setPuedeGestionar(esAlto || esAdminApp || p.areas.includes("Merch") || p.sirve.includes("Merch"));
     }
   }, [campusActivo]);
 

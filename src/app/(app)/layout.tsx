@@ -146,13 +146,20 @@ function Shell({ children, impersonando }: { children: React.ReactNode; imperson
   // sueltos en vez de Merch, porque PRIORIDAD_NAV varía según qué tenga
   // visible cada persona) la barra suelta queda ESTANDARIZADA para
   // cualquier rol: Inicio + Mi equipo (si aplica) + Merch + Más. Todo lo
-  // demás — Fondo, Asistencia, Cumpleaños, Reuniones, Administración,
-  // Soporte, Bajas — vive solo dentro de "Más", nunca suelto.
-  const NUNCA_SUELTOS = new Set(["administracion", "soporte", "bajas", "asistencia", "cumpleanos", "reuniones", "fondos"]);
+  // demás vive solo dentro de "Más", nunca suelto — por eso esto es una
+  // lista BLANCA (solo "equipos" puede ir suelto) y no una lista negra de
+  // claves a excluir: con un blocklist, cualquier módulo nuevo que no
+  // estuviera explícitamente ahí se colaba suelto para quien lo tuviera
+  // como más prioritario (así se detectó el caso de Aline — con
+  // Fondo/Asistencia ocultos, Cumpleaños/Reuniones ganaban un lugar suelto
+  // en vez de Merch; con este cambio de enfoque, ningún módulo futuro de
+  // PRIORIDAD_NAV puede volver a colarse de la misma forma, sea cual sea
+  // la combinación de rol/área).
+  const UNICA_SUELTA_PERMITIDA = "equipos";
   const clavesPrincipales = perfil
     ? clavesPrincipalesNav({ roles: perfil.roles, areas: perfil.areas, sirve: perfil.sirve, modulos_on: perfil.modulos_on, modulos_off: perfil.modulos_off })
         .map((cv) => MODULO_APP_A_CLAVE[cv])
-        .filter((k): k is string => !!k && !NUNCA_SUELTOS.has(k))
+        .filter((k): k is string => k === UNICA_SUELTA_PERMITIDA)
     : [];
   const principalesBase = [
     modulosDeEstaPersona.find((m) => m.key === "inicio"),
