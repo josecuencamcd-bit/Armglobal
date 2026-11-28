@@ -3,6 +3,7 @@ import { ok, fail, fromSupabaseError } from "@/lib/api-helpers";
 import { CAMPUS } from "@/lib/sesiones";
 import { cierreSimplificado } from "@/lib/informe-fondos";
 import { identidadActuante } from "@/lib/identidad";
+import { pausaEncuentrosActiva } from "@/lib/vigilantes";
 
 const FONDO_AREAS = ["Kids", "Tweens", "Técnica", "Worship", "Conexión", "Voluntariado"] as const;
 
@@ -56,8 +57,10 @@ export async function GET() {
     esAdmin || perfil.campus == null ? CAMPUS : [perfil.campus];
 
   try {
+    const pausado = await pausaEncuentrosActiva(supabase);
+
     const encuentros: { campus: string; encuentro: string; fecha: string; key: string }[] = [];
-    if (esAdmin || esPastorCampus || esAdministrador) {
+    if (!pausado && (esAdmin || esPastorCampus || esAdministrador)) {
       const { data, error } = await supabase
         .from("sesiones")
         .select("key, campus, encuentro, fecha")
@@ -71,7 +74,7 @@ export async function GET() {
     }
 
     const notas: { campus: string; area: string; fecha: string; key: string }[] = [];
-    if (esLider && areasPerfil.length) {
+    if (!pausado && esLider && areasPerfil.length) {
       const { data, error } = await supabase
         .from("notas")
         .select("key, campus, area, fecha")

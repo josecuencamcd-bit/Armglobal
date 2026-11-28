@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { encuentrosPendientes, notasPendientes, checklistsPendientes, encuentrosPorIniciar, destinatariosChecklist, destinatariosChecklistResponsables, debeAvisar, vigilanteFondos } from "@/lib/vigilantes";
+import { encuentrosPendientes, notasPendientes, checklistsPendientes, encuentrosPorIniciar, destinatariosChecklist, destinatariosChecklistResponsables, debeAvisar, vigilanteFondos, pausaEncuentrosActiva } from "@/lib/vigilantes";
 import { cumpleVigilante } from "@/lib/cumpleanos";
 import { enviarWhatsApp, telefonoWa } from "@/lib/whatsapp";
 import { avisarAdmins } from "@/lib/email";
@@ -59,7 +59,13 @@ export async function GET(req: Request) {
   resultado.cumples_enviados = cumples.enviadas;
   resultado.cumples_recordados = cumples.recordadas;
 
-  const pendEncuentros = await encuentrosPendientes(supabase);
+  // Pausa manual de alarmas de encuentros (pendientes, notas, checklist y
+  // checklist previo) mientras la app sigue en construcción — ver
+  // `pausaEncuentrosActiva`. No afecta vigilanteFondos ni cumpleVigilante,
+  // que son avisos de otra naturaleza y siguen corriendo igual.
+  const pausado = await pausaEncuentrosActiva(supabase);
+
+  const pendEncuentros = pausado ? [] : await encuentrosPendientes(supabase);
   for (const e of pendEncuentros) {
     const key = [e.campus, e.encuentro, e.fecha].join("|");
     if (!(await debeAvisar(supabase, "encuentros", key, e.hoy))) continue;
@@ -77,7 +83,7 @@ export async function GET(req: Request) {
     resultado.encuentros_avisados++;
   }
 
-  const pendNotas = await notasPendientes(supabase);
+  const pendNotas = pausado ? [] : await notasPendientes(supabase);
   for (const e of pendNotas) {
     const key = [e.campus, e.area, e.encuentro, e.fecha].join("|");
     if (!(await debeAvisar(supabase, "notas", key, e.hoy))) continue;
@@ -100,7 +106,7 @@ export async function GET(req: Request) {
   // diferencia de encuentros/notas (WhatsApp, aún sin credenciales), este
   // va por Resend al administrador responsable, Admin app y equipo
   // pastoral del campus (ver ROLES_CHECKLIST).
-  const pendChecklist = await checklistsPendientes(supabase);
+  const pendChecklist = pausado ? [] : await checklistsPendientes(supabase);
   for (const e of pendChecklist) {
     const key = [e.campus, e.encuentro, e.fecha].join("|");
     if (!(await debeAvisar(supabase, "checklist", key, e.hoy))) continue;
@@ -128,7 +134,7 @@ export async function GET(req: Request) {
   // responsable asignado (y el administrador/equipo pastoral en copia)
   // alcancen a dejar el Checklist pre-encuentro listo. Solo si todavía no
   // está finalizado — si ya lo cerraron antes, no hace falta molestar.
-  const porIniciar = await encuentrosPorIniciar();
+  const porIniciar = pausado ? [] : await encuentrosPorIniciar();
   for (const e of porIniciar) {
     const key = [e.campus, e.encuentro, e.fecha].join("|");
     if (!(await debeAvisar(supabase, "checklist-previo", key, true))) continue;

@@ -25,6 +25,17 @@ const INICIO_ENC: Record<string, number> = {
   "Jueves PM": 20 * 60,
 };
 
+/** pausaEncuentros_: mientras la app esté "en construcción", el usuario
+ * pidió no recibir alarmas de encuentros (pendientes, checklist, checklist
+ * previo, notas de área) hasta que él mismo las reactive — se guarda como
+ * una fila más en `avisos_vigilante` (tipo='config', key='pausa_encuentros'),
+ * mismo patrón que `cierreDesde`. Su presencia = pausado. Para reactivar,
+ * basta con borrar esa fila (tipo='config' AND key='pausa_encuentros'). */
+export async function pausaEncuentrosActiva(db: DB): Promise<boolean> {
+  const { data } = await db.from("avisos_vigilante").select("key").eq("tipo", "config").eq("key", "pausa_encuentros").maybeSingle();
+  return !!data;
+}
+
 function sumaDias(fecha: string, dias: number): string {
   const [y, m, d] = fecha.split("-").map(Number);
   const dt = new Date(Date.UTC(y, m - 1, d + dias, 12));

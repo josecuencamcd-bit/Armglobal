@@ -28,6 +28,17 @@ export function pctCambio(actual: number, anterior: number): number {
   return anterior ? Math.round(((actual - anterior) / anterior) * 1000) / 10 : actual ? 100 : 0;
 }
 
+/** baselineAportes_: fecha desde la que cuentan los aportes de encuentro
+ * (tabla `aportes`) para los totales e histórico de Fondos/Finanzas — un
+ * reset no destructivo: lo de antes (pruebas de la migración) queda
+ * guardado en la base por si hace falta revisarlo, pero no suma. Se
+ * guarda igual que `cierreDesde` (avisos_vigilante, tipo='config'); sin
+ * fila, no hay baseline y cuenta todo (comportamiento normal). */
+export async function baselineAportes(db: DB): Promise<string | null> {
+  const { data } = await db.from("avisos_vigilante").select("ultimo").eq("tipo", "config").eq("key", "baseline_aportes").maybeSingle();
+  return data?.ultimo ? data.ultimo.slice(0, 10) : null;
+}
+
 /** ingresosCampus_: ingresos del campus en un mes, sacados de los aportes
  * registrados en los encuentros (tabla `aportes`, no `fondos_equipo`).
  * "Amor por la Casa" se excluye a propósito: es un registro anual, no
@@ -41,6 +52,7 @@ export async function ingresosCampus(db: DB, campus: Campus, mes: string) {
     .eq("campus", campus)
     .neq("categoria", "Amor por la Casa");
   if (error) throw error;
+  const baseline = await baselineAportes(db);
   const cat: Record<string, number> = {};
   const met: Record<string, number> = {};
   let total = 0,
@@ -48,6 +60,7 @@ export async function ingresosCampus(db: DB, campus: Campus, mes: string) {
     antes = 0;
   for (const r of data ?? []) {
     const f = r.fecha.slice(0, 10);
+    if (baseline && f < baseline) continue;
     const m = Number(r.monto) || 0;
     if (f.slice(0, 7) < mes) {
       antes += m;
@@ -177,9 +190,11 @@ export async function totalHistorico(db: DB, campus: Campus, area: Area | "Campu
   let cuenta = (data ?? []).length;
 
   if (area === "Campus") {
-    const { data: ap, error: e2 } = await db.from("aportes").select("monto").eq("campus", campus);
+    const { data: ap, error: e2 } = await db.from("aportes").select("monto, fecha").eq("campus", campus);
     if (e2) throw e2;
+    const baseline = await baselineAportes(db);
     for (const r of ap ?? []) {
+      if (baseline && r.fecha.slice(0, 10) < baseline) continue;
       total += Number(r.monto) || 0;
       cuenta++;
     }
