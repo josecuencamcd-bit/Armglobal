@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import Link from "next/link";
 import { proximaFecha, METODOS_FONDO } from "@/lib/sesiones";
 import { SERVICIO_DE_ENCUENTRO } from "@/lib/disponibilidad";
 
@@ -424,14 +423,6 @@ export default function VistaMiembro({ campus, areas }: { campus: string; areas:
       <h1 className="titulo" style={{ fontSize: "1.3rem", margin: "0 0 4px" }}>Mi equipo</h1>
       <p className="muted" style={{ margin: "0 0 16px", fontSize: "0.82rem" }}>Campus {campus}</p>
       {error && <p className="aviso">{error}</p>}
-
-      <Link href="/merch" className="tarjeta eco-row" style={{ textDecoration: "none", color: "inherit", marginBottom: 14 }}>
-        <div>
-          <b>Catálogo Merch</b>
-          <small>Mira qué hay disponible y pide comprar.</small>
-        </div>
-        <span className="muted">Ver →</span>
-      </Link>
 
       {misServicios.length > 0 && (
         <div className="tarjeta" style={{ marginBottom: 14 }}>
