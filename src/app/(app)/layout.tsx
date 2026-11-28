@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { Database } from "@/lib/supabase/types";
@@ -73,6 +73,11 @@ function Shell({ children, impersonando }: { children: React.ReactNode; imperson
   const supabase = createClient();
   const [perfil, setPerfil] = useState<Perfil | null>(null);
   const [masAbierto, setMasAbierto] = useState(false);
+  // Respaldo del gesto de deslizar en "Más opciones": en algunos celulares
+  // el swipe dentro de la hoja no engancha (reporte de José, 28-nov — no
+  // llegaba a ver "Administración", el último ítem, abajo del todo). El
+  // botón de abajo mueve el scroll con JS sin depender del gesto táctil.
+  const masListaRef = useRef<HTMLDivElement>(null);
   const [menuAdminAbierto, setMenuAdminAbierto] = useState(false);
   const [menuPerfilAbierto, setMenuPerfilAbierto] = useState(false);
   const [saliendo, setSaliendo] = useState(false);
@@ -383,15 +388,20 @@ function Shell({ children, impersonando }: { children: React.ReactNode; imperson
           onClick={() => setMasAbierto(false)}
           className="nav-sheet"
         >
-          <div onClick={(e) => e.stopPropagation()} className="nav-sheet-card">
+          <div onClick={(e) => e.stopPropagation()} className="nav-sheet-card" ref={masListaRef}>
             <div className="nav-sheet-head">
               <b>Más opciones</b>
               <button type="button" onClick={() => setMasAbierto(false)}>✕</button>
             </div>
             {restoFinal.length > 3 && (
-              <p className="muted" style={{ fontSize: "0.68rem", textAlign: "center", padding: "0 4px 4px" }}>
-                Deslizá para ver más opciones ↓
-              </p>
+              <button
+                type="button"
+                onClick={() => masListaRef.current?.scrollBy({ top: 220, behavior: "smooth" })}
+                className="muted"
+                style={{ fontSize: "0.68rem", textAlign: "center", padding: "0 4px 4px", background: "none", border: 0, width: "100%", cursor: "pointer" }}
+              >
+                Ver más opciones ↓
+              </button>
             )}
             {restoFinal.map((m) => {
               const activo = pathname?.startsWith(m.href);
