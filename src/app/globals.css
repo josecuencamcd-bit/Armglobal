@@ -705,6 +705,25 @@ button.reu-chip { cursor: pointer; }
   background: var(--line);
   margin: 2px auto 6px;
 }
+/* Menú del avatar (José, 28-nov): a diferencia de "Más"/Administración,
+   no es un panel de navegación — se despliega pegado al avatar, arriba,
+   en vez de como hoja desde abajo. Mismo look que .nav-sheet-card, sin el
+   tirador (no tiene sentido arriba) y sin el borde superior cuadrado. */
+.perfil-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 50;
+  width: 220px;
+  background: var(--surface-2);
+  border: 1px solid var(--hud-line, var(--line));
+  border-radius: var(--r-lg);
+  padding: 6px 8px;
+  box-shadow: 0 16px 40px -16px rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
 .nav-sheet-head { display: flex; justify-content: space-between; align-items: center; padding: 8px 8px 12px; }
 .nav-sheet-head b { font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
 .nav-sheet-head button { border: 1px solid var(--line); background: var(--surface); color: var(--ink); width: 28px; height: 28px; border-radius: 50%; font-size: 0.8rem; cursor: pointer; flex: 0 0 auto; }

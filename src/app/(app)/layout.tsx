@@ -227,7 +227,7 @@ function Shell({ children, impersonando }: { children: React.ReactNode; imperson
             La <em>Iglesia</em> es mucho más de lo que te dijeron
           </p>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0, position: "relative" }}>
           <button
             onClick={elegirCampus}
             disabled={!puedeElegir}
@@ -260,6 +260,41 @@ function Shell({ children, impersonando }: { children: React.ReactNode; imperson
                 iniciales(perfil.nombre)
               )}
             </button>
+          )}
+          {menuPerfilAbierto && perfil && (
+            // José (28-nov): este menú no es un panel de navegación como
+            // "Más" o "Administración" — es el menú del avatar, así que se
+            // despliega pegado a él, arriba, y no como hoja desde abajo.
+            <>
+              <div
+                onClick={() => setMenuPerfilAbierto(false)}
+                style={{ position: "fixed", inset: 0, zIndex: 49 }}
+              />
+              <div className="perfil-dropdown">
+                <div className="nav-sheet-head">
+                  <b>{perfil.nombre}</b>
+                  <button type="button" onClick={() => setMenuPerfilAbierto(false)}>✕</button>
+                </div>
+                <button
+                  onClick={() => {
+                    setMenuPerfilAbierto(false);
+                    ir("/perfil");
+                  }}
+                  className="nav-sheet-item"
+                >
+                  <b>Mi perfil</b>
+                </button>
+                <button
+                  onClick={() => {
+                    setMenuPerfilAbierto(false);
+                    salir();
+                  }}
+                  className="nav-sheet-item"
+                >
+                  <b>Cerrar sesión</b>
+                </button>
+              </div>
+            </>
           )}
         </div>
       </header>
@@ -329,38 +364,6 @@ function Shell({ children, impersonando }: { children: React.ReactNode; imperson
             <span>Más</span>
           </button>
         </nav>
-      )}
-
-      {menuPerfilAbierto && perfil && (
-        <div
-          onClick={() => setMenuPerfilAbierto(false)}
-          className="nav-sheet"
-        >
-          <div onClick={(e) => e.stopPropagation()} className="nav-sheet-card">
-            <div className="nav-sheet-head">
-              <b>{perfil.nombre}</b>
-              <button type="button" onClick={() => setMenuPerfilAbierto(false)}>✕</button>
-            </div>
-            <button
-              onClick={() => {
-                setMenuPerfilAbierto(false);
-                ir("/perfil");
-              }}
-              className="nav-sheet-item"
-            >
-              <b>Mi perfil</b>
-            </button>
-            <button
-              onClick={() => {
-                setMenuPerfilAbierto(false);
-                salir();
-              }}
-              className="nav-sheet-item"
-            >
-              <b>Cerrar sesión</b>
-            </button>
-          </div>
-        </div>
       )}
 
       {menuAdminAbierto && (
