@@ -6,7 +6,7 @@ import { z } from "zod";
 
 const ROLES = [
   "Pastor principal", "Pastor de campus", "Pastor", "Ministro",
-  "Administrador", "Líder", "Voluntario", "Admin app",
+  "Administrador", "Líder", "Líder responsable", "Voluntario", "Admin app",
 ] as const;
 
 /**
