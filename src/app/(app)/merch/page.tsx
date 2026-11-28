@@ -88,11 +88,13 @@ export default function MerchCatalogoPage() {
       // cual sea su área). José (27-11): un Administrador que no
       // sirve/lidera en Merch no debe ver este botón — caso detectado en
       // el perfil de Aline (Administrador + Líder de Conexión, sirve en
-      // Worship). Visión total solo para Pastor*/Ministro/Admin app, que
-      // sí ven todas las áreas; el resto solo si de verdad está en Merch.
-      const esAlto = p.roles.some((r) => ["Pastor principal", "Pastor de campus", "Pastor", "Ministro"].includes(r));
+      // Worship). Visión total (auditar sin ser el responsable) solo para
+      // Pastor*/Admin app — José (28-11): Ministro NO entra acá; si un
+      // Ministro gestiona Merch es porque además es su líder/responsable
+      // de área (areas/sirve), como Jennifer (Ministra Y líder de Merch).
+      const esPastor = p.roles.some((r) => ["Pastor principal", "Pastor de campus", "Pastor"].includes(r));
       const esAdminApp = p.roles.includes("Admin app");
-      setPuedeGestionar(esAlto || esAdminApp || p.areas.includes("Merch") || p.sirve.includes("Merch"));
+      setPuedeGestionar(esPastor || esAdminApp || p.areas.includes("Merch") || p.sirve.includes("Merch"));
     }
   }, [campusActivo]);
 
